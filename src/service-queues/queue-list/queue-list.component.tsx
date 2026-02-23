@@ -118,7 +118,7 @@ const QueueList: React.FC<QueueListProps> = ({
     return `${formatName(qe.family_name)} ${formatName(qe.middle_name)} ${formatName(qe.given_name)}`;
   }
   function formatName(name: string) {
-    if (name === 'NULL') {
+    if (name === 'NULL' || !name) {
       return '';
     } else {
       return name;
