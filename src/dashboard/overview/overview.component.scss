@@ -10,7 +10,7 @@
     border-radius: 5px;
     background-color: white;
     font-weight: bold;
-    flex: 1 1 calc(33.33% - 1rem);
+    flex: 1 1 calc(20% - 1rem);
   }
 }
 
@@ -51,20 +51,24 @@ h4 {
   }
 }
 
-.queue {
-    color: palevioletred
+.opd {
+    background-color: #2B579A !important;
 }
-.total {
-    color: gray;
-}
-
-.triage {
-    color: yelllow;
-}
-.consultation {
-    color: green;
+.completed {
+    background-color: #4CAF50 !important;
 }
 
-.emergency {
-    color: red;
+.uncompleted {
+    background-color: #FFC107 !important;
+}
+.emergencies {
+    background-color: lightcoral !important;
+}
+
+.waitingTime {
+    background-color: lightblue !important;
+}
+
+.text {
+  color: white
 }

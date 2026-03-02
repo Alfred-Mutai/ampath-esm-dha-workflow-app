@@ -1,5 +1,6 @@
 import { FluidDropdown, Tile } from '@carbon/react';
 import React, { useState } from 'react';
+import { UserMultiple, CheckmarkFilled, Time, Hospital } from '@carbon/react/icons';
 
 import styles from './overview.component.scss';
 import { type QueueEntryResult } from '../../registry/types';
@@ -9,9 +10,10 @@ import Chart from '../charts/chart.component';
 interface OverviewProps {
   triageCount?: QueueEntryResult[];
   consultationCount?: QueueEntryResult[];
+  dashboardSummary?: any;
 }
 
-const Overview: React.FC<OverviewProps> = ({ triageCount, consultationCount }) => {
+const Overview: React.FC<OverviewProps> = ({ triageCount, consultationCount, dashboardSummary }) => {
   const totalPatients: QueueEntryResult[] = [...triageCount, ...consultationCount];
   const patientsInQueue = totalPatients.filter(
     (patient) => patient.status === 'WAITING' || patient.status === 'IN SERVICE',
@@ -61,47 +63,39 @@ const Overview: React.FC<OverviewProps> = ({ triageCount, consultationCount }) =
   return (
     <>
       <div className={styles.container}>
-        <Tile className={styles.card}>
-          <h4>Total Patients Today</h4>
-          <h5>Patients</h5>
-          <h4 className={styles.total}>{triagePatients + consultationPatients}</h4>
+        <Tile className={`${styles.card} ${styles.opd}`}>
+          <h4 className={styles.text}>
+            <UserMultiple size={24} />
+            Total OPD Visits
+          </h4>
+          <h4 className={styles.text}>{dashboardSummary?.total_opd_visits ?? 0}</h4>
         </Tile>
-        <Tile className={styles.card}>
-          <h4>Patients in Queue Today</h4>
-          <h5>Patients</h5>
-          <h4 className={styles.queue}>{patientsInQueue}</h4>
+        <Tile className={`${styles.card} ${styles.completed}`}>
+          <h4 className={styles.text}>
+            <CheckmarkFilled size={20} /> Completed Visits
+          </h4>
+          <h4 className={styles.text}>{dashboardSummary?.completed_visits ?? 0}</h4>
         </Tile>
-        <Tile className={styles.card}>
-          <h4>Patients in Triage </h4>
-          <h5>Patients</h5>
-          <h4 className={styles.triage}>{triagePatients}</h4>
+        <Tile className={`${styles.card} ${styles.uncompleted}`}>
+          <h4 className={styles.text}>
+            <Time size={20} /> Uncompleted visits
+          </h4>
+          <h4 className={styles.text}>{dashboardSummary?.uncompleted_visits ?? 0}</h4>
         </Tile>
-        <Tile className={styles.card}>
-          <h4>Patients in Consultation </h4>
-          <h5>Patients</h5>
-          <h4 className={styles.consultation}>{consultationPatients}</h4>
+        <Tile className={`${styles.card} ${styles.emergencies}`}>
+          <h4 className={styles.text}>
+            <Hospital size={20} /> Emergencies
+          </h4>
+          <h4 className={styles.text}>{dashboardSummary?.emergencies ?? 0}</h4>
         </Tile>
-        <Tile className={styles.card}>
-          <h4>Walk-ins Today </h4>
-          <h5>Patients</h5>
-          <h4>0</h4>
-        </Tile>
-        <Tile className={styles.card}>
-          <h4>Emergencies Today </h4>
-          <h5>Patients</h5>
-          <h4 className={styles.emergency}>0</h4>
+        <Tile className={`${styles.card} ${styles.waitingTime}`}>
+          <h4 className={styles.text}>
+            <Time size={20} /> Avg. Waiting Time
+          </h4>
+          <h4 className={styles.text}>{dashboardSummary?.average_waiting_minutes ?? 0} mins</h4>
         </Tile>
       </div>
       <Chart />
-      <FluidDropdown
-        className={styles.dropdownItem}
-        id={''}
-        items={dropDownItems}
-        label={'Total Patients'}
-        titleText={''}
-        onChange={handleDropdownChange}
-      ></FluidDropdown>
-      <PatientList patients={selectedPatients} />
     </>
   );
 };

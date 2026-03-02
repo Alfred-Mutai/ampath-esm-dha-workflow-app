@@ -7,29 +7,25 @@ import { getServiceQueueByLocationUuid } from '../service-queues/service-queues.
 import { type QueueEntryResult } from '../registry/types';
 import { useSession } from '@openmrs/esm-framework';
 import { QUEUE_SERVICE_UUIDS } from '../shared/constants/concepts';
+import { getDashBoardSummary } from '../resources/dashboard.resource';
 
 interface DashboardProps {}
 
 const Dashboard: React.FC<DashboardProps> = () => {
   const [triageQueueEntries, setTriageQueueEntries] = useState<QueueEntryResult[]>([]);
   const [consultationQueueEntries, setConsultationQueueEntries] = useState<QueueEntryResult[]>([]);
+  const [dashboardSummary, setDashboardSummary] = useState<any[]>([]);
   const session = useSession();
   const locationUuid = session.sessionLocation.uuid;
-  const triageServiceUuid = QUEUE_SERVICE_UUIDS.TRIAGE_SERVICE_UUID;
-  const consultationServiceUuid = QUEUE_SERVICE_UUIDS.CLINICAL_CONSULTATION_SERVICE_UUID;
   useEffect(() => {
-    getTriageEntryQueues();
-    getConsultationEntryQueues();
+    getDashBoardData();
   }, []);
 
-  const getTriageEntryQueues = async () => {
-    const res = await getServiceQueueByLocationUuid(triageServiceUuid, locationUuid);
-    setTriageQueueEntries(res);
+  const getDashBoardData = async () => {
+    const res = await getDashBoardSummary(locationUuid);
+    setDashboardSummary(res[0]);
   };
-  const getConsultationEntryQueues = async () => {
-    const res = await getServiceQueueByLocationUuid(consultationServiceUuid, locationUuid);
-    setConsultationQueueEntries(res);
-  };
+
   return (
     <div className={styles.container}>
       <Tabs>
@@ -37,23 +33,15 @@ const Dashboard: React.FC<DashboardProps> = () => {
           <Tab>
             <span className={styles.tabText}>Overview</span>
           </Tab>
-          <Tab>
-            <span className={styles.tabText}>Pharmacy</span>
-          </Tab>
-          <Tab>
-            <span className={styles.tabText}>Labs</span>
-          </Tab>
-          <Tab>
-            <span className={styles.tabText}>Programs</span>
-          </Tab>
         </TabList>
         <TabPanels>
           <TabPanel>
-            <Overview triageCount={triageQueueEntries} consultationCount={consultationQueueEntries} />
+            <Overview
+              triageCount={triageQueueEntries}
+              consultationCount={consultationQueueEntries}
+              dashboardSummary={dashboardSummary}
+            />
           </TabPanel>
-          <TabPanel></TabPanel>
-          <TabPanel></TabPanel>
-          <TabPanel></TabPanel>
         </TabPanels>
       </Tabs>
     </div>
