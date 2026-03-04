@@ -16,6 +16,12 @@ export enum OtpStatus {
   Verified = 'VERIFIED',
 }
 
+export enum OtpOptions {
+  Skip = 'SKIP',
+  NoOverride = 'NO OVERRIDE',
+  Override = 'OVERRIDE',
+}
+
 export interface ValidateCustomOtpResponse {
   message: string;
   isValid?: boolean;

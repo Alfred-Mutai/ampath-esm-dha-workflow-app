@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { OtpStatus, type RequestCustomOtpDto } from '../../types';
+import { OtpOptions, OtpStatus, type RequestCustomOtpDto } from '../../types';
 import {
   Button,
   FormLabel,
@@ -35,7 +35,7 @@ const OtpVerificationModal: React.FC<OtpVerificationModalpProps> = ({
   const [otpStatus, setOtpStatus] = useState<string>(OtpStatus.Draft);
   const [loading, setLoading] = useState<boolean>(false);
   const [sessionId, setSessionId] = useState<string>('');
-  const [overrideOtp, setOverideOtp] = useState<boolean>(false);
+  const [overrideOtp, setOverideOtp] = useState<OtpOptions>(OtpOptions.NoOverride);
   const [alternativeIdNo, setAlternativeIdNo] = useState<string>();
 
   const handleSendOtp = async () => {
@@ -59,7 +59,7 @@ const OtpVerificationModal: React.FC<OtpVerificationModalpProps> = ({
   };
   const getOtpPayload = (): RequestCustomOtpDto => {
     let payload: RequestCustomOtpDto = null;
-    if (overrideOtp) {
+    if (overrideOtp === OtpOptions.Override) {
       payload = {
         ...requestCustomOtpDto,
         identificationNumber: alternativeIdNo,
@@ -108,9 +108,6 @@ const OtpVerificationModal: React.FC<OtpVerificationModalpProps> = ({
       setLoading(false);
     }
   };
-  const registerOnAfyaYangu = () => {
-    window.open('https://afyayangu.go.ke/', '_blank');
-  };
 
   const onSubmit = () => {};
   const handleTimeUp = () => {
@@ -153,11 +150,10 @@ const OtpVerificationModal: React.FC<OtpVerificationModalpProps> = ({
     }
     return '';
   };
-  const handleOtpOverrideSelection = (overrideSelection: string) => {
-    if (overrideSelection === 'override') {
-      setOverideOtp(true);
-    } else {
-      setOverideOtp(false);
+  const handleOtpOverrideSelection = (overrideSelection: OtpOptions) => {
+    setOverideOtp(overrideSelection);
+    if (overrideSelection === OtpOptions.Skip) {
+      setOtpStatus(OtpStatus.Verified);
     }
   };
   const handleAlternativeIdNo = (alternativeNo: string) => {
@@ -184,20 +180,26 @@ const OtpVerificationModal: React.FC<OtpVerificationModalpProps> = ({
                 {otpStatus === OtpStatus.Draft ? (
                   <>
                     <RadioButtonGroup
-                      defaultSelected="no-override"
+                      defaultSelected={OtpOptions.NoOverride}
                       legendText="OTP Override"
-                      onChange={(v) => handleOtpOverrideSelection(v as string)}
+                      onChange={(v) => handleOtpOverrideSelection(v as OtpOptions)}
                       name="override-button-default-group"
                     >
                       <RadioButton
                         id="no-override"
                         labelText={`Send Code to Phone ${maskAllButFirstAndLastThree(phoneNumber)}?`}
-                        value="no-override"
+                        value={OtpOptions.NoOverride}
                       />
-                      <RadioButton id="override" labelText="Send OTP to alternative contact" value="override" />
+                      <RadioButton
+                        id="override"
+                        labelText="Send OTP to alternative contact"
+                        value={OtpOptions.Override}
+                      />
+
+                      <RadioButton id="skip" labelText="Skip OTP" value={OtpOptions.Skip} />
                     </RadioButtonGroup>
 
-                    {overrideOtp ? (
+                    {overrideOtp === OtpOptions.Override ? (
                       <>
                         <div className={styles.formControl}>
                           <TextInput
@@ -219,7 +221,15 @@ const OtpVerificationModal: React.FC<OtpVerificationModalpProps> = ({
 
                 {otpStatus === OtpStatus.Verified ? (
                   <>
-                    <h6>OTP Verification Successfull!</h6>
+                    {overrideOtp === OtpOptions.Skip ? (
+                      <>
+                        <h6>OTP Verification Skipped! Continue</h6>
+                      </>
+                    ) : (
+                      <>
+                        <h6>OTP Verification Successfull!</h6>
+                      </>
+                    )}
                   </>
                 ) : (
                   <></>
