@@ -1,0 +1,6 @@
+const CCC_PATIENT_UUID = 'a8a3899a-1350-11df-a1f1-0026b9348838';
+const MCH_PATIENT_UUID = 'a8a17d80-1350-11df-a1f1-0026b9348838';
+export const PatientCategories = {
+  CCC_PATIENT_UUID,
+  MCH_PATIENT_UUID,
+};

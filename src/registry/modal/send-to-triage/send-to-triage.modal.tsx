@@ -30,7 +30,6 @@ import {
   type QueueEntryDto,
   type ServiceQueue,
   PaymentDetail,
-  CCC_UUID,
   type VisitAttribute,
 } from '../../types';
 import { createQueueEntry, getFacilityServiceQueues } from '../../../resources/queue.resource';
@@ -51,6 +50,7 @@ import {
   type PaymentStatus,
   type CashPoint,
 } from '../../../shared/types';
+import { PatientCategories } from '../../../shared/constants/patient-category';
 
 interface SendToTriageModalProps {
   patients: Patient[];
@@ -606,7 +606,8 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
                             onChange={($event) => patientCategoryHandler($event.target.value)}
                           >
                             <SelectItem value="" text="Select" />;
-                            <SelectItem value={CCC_UUID} text="CCC" />;
+                            <SelectItem value={PatientCategories.CCC_PATIENT_UUID} text="CCC" />;
+                            <SelectItem value={PatientCategories.MCH_PATIENT_UUID} text="MCH" />;
                           </Select>
                         </div>
                       </div>

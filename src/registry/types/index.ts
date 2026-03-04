@@ -325,8 +325,6 @@ export enum PaymentDetail {
   NonPaying = 'Non-Paying',
 }
 
-export const CCC_UUID = 'a8a3899a-1350-11df-a1f1-0026b9348838';
-
 export type EligibilityFilterDto = {
   requestIdType: string;
   requestIdNumber: string;
