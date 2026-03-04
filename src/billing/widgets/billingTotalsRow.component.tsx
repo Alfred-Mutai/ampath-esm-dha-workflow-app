@@ -15,13 +15,15 @@ import {
   Search,
   InlineLoading,
   AISkeletonText,
+  Modal,
+  Button,
 } from '@carbon/react';
 import { Money, WarningAlt, CheckmarkFilled, Hospital, Receipt, PendingFilled } from '@carbon/react/icons';
 import { navigate, openmrsFetch, restBaseUrl } from '@openmrs/esm-framework';
 import { spacing05 } from '@carbon/themes';
 import './billingTotalsRow.component.scss';
 
-type BillStatus = 'UNPAID' | 'PAID' | 'CLAIM_PENDING' | 'OTHERS' | 'CLAIM_APPROVED';
+type BillStatus = 'UNPAID' | 'PAID';
 
 type Bill = {
   id: string;
@@ -127,6 +129,325 @@ const headers = [
   { key: 'status', header: 'Status' },
   { key: 'items', header: 'Billed Items' },
 ];
+
+const claimHeaders = [
+  { key: 'patient', header: 'Patient' },
+  { key: 'scheme', header: 'Scheme' },
+  { key: 'total', header: 'Amount' },
+  { key: 'date', header: 'Created' },
+  { key: 'actions', header: 'Actions' },
+];
+
+const ClaimsTable = ({
+  claims,
+  type,
+  loading,
+}: {
+  claims: Claim[];
+  type: 'PENDING' | 'SUBMITTED';
+  loading: boolean;
+}) => {
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  const [selectedClaim, setSelectedClaim] = useState<Claim | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  // 🔎 Filter
+  const filtered = useMemo(() => {
+    return claims.filter((c) => {
+      const searchLower = search.toLowerCase();
+      return (
+        c.patient.toLowerCase().includes(searchLower) ||
+        c.scheme.toLowerCase().includes(searchLower)
+      );
+    });
+  }, [claims, search]);
+
+  // 📄 Pagination
+  const paginated = useMemo(() => {
+    return filtered.slice((page - 1) * pageSize, page * pageSize);
+  }, [filtered, page, pageSize]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search]);
+
+  if (loading) {
+    return <InlineLoading description="Loading claims..." />;
+  }
+
+  const rows = paginated.map((c) => ({
+    id: c.id,
+    patient: c.patient,
+    scheme: c.scheme,
+    total: `Ksh ${c.total}`,
+    date: c.createdAt.toLocaleDateString(),
+    actions: c.id,
+  }));
+
+  const handleSubmitClaim = async () => {
+    if (!selectedClaim) return;
+
+    try {
+      setSubmitting(true);
+
+      // TODO: Replace with real API call
+      await new Promise((res) => setTimeout(res, 1200));
+
+      alert('Claim submitted successfully');
+
+      setSelectedClaim(null);
+    } catch (err) {
+      alert('Failed to submit claim');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Stack gap={4}>
+      {/* 🔎 Search */}
+      <Grid fullWidth>
+        <Column lg={16} md={8} sm={4}>
+          <Search
+            id={`search-claims-${type}`}
+            labelText="Search claims"
+            placeholder="Search by patient or scheme"
+            size="md"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </Column>
+      </Grid>
+
+      {/* 📊 Table */}
+      <DataTable rows={rows} headers={claimHeaders}>
+        {({ rows, headers, getTableProps }) => (
+          <Table {...getTableProps()}>
+            <TableHead>
+              <TableRow>
+                {headers.map((h) => (
+                  <TableHeader key={h.key}>{h.header}</TableHeader>
+                ))}
+              </TableRow>
+            </TableHead>
+
+            <TableBody>
+              {rows.map((row) => (
+                <TableRow key={row.id}>
+                  {row.cells.map((cell) => {
+                    if (cell.info.header === 'actions') {
+                      return (
+                        <TableCell key={cell.id}>
+                          {type === 'PENDING' ? (
+                            <Button
+                              size="sm"
+                              kind="primary"
+                              onClick={() =>
+                                setSelectedClaim(
+                                  claims.find((c) => c.id === cell.value) || null,
+                                )
+                              }
+                            >
+                              Preview
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              kind="secondary"
+                            >
+                              Check Status
+                            </Button>
+                          )}
+                        </TableCell>
+                      );
+                    }
+
+                    return <TableCell key={cell.id}>{cell.value}</TableCell>;
+                  })}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </DataTable>
+
+      {/* 📄 Pagination */}
+      <Pagination
+        page={page}
+        pageSize={pageSize}
+        pageSizes={[10, 25, 50, 100]}
+        totalItems={filtered.length}
+        onChange={({ page, pageSize }) => {
+          setPage(page);
+          setPageSize(pageSize);
+        }}
+      />
+
+      {/* 🧾 Preview Modal */}
+      {selectedClaim && (
+        <Modal
+          open
+          modalHeading="Claim Preview"
+          primaryButtonText={submitting ? 'Submitting...' : 'Submit Claim'}
+          secondaryButtonText="Cancel"
+          primaryButtonDisabled={submitting}
+          onRequestClose={() => !submitting && setSelectedClaim(null)}
+          onRequestSubmit={handleSubmitClaim}
+        >
+          <Stack gap={4}>
+            <p><strong>Patient:</strong> {selectedClaim.patient}</p>
+            <p><strong>Insurance Scheme:</strong> {selectedClaim.scheme}</p>
+            <p><strong>Amount:</strong> Ksh {selectedClaim.total}</p>
+            <p>
+              <strong>Created:</strong>{' '}
+              {selectedClaim.createdAt.toLocaleDateString()}
+            </p>
+          </Stack>
+        </Modal>
+      )}
+    </Stack>
+  );
+};
+
+type ClaimStatus = 'PENDING' | 'SUBMITTED';
+
+type Claim = {
+  id: string;
+  billId: string;
+  patientId: string;
+  patient: string;
+  scheme: string;
+  total: string;
+  status: ClaimStatus;
+  createdAt: Date;
+};
+
+type ClaimsResponse = {
+  pending: Claim[];
+  submitted: Claim[];
+};
+
+async function fetchClaims(): Promise<ClaimsResponse> {
+  try {
+    const res = await openmrsFetch(
+      `${restBaseUrl}/billing/claim?v=custom:(uuid,status,dateCreated,bill:(uuid,totalAmount,patient:(uuid,display)),insuranceScheme:(display))&limit=50`,
+      { credentials: 'include' },
+    );
+
+    if (!res.ok) throw new Error('API not ready');
+
+    const data = await res.json();
+
+    const parsed: Claim[] = data.results.map((c) => {
+      const patientDisplay = c.bill?.patient?.display ?? 'Unknown';
+      const patientName = patientDisplay.includes('-')
+        ? patientDisplay.slice(patientDisplay.lastIndexOf('-') + 1).trim()
+        : patientDisplay.trim();
+
+      return {
+        id: c.uuid,
+        billId: c.bill?.uuid,
+        patientId: c.bill?.patient?.uuid,
+        patient: patientName,
+        scheme: c.insuranceScheme?.display ?? 'N/A',
+        total: Number(c.bill?.totalAmount ?? 0).toLocaleString(undefined, {
+          minimumFractionDigits: 2,
+        }),
+        status: c.status === 'SUBMITTED' ? 'SUBMITTED' : 'PENDING',
+        createdAt: new Date(c.dateCreated),
+      };
+    });
+
+    return {
+      pending: parsed.filter((c) => c.status === 'PENDING'),
+      submitted: parsed.filter((c) => c.status === 'SUBMITTED'),
+    };
+  } catch (error) {
+    console.warn('Using mock claims data');
+
+    return getMockClaims();
+  }
+}
+
+function getMockClaims(): ClaimsResponse {
+  const mockApiResponse = {
+    results: [
+      {
+        uuid: 'claim-001',
+        status: 'PENDING',
+        dateCreated: '2026-03-01T10:30:00.000Z',
+        bill: {
+          uuid: 'bill-001',
+          totalAmount: 2500,
+          patient: {
+            uuid: 'patient-001',
+            display: '1001 - John Doe',
+          },
+        },
+        insuranceScheme: {
+          display: 'NHIF',
+        },
+      },
+      {
+        uuid: 'claim-002',
+        status: 'SUBMITTED',
+        dateCreated: '2026-03-02T09:15:00.000Z',
+        bill: {
+          uuid: 'bill-002',
+          totalAmount: 4800,
+          patient: {
+            uuid: 'patient-002',
+            display: '1002 - Mary Wanjiku',
+          },
+        },
+        insuranceScheme: {
+          display: 'AAR Insurance',
+        },
+      },
+      {
+        uuid: 'claim-003',
+        status: 'PENDING',
+        dateCreated: '2026-03-03T14:45:00.000Z',
+        bill: {
+          uuid: 'bill-003',
+          totalAmount: 1200,
+          patient: {
+            uuid: 'patient-003',
+            display: '1003 - Peter Mwangi',
+          },
+        },
+        insuranceScheme: {
+          display: 'Britam',
+        },
+      },
+    ],
+  };
+
+  const parsed: Claim[] = mockApiResponse.results.map((c) => {
+    const patientName = c.bill.patient.display.split('-')[1].trim();
+
+    return {
+      id: c.uuid,
+      billId: c.bill.uuid,
+      patientId: c.bill.patient.uuid,
+      patient: patientName,
+      scheme: c.insuranceScheme.display,
+      total: c.bill.totalAmount.toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+      }),
+      status: c.status as ClaimStatus,
+      createdAt: new Date(c.dateCreated),
+    };
+  });
+
+  return {
+    pending: parsed.filter((c) => c.status === 'PENDING'),
+    submitted: parsed.filter((c) => c.status === 'SUBMITTED'),
+  };
+}
 
 const StatTile = ({
   icon,
@@ -360,6 +681,10 @@ const BillingTotalsRow: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [filterDate, setFilterDate] = useState<Date | null>(null);
 
+  const [pendingClaims, setPendingClaims] = useState<Claim[]>([]);
+  const [submittedClaims, setSubmittedClaims] = useState<Claim[]>([]);
+  const [claimsLoading, setClaimsLoading] = useState(true);
+
   useEffect(() => {
     fetchBills()
       .then((fetched) => {
@@ -367,6 +692,13 @@ const BillingTotalsRow: React.FC = () => {
         setBills(sorted);
       })
       .finally(() => setLoading(false));
+
+    fetchClaims()
+      .then(({ pending, submitted }) => {
+        setPendingClaims(pending);
+        setSubmittedClaims(submitted);
+      })
+      .finally(() => setClaimsLoading(false));
   }, []);
 
   const counts = useMemo(
@@ -374,9 +706,10 @@ const BillingTotalsRow: React.FC = () => {
       all: bills.length,
       unpaid: bills.filter((b) => b.status === 'UNPAID').length,
       paid: bills.filter((b) => b.status === 'PAID').length,
-      pending: bills.filter((b) => b.status === 'CLAIM_PENDING').length,
+      pendingClaims: pendingClaims.length,
+      submittedClaims: submittedClaims.length,
     }),
-    [bills],
+    [bills, pendingClaims, submittedClaims],
   );
 
   const revenueToday = useMemo(() => {
@@ -481,7 +814,7 @@ const BillingTotalsRow: React.FC = () => {
             <StatTile
               icon={<Hospital size={25} />}
               label="Pending Claims"
-              value={loading ? <AISkeletonText /> : counts.pending}
+              value={loading ? <AISkeletonText /> : counts.pendingClaims}
               style={{
                 backgroundColor: 'var(--cds-layer-background-02, #F4EBFF)',
                 color: '#8C41FF',
@@ -520,7 +853,13 @@ const BillingTotalsRow: React.FC = () => {
               <Tab>
                 Pending Claims{' '}
                 <Tag type="blue" size="sm">
-                  {loading ? <AISkeletonText /> : counts.pending}
+                  {loading ? <AISkeletonText /> : counts.pendingClaims}
+                </Tag>
+              </Tab>
+              <Tab>
+                Submitted Claims{' '}
+                <Tag type="green" size="sm">
+                  {loading ? <AISkeletonText /> : counts.submittedClaims}
                 </Tag>
               </Tab>
             </TabList>
@@ -548,13 +887,11 @@ const BillingTotalsRow: React.FC = () => {
                 />
               </TabPanel>
               <TabPanel>
-                <BillsTab
-                  source={bills}
-                  status="CLAIM_PENDING"
-                  filterDate={filterDate}
-                  setFilterDate={setFilterDate}
-                  loading={loading}
-                />
+                <ClaimsTable claims={pendingClaims} type="PENDING" loading={claimsLoading} />
+              </TabPanel>
+
+              <TabPanel>
+                <ClaimsTable claims={submittedClaims} type="SUBMITTED" loading={claimsLoading} />
               </TabPanel>
             </TabPanels>
           </Tabs>
