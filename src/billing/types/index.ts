@@ -22,6 +22,22 @@ export interface Patient {
 export type PaymentStatus = 'PENDING' | 'PAID' | 'CANCELLED' | string;
 export type BillStatus = 'PENDING' | 'PAID' | 'CANCELLED' | string;
 
+export type Payment = {
+  uuid: string;
+  instanceType: {
+    uuid: string;
+    name: string;
+    description: string | null;
+    retired: boolean;
+  };
+  attributes: any[];
+  amount: number;
+  amountTendered: number;
+  dateCreated: number;
+  voided: boolean;
+  resourceVersion: string;
+};
+
 export interface Bill {
   uuid: string;
   receiptNumber: string;
@@ -34,6 +50,12 @@ export interface Bill {
   dateCreated: string;
   lineItems: LineItem[];
   patient: Patient;
-  payments: any[];
+  payments: Payment[];
   resourceVersion: string;
 }
+
+export type PayBillDto = {
+  instanceType: string;
+  amountTendered: number;
+  amount: number;
+};

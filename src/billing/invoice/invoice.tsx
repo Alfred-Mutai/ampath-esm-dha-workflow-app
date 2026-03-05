@@ -3,22 +3,13 @@ import styles from './invoice.scss';
 import HeaderCard from './invoice-header/header-card/header-card';
 import { useParams } from 'react-router-dom';
 import { showSnackbar, usePatient } from '@openmrs/esm-framework';
-import { type Bill } from '../types';
-import { fetchBill } from './bill.resource';
-import {
-  Button,
-  Select,
-  SelectItem,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  TextInput,
-} from '@carbon/react';
+import { type PayBillDto, type Bill } from '../types';
+import { fetchBill, payBill } from './bill.resource';
+import { Button, InlineLoading, Select, SelectItem, TextInput } from '@carbon/react';
 import { type PaymentMode } from '../../shared/types';
 import { fetchPaymentModes } from '../../shared/services/billing.resource';
+import PaymentDetails from './payment-details/payment-details';
+import LineItems from './line-items/line-items';
 interface InvoinceProps {}
 const Invoice: React.FC<InvoinceProps> = () => {
   const { billUuid, patientUuid } = useParams();
@@ -30,6 +21,7 @@ const Invoice: React.FC<InvoinceProps> = () => {
   const [selectedPaymentMode, setSelectedPaymentMode] = useState<PaymentMode>();
   const [payAmount, setPayAmount] = useState<number>();
   const [refNo, setRefNo] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(false);
 
   useEffect(() => {
     if (billUuid) {
@@ -62,7 +54,14 @@ const Invoice: React.FC<InvoinceProps> = () => {
     return total;
   }
   function getTotalTendered(bill: Bill) {
+    if (!bill || !bill.payments) {
+      return 0;
+    }
     let total = 0;
+    const payments = bill.payments ?? [];
+    for (let i = 0; i < payments.length; i++) {
+      total += payments[i].amountTendered;
+    }
     return total;
   }
   async function getPaymentMethods() {
@@ -81,6 +80,67 @@ const Invoice: React.FC<InvoinceProps> = () => {
   const refNoHandler = (refNo: string) => {
     setRefNo(refNo);
   };
+  const showAlert = (type: string, title: string, subTitle: string) => {
+    showSnackbar({
+      kind: type,
+      title: title,
+      subtitle: subTitle,
+    });
+  };
+  const isValidPaybillDto = (payBillDto: PayBillDto): boolean => {
+    if (!payBillDto.amount) {
+      showAlert('error', 'Missing Amount', 'Kindly add the total amount');
+      return false;
+    }
+    if (!payBillDto.amountTendered) {
+      showAlert('error', 'Missing Amount Tendered', 'Kindly add the amount tendered');
+      return false;
+    }
+    if (!payBillDto.instanceType) {
+      showAlert('error', 'Missing Payment mode', 'Kindly add the missing payment mode');
+      return false;
+    }
+    if (payAmount > totalAmount - totalTendered) {
+      showAlert('error', 'High Amount tendered value', 'The amount tendered is greater than the balance');
+      return false;
+    }
+    return true;
+  };
+  const handlePayment = async () => {
+    setLoading(true);
+    const payBillDto = generatePayBillDto();
+    if (isValidPaybillDto(payBillDto)) {
+      try {
+        const resp = await payBill(billUuid, payBillDto);
+        if (resp && resp.uuid) {
+          showAlert(
+            'success',
+            'Payment succesfull',
+            `KES ${resp.amountTendered} (${resp.instanceType.name}) was succesfully paid`,
+          );
+        }
+      } catch (error) {
+        showAlert(
+          'error',
+          'Error Payming Bill',
+          error.message ?? 'An error occurred while paying the bill. Kindly retry or contact support',
+        );
+      } finally {
+        setLoading(false);
+        fetchInvoiceBill(billUuid);
+      }
+    } else {
+      setLoading(false);
+    }
+  };
+  const generatePayBillDto = (): PayBillDto => {
+    return {
+      instanceType: selectedPaymentMode.uuid,
+      amountTendered: payAmount,
+      amount: totalAmount,
+    };
+  };
+
   return (
     <>
       <div className={styles.invoiceLayout}>
@@ -108,39 +168,30 @@ const Invoice: React.FC<InvoinceProps> = () => {
               <h5>Line Items</h5>
             </div>
             <div className={styles.lineItemsData}>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableHeader>No</TableHeader>
-                    <TableHeader>Bill Item</TableHeader>
-                    <TableHeader>Status</TableHeader>
-                    <TableHeader>Quantity</TableHeader>
-                    <TableHeader>Price</TableHeader>
-                    <TableHeader>Total</TableHeader>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {bill.lineItems.map((item, index) => {
-                    return (
-                      <>
-                        <TableRow id={item.uuid}>
-                          <TableCell>{index + 1}</TableCell>
-                          <TableCell>{item.billableService}</TableCell>
-                          <TableCell>{item.paymentStatus}</TableCell>
-                          <TableCell>{item.quantity}</TableCell>
-                          <TableCell>KES {item.price}</TableCell>
-                          <TableCell>KES {item.price * item.quantity}</TableCell>
-                        </TableRow>
-                      </>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+              {bill && bill.lineItems ? (
+                <>
+                  <LineItems lineItems={bill.lineItems} />
+                </>
+              ) : (
+                <></>
+              )}
             </div>
           </div>
           <div className={styles.paymentSection}>
             <div className={styles.paymentSectionHeader}>
-              <h5>Payment</h5>
+              <h5>Payments</h5>
+            </div>
+            <div className={styles.paymentDetails}>
+              {bill && bill.payments ? (
+                <>
+                  <PaymentDetails payments={bill.payments} />
+                </>
+              ) : (
+                <></>
+              )}
+            </div>
+            <div className={styles.paymentSectionHeader}>
+              <h5>Make Payment</h5>
             </div>
             <div className={styles.paymentSectionContent}>
               <div className={styles.paymentMethodSection}>
@@ -178,7 +229,15 @@ const Invoice: React.FC<InvoinceProps> = () => {
                 <div>Total Tendered : {totalTendered}</div>
                 <div>
                   <Button kind="secondary">Discard</Button>
-                  <Button kind="primary">Process Payment</Button>
+                  <Button kind="primary" onClick={handlePayment} disabled={loading}>
+                    {loading ? (
+                      <>
+                        <InlineLoading description="Processing" />
+                      </>
+                    ) : (
+                      <>Process Payment</>
+                    )}
+                  </Button>
                 </div>
               </div>
             </div>
