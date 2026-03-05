@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import styles from './invoice.scss';
 import HeaderCard from './invoice-header/header-card/header-card';
 import { useParams } from 'react-router-dom';
-import { showSnackbar, usePatient } from '@openmrs/esm-framework';
+import { formatDate, navigate, parseDate, showSnackbar, usePatient } from '@openmrs/esm-framework';
 import { type PayBillDto, type Bill } from '../types';
 import { fetchBill, payBill } from './bill.resource';
 import { Button, InlineLoading, Select, SelectItem, TextInput } from '@carbon/react';
@@ -52,7 +52,7 @@ const Invoice: React.FC<InvoinceProps> = () => {
     let total = 0;
     const lineItems = bill?.lineItems ?? [];
     for (let i = 0; i < lineItems.length; i++) {
-      total += lineItems[i].price;
+      total += lineItems[i].price * lineItems[i].quantity;
     }
     return total;
   }
@@ -144,6 +144,10 @@ const Invoice: React.FC<InvoinceProps> = () => {
     };
   };
 
+  const navigateToBillingPage = () => {
+    navigate({ to: `${window.spaBase}/home/billing`, templateParams: {} });
+  };
+
   return (
     <>
       <div className={styles.invoiceLayout}>
@@ -157,7 +161,7 @@ const Invoice: React.FC<InvoinceProps> = () => {
                 <HeaderCard title="Total Amount" subTitle={`KES ${totalAmount}`} />
                 <HeaderCard title="Amount Tendered" subTitle={`KES ${totalTendered}`} />
                 <HeaderCard title="Invoice No" subTitle={bill.receiptNumber} />
-                <HeaderCard title="Date and Time" subTitle={bill.dateCreated} />
+                <HeaderCard title="Date and Time" subTitle={formatDate(parseDate(bill.dateCreated))} />
                 <HeaderCard title="Invoice Status" subTitle={bill.status} />
               </div>
             </>
@@ -174,6 +178,7 @@ const Invoice: React.FC<InvoinceProps> = () => {
               {bill && bill.lineItems ? (
                 <>
                   <LineItems
+                    bill={bill}
                     lineItems={bill.lineItems.filter((res) => {
                       return !res.voided;
                     })}
@@ -235,17 +240,25 @@ const Invoice: React.FC<InvoinceProps> = () => {
               <div className={styles.processPaymentSection}>
                 <div>Total Amount : {totalAmount}</div>
                 <div>Total Tendered : {totalTendered}</div>
-                <div>
-                  <Button kind="secondary">Discard</Button>
-                  <Button kind="primary" onClick={handlePayment} disabled={loading}>
-                    {loading ? (
-                      <>
-                        <InlineLoading description="Processing" />
-                      </>
-                    ) : (
-                      <>Process Payment</>
-                    )}
+                <div className={styles.actionRow}>
+                  <Button kind="secondary" onClick={navigateToBillingPage}>
+                    Discard
                   </Button>
+                  {bill.status === 'PENDING' ? (
+                    <>
+                      <Button kind="primary" onClick={handlePayment} disabled={loading}>
+                        {loading ? (
+                          <>
+                            <InlineLoading description="Processing" />
+                          </>
+                        ) : (
+                          <>Process Payment</>
+                        )}
+                      </Button>
+                    </>
+                  ) : (
+                    <></>
+                  )}
                 </div>
               </div>
             </div>

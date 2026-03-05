@@ -11,18 +11,23 @@ import {
 } from '@carbon/react';
 import { type LineItem } from '../../../shared/types';
 import DeleteBillLineItemModal from '../modal/delete-bill-item/delete-bill-item.modal';
+import EditBillItemModal from '../modal/edit-bill-item/edit-bill-item.modal';
+import { type Bill } from '../../types';
 interface LineItemsProps {
   lineItems: LineItem[];
   refresh: () => void;
+  bill?: Bill;
 }
-const LineItems: React.FC<LineItemsProps> = ({ lineItems, refresh }) => {
+const LineItems: React.FC<LineItemsProps> = ({ lineItems, refresh, bill }) => {
   const [selectedLineItem, setSelectedLineItem] = useState<LineItem>();
   const [showDeleteModal, setShowDeleteModal] = useState<boolean>();
+  const [showEditModal, setShowEditModal] = useState<boolean>();
   if (!lineItems || lineItems.length === 0) {
     return <>No Data to Display</>;
   }
   const handleEditLineItem = (selectedLineItem: LineItem) => {
     setSelectedLineItem(selectedLineItem);
+    setShowEditModal(true);
   };
   const handleDeleteLineItem = (selectedLineItem: LineItem) => {
     setSelectedLineItem(selectedLineItem);
@@ -30,6 +35,10 @@ const LineItems: React.FC<LineItemsProps> = ({ lineItems, refresh }) => {
   };
   const hideDeleteModal = () => {
     setShowDeleteModal(false);
+    refresh();
+  };
+  const hideEditModal = () => {
+    setShowEditModal(false);
     refresh();
   };
   return (
@@ -59,10 +68,16 @@ const LineItems: React.FC<LineItemsProps> = ({ lineItems, refresh }) => {
                   <TableCell>KES {item.price * item.quantity}</TableCell>
                   <TableCell>
                     <>
-                      <OverflowMenu aria-label="overflow-menu">
-                        <OverflowMenuItem itemText="Edit" onClick={() => handleEditLineItem(item)} />
-                        <OverflowMenuItem itemText="Delete" onClick={() => handleDeleteLineItem(item)} />
-                      </OverflowMenu>
+                      {bill.status === 'PENDING' ? (
+                        <>
+                          <OverflowMenu aria-label="overflow-menu">
+                            <OverflowMenuItem itemText="Edit" onClick={() => handleEditLineItem(item)} />
+                            <OverflowMenuItem itemText="Delete" onClick={() => handleDeleteLineItem(item)} />
+                          </OverflowMenu>
+                        </>
+                      ) : (
+                        <></>
+                      )}
                     </>
                   </TableCell>
                 </TableRow>
@@ -78,6 +93,20 @@ const LineItems: React.FC<LineItemsProps> = ({ lineItems, refresh }) => {
             onModalClose={hideDeleteModal}
             onSuccessfullDeletion={hideDeleteModal}
             open={showDeleteModal}
+          />
+        </>
+      ) : (
+        <></>
+      )}
+
+      {showEditModal ? (
+        <>
+          <EditBillItemModal
+            lineItem={selectedLineItem}
+            onModalClose={hideEditModal}
+            onSuccessfullEdit={hideEditModal}
+            open={showEditModal}
+            bill={bill}
           />
         </>
       ) : (

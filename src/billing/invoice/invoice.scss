@@ -91,6 +91,12 @@
                     flex-direction: column;
                     width: 30%;
                     row-gap: 15px;
+                    .actionRow{
+                        display: flex;
+                        flex-direction: row;
+                        column-gap: 5px;
+                        width: 100%;
+                    }
                 }
 
             }
