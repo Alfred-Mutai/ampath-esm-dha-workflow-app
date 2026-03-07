@@ -26,11 +26,11 @@
         "slot": "dha-workflow-dashboard-slot",
         "title": "Dashboard"
       },
-      "online":true,
+      "online": true,
       "offline": true,
       "order": 0
     },
-     {
+    {
       "component": "dhaWorkflowDashboard",
       "name": "dashboardExt",
       "slot": "dha-workflow-dashboard-slot"
@@ -53,7 +53,7 @@
       "name": "registry",
       "slot": "client-registry-dashboard-slot"
     },
-     {
+    {
       "name": "triage-dashboard-link",
       "component": "triageDashboardLink",
       "slot": "homepage-dashboard-slot",
@@ -62,7 +62,7 @@
         "slot": "triage-queue-dashboard-slot",
         "title": "Triage"
       },
-      "online":true,
+      "online": true,
       "offline": false
     },
     {
@@ -79,7 +79,7 @@
         "slot": "consultation-dashboard-slot",
         "title": "Consultation"
       },
-      "online":true,
+      "online": true,
       "offline": false
     },
     {
@@ -99,7 +99,7 @@
       "online": true,
       "offline": true
     },
-     {
+    {
       "component": "mnchQueueDashboard",
       "name": "mnch",
       "slot": "mnch-dashboard-slot"
@@ -116,7 +116,7 @@
       "online": true,
       "offline": true
     },
-     {
+    {
       "name": "accounting-dashboard-link",
       "component": "accountingDashboardLink",
       "slot": "homepage-dashboard-slot",
@@ -125,7 +125,7 @@
         "slot": "accounting-dashboard-slot",
         "title": "Accounting"
       },
-      "online":true,
+      "online": true,
       "offline": false
     },
     {
@@ -142,7 +142,7 @@
         "slot": "registers-dashboard-slot",
         "title": "Registers"
       },
-      "online":true,
+      "online": true,
       "offline": false
     },
     {
@@ -159,7 +159,7 @@
         "slot": "reports-dashboard-slot",
         "title": "Reports"
       },
-      "online":true,
+      "online": true,
       "offline": false
     },
     {
@@ -218,12 +218,12 @@
       "name": "admissions-dashboard",
       "slot": "admissions-dashboard-slot"
     },
-     {
+    {
       "component": "serviceQueueBannerComponent",
       "name": "service-queue-banne",
       "slot": "patient-banner-tags-slot"
     },
-      {
+    {
       "name": "admissions-summary-dashboard",
       "slot": "patient-chart-dashboard-slot",
       "component": "patientChartAdmissionsLink",
@@ -263,6 +263,14 @@
       "component": "billingRoot",
       "name": "billing",
       "slot": "ampath-billing-dashboard-slot"
+    }
+  ],
+  "workspaces": [
+    {
+      "name": "create-order-bill-form-workspace",
+      "component": "createOrderBillFormWorkspace",
+      "title": "Create order Bill",
+      "type": "other-form"
     }
   ],
   "modals": [

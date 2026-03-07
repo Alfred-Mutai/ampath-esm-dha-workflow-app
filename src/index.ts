@@ -161,3 +161,5 @@ export const billingDashboard = getAsyncLifecycle(
 );
 
 export const billingRoot = getAsyncLifecycle(() => import('./billing/billing-root'), options);
+
+export const createOrderBillFormWorkspace = getAsyncLifecycle(() => import('./billing/workspaces/create-order-bill-form-workspace/create-order-bill-form.workspace'), options);
