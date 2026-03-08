@@ -256,7 +256,7 @@ const Invoice: React.FC<InvoinceProps> = () => {
           >
             {t('printBill', 'Print bill')}
           </Button>
-          {(bill?.status === 'PAID' || payAmount > 0) && <PrintReceipt billUuid={bill?.uuid} />}
+          {bill?.status === 'PAID' && <PrintReceipt billUuid={bill?.uuid} />}
         </div>
         <div className={styles.contentSection}>
           <div className={styles.lineItemsSection}>

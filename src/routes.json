@@ -263,6 +263,11 @@
       "component": "billingRoot",
       "name": "billing",
       "slot": "ampath-billing-dashboard-slot"
+    },
+     {
+      "name": "ampath-billing-checkin-form",
+      "slot": "extra-visit-attribute-slot",
+      "component": "visitBillingForm"
     }
   ],
   "workspaces": [

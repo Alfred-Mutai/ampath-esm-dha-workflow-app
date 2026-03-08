@@ -162,4 +162,12 @@ export const billingDashboard = getAsyncLifecycle(
 
 export const billingRoot = getAsyncLifecycle(() => import('./billing/billing-root'), options);
 
-export const createOrderBillFormWorkspace = getAsyncLifecycle(() => import('./billing/workspaces/create-order-bill-form-workspace/create-order-bill-form.workspace'), options);
+export const createOrderBillFormWorkspace = getAsyncLifecycle(
+  () => import('./billing/workspaces/create-order-bill-form-workspace/create-order-bill-form.workspace'),
+  options,
+);
+
+export const visitBillingForm = getAsyncLifecycle(
+  () => import('./billing/extensions/visit-billing/visit-billing.extension'),
+  options,
+);
