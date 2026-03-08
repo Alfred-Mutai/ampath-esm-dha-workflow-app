@@ -1,6 +1,8 @@
 import { openmrsFetch, OpenmrsResource, restBaseUrl } from "@openmrs/esm-framework";
 import { useState } from "react";
 import useSWR from 'swr';
+import { getHieBaseUrl } from "../../../shared/utils/get-base-url";
+import { postJson } from "../../../registry/registry.resource";
 
 export const useBillableItems = () => {
     const url = `${restBaseUrl}/billing/billableService?v=custom:(uuid,name,shortName,serviceStatus,serviceType:(uuid,display),servicePrices:(uuid,name,price,paymentMode),concept:(uuid))`;
@@ -26,5 +28,16 @@ export const useCashPoint = () => {
 
 export const createPatientBill = (payload) => {
     const postUrl = `${restBaseUrl}/billing/bill`;
-    return openmrsFetch(postUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: payload });
+    return openmrsFetch<{ uuid: string }>(postUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: payload });
 };
+
+export const removePatientBill = (uuid) => {
+    const purgeUrl = `${restBaseUrl}/billing/bill/${uuid}?purge=true`;
+    return openmrsFetch<{ uuid: string }>(purgeUrl, { method: 'DELETE' });
+};
+
+export const createOrderBillInHie = async (payload) => {
+    const hieBaseUrl = await getHieBaseUrl();
+    const url = `${hieBaseUrl}/bill-order`;
+    return postJson<{ bill_uuid: string }>(url, payload);
+}

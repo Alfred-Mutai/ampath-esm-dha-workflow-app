@@ -9,7 +9,7 @@ import { Column, FilterableMultiSelect, Select, SelectItem, Form, FormGroup, Sta
 import styles from './create-order-bill-form.scss';
 import React from "react";
 import classNames from 'classnames';
-import { createPatientBill, useBillableItems, useCashPoint } from "./create-order-bill-form.resource";
+import { createOrderBillInHie, createPatientBill, removePatientBill, useBillableItems, useCashPoint } from "./create-order-bill-form.resource";
 
 interface CreateOrderBillFormProps {
     closeWorkspace: () => void;
@@ -58,8 +58,9 @@ const CreateOrderBillForm: React.FC<CreateOrderBillFormProps> = ({
                 .map((item, index) => ({
                     billableService: item.uuid,
                     quantity: data.quantity,
+                    item: conceptUuid,
                     price: item.servicePrices?.find(service => service.uuid === servicePriceUuid)?.price || '0.000',
-                    priceName: 'Default',
+                    priceName: item.servicePrices?.find(service => service.uuid === servicePriceUuid)?.name || 'Default',
                     priceUuid: servicePriceUuid || '',
                     lineItemOrder: index,
                     paymentStatus: 'PENDING',
@@ -72,7 +73,21 @@ const CreateOrderBillForm: React.FC<CreateOrderBillFormProps> = ({
                 payments: [],
             };
 
-            await createPatientBill(billPayload);
+            const response = await createPatientBill(billPayload);
+            let billUuid = response.data.uuid;
+
+            const hiePayload = {
+                bill_uuid: billUuid,
+                order_no: order?.orderNumber
+            };
+
+            try {
+                await createOrderBillInHie(hiePayload);
+            } catch (error) {
+                await removePatientBill(billUuid);
+                throw error;
+            }
+
             showSnackbar({
                 title: t('billSuccess', 'Bill created'),
                 subtitle: t('billSuccessMessage', "Patient's bill has been created successfully"),
