@@ -318,6 +318,11 @@ export type QueueEntryResult = {
   status: string;
   visit_uuid: string;
   queue_coming_from: string;
+  bill_status: string;
+  bill_item_payment_status: string;
+  price_name: string;
+  cash_unpaid_client: string;
+  hide_in_queue: number;
 };
 
 export enum PaymentDetail {

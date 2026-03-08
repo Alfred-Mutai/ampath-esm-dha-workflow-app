@@ -52,11 +52,33 @@ const ServiceQueueComponent: React.FC<ServiceQueueComponentProps> = ({ serviceTy
     getEntryQueues();
   }, []);
 
+  const filterOutClients = (queueEntries: QueueEntryResult[]) => {
+    if (!queueEntries) {
+      return [];
+    }
+    return queueEntries.filter((q) => {
+      if ('hide_in_queue' in q) {
+        return q.hide_in_queue === 0;
+      } else {
+        return true;
+      }
+    });
+  };
+
   const getEntryQueues = async () => {
     setLoading(true);
-    const res = await getServiceQueueByLocationUuid(serviceTypeUuid, locationUuid);
-    setQueueEntries(res);
-    setLoading(false);
+    try {
+      const res = await getServiceQueueByLocationUuid(serviceTypeUuid, locationUuid);
+      const queueClients = filterOutClients(res);
+      setQueueEntries(queueClients);
+      setLoading(false);
+    } catch (error) {
+      showSnackbar({
+        kind: 'error',
+        title: 'Error fetching queue',
+        subtitle: 'An error occurred while fetching the queue. Please reload or contact support',
+      });
+    }
   };
 
   if (!groupedByRoom) {
