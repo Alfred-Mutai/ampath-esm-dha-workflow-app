@@ -167,6 +167,9 @@ const QueueList: React.FC<QueueListProps> = ({
               <TableRow>
                 <TableHeader>No</TableHeader>
                 <TableHeader>Name</TableHeader>
+                <TableHeader>Age</TableHeader>
+                <TableHeader>Phone Number</TableHeader>
+                <TableHeader>Identifiers</TableHeader>
                 <TableHeader>Coming From</TableHeader>
                 <TableHeader>Ticket</TableHeader>
                 <TableHeader>Status</TableHeader>
@@ -188,6 +191,9 @@ const QueueList: React.FC<QueueListProps> = ({
                       <>{formatPatientName(val)}</>
                     )}
                   </TableCell>
+                  <TableCell>{val.age ?? ''}</TableCell>
+                  <TableCell>{val.phone_number ?? ''}</TableCell>
+                  <TableCell>{val.identifiers ?? ''}</TableCell>
                   <TableCell>{showComingFromCol ? val.queue_coming_from : ''}</TableCell>
                   <TableCell>{val.queue_entry_id}</TableCell>
                   <TableCell>

@@ -323,6 +323,9 @@ export type QueueEntryResult = {
   price_name: string;
   cash_unpaid_client: string;
   hide_in_queue: number;
+  identifiers: string;
+  phone_number: string;
+  age: number;
 };
 
 export enum PaymentDetail {
