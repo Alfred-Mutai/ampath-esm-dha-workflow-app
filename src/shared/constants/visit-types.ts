@@ -1,0 +1,7 @@
+const OPD_VISIT_TYPE_UUID = '57d7f623-6a5c-47b2-a1b0-0238b92bea95';
+const INPATIENT_VISIT_TYPE_UUID = 'be7c422a-9f7d-4817-95d0-0e4d451ad153';
+
+export const VisitTypeUuids = {
+  OPD_VISIT_TYPE_UUID,
+  INPATIENT_VISIT_TYPE_UUID,
+};

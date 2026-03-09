@@ -16,14 +16,7 @@ import {
   TextInput,
 } from '@carbon/react';
 import styles from './send-to-triage.modal.scss';
-import {
-  type Patient,
-  useVisitTypes,
-  useSession,
-  showSnackbar,
-  type VisitType,
-  type Visit,
-} from '@openmrs/esm-framework';
+import { type Patient, useSession, showSnackbar, type VisitType, type Visit } from '@openmrs/esm-framework';
 import {
   type HieClient,
   type CreateVisitDto,
@@ -53,6 +46,7 @@ import {
 } from '../../../shared/types';
 import { PatientCategories } from '../../../shared/constants/patient-category';
 import { fetchClientPaymentMode } from '../../../shared/services/client-payment-mode.resource';
+import { VisitTypeUuids } from '../../../shared/constants/visit-types';
 
 interface SendToTriageModalProps {
   patients: Patient[];
@@ -92,14 +86,26 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
   const [selectedPatientCategory, setSelectedPatientCategory] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [hieClientPaymentMode, setHieClientPaymentMode] = useState<HieClientPaymentMode>();
-  const visitTypes = useVisitTypes();
   const session = useSession();
   const locationUuid = session.sessionLocation.uuid;
-  const visitTypeOptions = useMemo(() => generateVisitTypeOptions(), [visitTypes]);
 
   const facilityCashPoints = useMemo(() => getfacilityCashpoints(), [cashPoints, locationUuid]);
 
   const clientPaymentMode = useMemo(() => getClientPaymentMethod(), [hieClientPaymentMode, paymentModes]);
+
+  const visitTypeOptions = useMemo(
+    () => [
+      {
+        text: 'OPD Visit',
+        id: VisitTypeUuids.OPD_VISIT_TYPE_UUID,
+      },
+      {
+        text: 'Inpatient Visit',
+        id: VisitTypeUuids.INPATIENT_VISIT_TYPE_UUID,
+      },
+    ],
+    [client],
+  );
 
   const paymentDetails = Object.values(PaymentDetail).map((value) => {
     return {
@@ -356,15 +362,6 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
       });
     }
     return attributes;
-  }
-
-  function generateVisitTypeOptions() {
-    return visitTypes.map((vt: VisitType) => {
-      return {
-        id: vt.uuid,
-        text: vt.display,
-      };
-    });
   }
   async function getServiceQueues() {
     try {
