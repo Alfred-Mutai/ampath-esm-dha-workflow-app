@@ -22,8 +22,9 @@ import { Money, WarningAlt, CheckmarkFilled, Hospital, Receipt, PendingFilled } 
 import { ConfigurableLink, navigate, openmrsFetch, restBaseUrl } from '@openmrs/esm-framework';
 import { spacing05 } from '@carbon/themes';
 import './billingTotalsRow.component.scss';
+import { fetchAllBills } from '../api/billing.api';
 
-type BillStatus = 'UNPAID' | 'PAID';
+type BillStatus = 'UNPAID' | 'PAID' | 'CLAIM_SUBMITTED';
 
 type Bill = {
   id: string;
@@ -40,86 +41,79 @@ type Bill = {
 };
 
 async function fetchBills(): Promise<Bill[]> {
-  const res = await openmrsFetch(
-    `${restBaseUrl}/billing/bill?v=custom:(id,uuid,dateCreated,status,receiptNumber,patient:(uuid,display),cashier:(uuid,display),lineItems:(uuid,price,billableService,voided))&status=PENDING,POSTED&limit=50&startIndex=0&totalCount=true`,
-    { credentials: 'include', headers: { Accept: 'application/xml' } },
-  );
-
-  if (!res.ok) throw new Error('Failed to fetch OpenMRS bills');
-
-  const xmlText = await res.text();
-  const parser = new DOMParser();
-  const xml = parser.parseFromString(xmlText, 'application/xml');
-  const billObjects = Array.from(xml.getElementsByTagName('object')).filter(
-    (obj) => obj.parentElement?.tagName === 'results',
-  );
-
+  const res = await fetchAllBills();
   const bills: Bill[] = [];
 
-  billObjects.forEach((billNode) => {
-    const patientNode = billNode.getElementsByTagName('patient')[0];
-    const patientDisplay = patientNode?.getElementsByTagName('display')[0]?.textContent ?? 'Unknown';
+  (res.results ?? []).forEach((billNode: any) => {
+    const patientDisplay = billNode.patient?.display ?? 'Unknown';
     const patientName = patientDisplay.includes('-')
-      ? patientDisplay.slice(patientDisplay.lastIndexOf('-') + 1).trim()
-      : patientDisplay.trim();
+      ? (patientDisplay.split('-').pop()?.trim() ?? patientDisplay)
+      : patientDisplay;
 
-    const receiptNumber = billNode.getElementsByTagName('receiptNumber')[0]?.textContent ?? 'N/A';
-    const statusText = billNode.getElementsByTagName('status')[0]?.textContent ?? '';
-    const status: BillStatus = statusText === 'POSTED' ? 'PAID' : 'UNPAID';
+    const raisedByDisplay = billNode.cashier?.display ?? 'Unknown';
+    const raisedBy = raisedByDisplay.includes('-')
+      ? (raisedByDisplay.split('-').pop()?.trim() ?? raisedByDisplay)
+      : raisedByDisplay;
 
-    const dateCreated = billNode.getElementsByTagName('dateCreated')[0]?.textContent ?? '';
-    const createdAt = new Date(dateCreated);
-    const todayStr = new Date().toLocaleDateString();
-    const timeStr = createdAt
-      .toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
-      .toUpperCase();
-
-    const cashierNode = billNode.getElementsByTagName('cashier')[0];
-    const cashierDisplay = cashierNode?.getElementsByTagName('display')[0]?.textContent ?? 'N/A';
-    const raisedBy = cashierDisplay.includes('-')
-      ? cashierDisplay.slice(cashierDisplay.lastIndexOf('-') + 1).trim()
-      : cashierDisplay.trim();
-
-    const lineItemsNode = billNode.getElementsByTagName('lineItems')[0];
-    let totalAmount = 0;
-    const billedServices: string[] = [];
-
-    if (lineItemsNode) {
-      Array.from(lineItemsNode.getElementsByTagName('object')).forEach((item) => {
-        const voided = item.getElementsByTagName('voided')[0]?.textContent === 'true';
-        if (voided) return;
-
-        const priceText = item.getElementsByTagName('price')[0]?.textContent ?? '0';
-        totalAmount += parseFloat(priceText);
-
-        const serviceName = item.getElementsByTagName('billableService')[0]?.textContent?.trim();
-        if (serviceName) billedServices.push(serviceName);
-      });
-    }
-
-    if (billedServices.length === 0) return;
-
+    const createdAt = new Date(billNode.dateCreated);
     const dateStr =
-      createdAt.toLocaleDateString() === todayStr
+      createdAt.toLocaleDateString() === new Date().toLocaleDateString()
         ? 'Today'
         : createdAt.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    const timeStr = createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
 
+    let totalAmount = 0;
+    const services: string[] = [];
+    const payModes: string[] = [];
+
+    (billNode.lineItems ?? []).forEach((item: any) => {
+      if (item.voided) return;
+      totalAmount += Number(item.price ?? 0);
+      if (item.billableService) services.push(item.billableService);
+      payModes.push((item.priceName ?? 'DEFAULT').toUpperCase());
+    });
+
+    if (services.length === 0) return; // skip empty bills
+
+    // --- Categorization logic ---
+    const normalizedPayModes = payModes.map((p) => (p || '').toUpperCase());
+    const hasSha = normalizedPayModes.includes('SHA');
+
+    // Default everything else to PAID (Cash) unless explicitly SHA
+    let status: BillStatus;
+    let paymentMode: string;
+
+    if (billNode.status === 'PENDING') {
+      status = 'UNPAID';
+      paymentMode = 'CASH';
+    } else if (billNode.status === 'POSTED' || billNode.status === 'PAID') {
+      if (hasSha) {
+        status = 'CLAIM_SUBMITTED';
+        paymentMode = 'SHA';
+      } else {
+        status = 'PAID'; // Everything else counts as Paid Cash
+        paymentMode = 'CASH';
+      }
+    } else {
+      status = 'PAID'; // fallback for any unexpected status
+      paymentMode = 'CASH';
+    }
     bills.push({
-      id: `${billNode.getElementsByTagName('uuid')[0]?.textContent ?? ''}|${patientNode?.getElementsByTagName('uuid')[0]?.textContent ?? ''}`,
-      patientId: patientNode?.getElementsByTagName('uuid')[0]?.textContent ?? '',
-      receiptNo: receiptNumber,
+      id: `${billNode.uuid}|${billNode.patient?.uuid ?? ''}`,
+      patientId: billNode.patient?.uuid ?? '',
+      receiptNo: billNode.receiptNumber ?? 'N/A',
       patient: patientName,
       raisedBy,
-      paymentMode: 'N/A',
+      paymentMode, // <- new field included
       date: `${dateStr}, ${timeStr}`,
-      status,
-      total: totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-      items: billedServices.join(', '),
+      status, // <- adjusted status
+      total: totalAmount.toFixed(2),
+      items: services.join(', '),
       createdAt,
     });
   });
 
-  return bills;
+  return bills.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 }
 
 const headers = [
@@ -137,317 +131,6 @@ const claimHeaders = [
   { key: 'date', header: 'Created' },
   { key: 'actions', header: 'Actions' },
 ];
-
-const ClaimsTable = ({
-  claims,
-  type,
-  loading,
-}: {
-  claims: Claim[];
-  type: 'PENDING' | 'SUBMITTED';
-  loading: boolean;
-}) => {
-  const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-
-  const [selectedClaim, setSelectedClaim] = useState<Claim | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-
-  // 🔎 Filter
-  const filtered = useMemo(() => {
-    return claims.filter((c) => {
-      const searchLower = search.toLowerCase();
-      return (
-        c.patient.toLowerCase().includes(searchLower) ||
-        c.scheme.toLowerCase().includes(searchLower)
-      );
-    });
-  }, [claims, search]);
-
-  // 📄 Pagination
-  const paginated = useMemo(() => {
-    return filtered.slice((page - 1) * pageSize, page * pageSize);
-  }, [filtered, page, pageSize]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [search]);
-
-  if (loading) {
-    return <InlineLoading description="Loading claims..." />;
-  }
-
-  const rows = paginated.map((c) => ({
-    id: c.id,
-    patient: c.patient,
-    scheme: c.scheme,
-    total: `Ksh ${c.total}`,
-    date: c.createdAt.toLocaleDateString(),
-    actions: c.id,
-  }));
-
-  const handleSubmitClaim = async () => {
-    if (!selectedClaim) return;
-
-    try {
-      setSubmitting(true);
-
-      // TODO: Replace with real API call
-      await new Promise((res) => setTimeout(res, 1200));
-
-      alert('Claim submitted successfully');
-
-      setSelectedClaim(null);
-    } catch (err) {
-      alert('Failed to submit claim');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <Stack gap={4}>
-      {/* 🔎 Search */}
-      <Grid fullWidth>
-        <Column lg={16} md={8} sm={4}>
-          <Search
-            id={`search-claims-${type}`}
-            labelText="Search claims"
-            placeholder="Search by patient or scheme"
-            size="md"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </Column>
-      </Grid>
-
-      {/* 📊 Table */}
-      <DataTable rows={rows} headers={claimHeaders}>
-        {({ rows, headers, getTableProps }) => (
-          <Table {...getTableProps()}>
-            <TableHead>
-              <TableRow>
-                {headers.map((h) => (
-                  <TableHeader key={h.key}>{h.header}</TableHeader>
-                ))}
-              </TableRow>
-            </TableHead>
-
-            <TableBody>
-              {rows.map((row) => (
-                <TableRow key={row.id}>
-                  {row.cells.map((cell) => {
-                    if (cell.info.header === 'actions') {
-                      return (
-                        <TableCell key={cell.id}>
-                          {type === 'PENDING' ? (
-                            <Button
-                              size="sm"
-                              kind="primary"
-                              onClick={() =>
-                                setSelectedClaim(
-                                  claims.find((c) => c.id === cell.value) || null,
-                                )
-                              }
-                            >
-                              Preview
-                            </Button>
-                          ) : (
-                            <Button
-                              size="sm"
-                              kind="secondary"
-                            >
-                              Check Status
-                            </Button>
-                          )}
-                        </TableCell>
-                      );
-                    }
-
-                    return <TableCell key={cell.id}>{cell.value}</TableCell>;
-                  })}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </DataTable>
-
-      {/* 📄 Pagination */}
-      <Pagination
-        page={page}
-        pageSize={pageSize}
-        pageSizes={[10, 25, 50, 100]}
-        totalItems={filtered.length}
-        onChange={({ page, pageSize }) => {
-          setPage(page);
-          setPageSize(pageSize);
-        }}
-      />
-
-      {/* 🧾 Preview Modal */}
-      {selectedClaim && (
-        <Modal
-          open
-          modalHeading="Claim Preview"
-          primaryButtonText={submitting ? 'Submitting...' : 'Submit Claim'}
-          secondaryButtonText="Cancel"
-          primaryButtonDisabled={submitting}
-          onRequestClose={() => !submitting && setSelectedClaim(null)}
-          onRequestSubmit={handleSubmitClaim}
-        >
-          <Stack gap={4}>
-            <p><strong>Patient:</strong> {selectedClaim.patient}</p>
-            <p><strong>Insurance Scheme:</strong> {selectedClaim.scheme}</p>
-            <p><strong>Amount:</strong> Ksh {selectedClaim.total}</p>
-            <p>
-              <strong>Created:</strong>{' '}
-              {selectedClaim.createdAt.toLocaleDateString()}
-            </p>
-          </Stack>
-        </Modal>
-      )}
-    </Stack>
-  );
-};
-
-type ClaimStatus = 'PENDING' | 'SUBMITTED';
-
-type Claim = {
-  id: string;
-  billId: string;
-  patientId: string;
-  patient: string;
-  scheme: string;
-  total: string;
-  status: ClaimStatus;
-  createdAt: Date;
-};
-
-type ClaimsResponse = {
-  pending: Claim[];
-  submitted: Claim[];
-};
-
-async function fetchClaims(): Promise<ClaimsResponse> {
-  try {
-    const res = await openmrsFetch(
-      `${restBaseUrl}/billing/claim?v=custom:(uuid,status,dateCreated,bill:(uuid,totalAmount,patient:(uuid,display)),insuranceScheme:(display))&limit=50`,
-      { credentials: 'include' },
-    );
-
-    if (!res.ok) throw new Error('API not ready');
-
-    const data = await res.json();
-
-    const parsed: Claim[] = data.results.map((c) => {
-      const patientDisplay = c.bill?.patient?.display ?? 'Unknown';
-      const patientName = patientDisplay.includes('-')
-        ? patientDisplay.slice(patientDisplay.lastIndexOf('-') + 1).trim()
-        : patientDisplay.trim();
-
-      return {
-        id: c.uuid,
-        billId: c.bill?.uuid,
-        patientId: c.bill?.patient?.uuid,
-        patient: patientName,
-        scheme: c.insuranceScheme?.display ?? 'N/A',
-        total: Number(c.bill?.totalAmount ?? 0).toLocaleString(undefined, {
-          minimumFractionDigits: 2,
-        }),
-        status: c.status === 'SUBMITTED' ? 'SUBMITTED' : 'PENDING',
-        createdAt: new Date(c.dateCreated),
-      };
-    });
-
-    return {
-      pending: parsed.filter((c) => c.status === 'PENDING'),
-      submitted: parsed.filter((c) => c.status === 'SUBMITTED'),
-    };
-  } catch (error) {
-    console.warn('Using mock claims data');
-
-    return getMockClaims();
-  }
-}
-
-function getMockClaims(): ClaimsResponse {
-  const mockApiResponse = {
-    results: [
-      {
-        uuid: 'claim-001',
-        status: 'PENDING',
-        dateCreated: '2026-03-01T10:30:00.000Z',
-        bill: {
-          uuid: 'bill-001',
-          totalAmount: 2500,
-          patient: {
-            uuid: 'patient-001',
-            display: '1001 - John Doe',
-          },
-        },
-        insuranceScheme: {
-          display: 'NHIF',
-        },
-      },
-      {
-        uuid: 'claim-002',
-        status: 'SUBMITTED',
-        dateCreated: '2026-03-02T09:15:00.000Z',
-        bill: {
-          uuid: 'bill-002',
-          totalAmount: 4800,
-          patient: {
-            uuid: 'patient-002',
-            display: '1002 - Mary Wanjiku',
-          },
-        },
-        insuranceScheme: {
-          display: 'AAR Insurance',
-        },
-      },
-      {
-        uuid: 'claim-003',
-        status: 'PENDING',
-        dateCreated: '2026-03-03T14:45:00.000Z',
-        bill: {
-          uuid: 'bill-003',
-          totalAmount: 1200,
-          patient: {
-            uuid: 'patient-003',
-            display: '1003 - Peter Mwangi',
-          },
-        },
-        insuranceScheme: {
-          display: 'Britam',
-        },
-      },
-    ],
-  };
-
-  const parsed: Claim[] = mockApiResponse.results.map((c) => {
-    const patientName = c.bill.patient.display.split('-')[1].trim();
-
-    return {
-      id: c.uuid,
-      billId: c.bill.uuid,
-      patientId: c.bill.patient.uuid,
-      patient: patientName,
-      scheme: c.insuranceScheme.display,
-      total: c.bill.totalAmount.toLocaleString(undefined, {
-        minimumFractionDigits: 2,
-      }),
-      status: c.status as ClaimStatus,
-      createdAt: new Date(c.dateCreated),
-    };
-  });
-
-  return {
-    pending: parsed.filter((c) => c.status === 'PENDING'),
-    submitted: parsed.filter((c) => c.status === 'SUBMITTED'),
-  };
-}
 
 const StatTile = ({
   icon,
@@ -474,40 +157,31 @@ const StatTile = ({
 );
 
 const StatusTag = ({ status }: { status: BillStatus }) => {
-  const map = {
-    UNPAID: (
-      <Tag size="md" type="red">
-        <PendingFilled size={10} style={{ marginRight: 4 }} />
-        Unpaid
-      </Tag>
-    ),
-    PAID: (
-      <Tag size="md" type="green">
-        <CheckmarkFilled size={10} style={{ marginRight: 4 }} />
-        Paid
-      </Tag>
-    ),
-    OTHERS: (
-      <Tag size="md">
-        <PendingFilled size={10} style={{ marginRight: 4 }} />
-        Other Modes
-      </Tag>
-    ),
-    CLAIM_PENDING: (
-      <Tag size="md" type="blue">
-        <PendingFilled size={10} style={{ marginRight: 4 }} />
-        Claim pending
-      </Tag>
-    ),
-    CLAIM_APPROVED: (
-      <Tag size="md" type="teal">
-        <PendingFilled size={10} style={{ marginRight: 4 }} />
-        Claim approved
-      </Tag>
-    ),
-  };
-
-  return map[status];
+  switch (status) {
+    case 'UNPAID':
+      return (
+        <Tag size="md" type="red">
+          <PendingFilled size={10} style={{ marginRight: 4 }} />
+          Unpaid
+        </Tag>
+      );
+    case 'PAID':
+      return (
+        <Tag size="md" type="green">
+          <CheckmarkFilled size={10} style={{ marginRight: 4 }} />
+          Paid (Cash)
+        </Tag>
+      );
+    case 'CLAIM_SUBMITTED':
+      return (
+        <Tag size="md" type="blue">
+          <Hospital size={10} style={{ marginRight: 4 }} />
+          Claim Submitted
+        </Tag>
+      );
+    default:
+      return <Tag size="md">Other</Tag>;
+  }
 };
 
 const filterBills = (allBills: Bill[], status?: BillStatus, search = '', range: [Date?, Date?] = []) => {
@@ -682,35 +356,29 @@ const BillingTotalsRow: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [filterDate, setFilterDate] = useState<Date | null>(null);
 
-  const [pendingClaims, setPendingClaims] = useState<Claim[]>([]);
-  const [submittedClaims, setSubmittedClaims] = useState<Claim[]>([]);
-  const [claimsLoading, setClaimsLoading] = useState(true);
-
   useEffect(() => {
-    fetchBills()
-      .then((fetched) => {
-        const sorted = fetched.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-        setBills(sorted);
-      })
-      .finally(() => setLoading(false));
+    const loadBills = async () => {
+      try {
+        const fetchedBills = await fetchBills();
+        setBills(fetchedBills);
+      } catch (error) {
+        console.error('Error fetching bills:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    fetchClaims()
-      .then(({ pending, submitted }) => {
-        setPendingClaims(pending);
-        setSubmittedClaims(submitted);
-      })
-      .finally(() => setClaimsLoading(false));
-  }, []);
+    loadBills();
+  }, []); // empty dependency → run only once on mount
 
   const counts = useMemo(
     () => ({
       all: bills.length,
       unpaid: bills.filter((b) => b.status === 'UNPAID').length,
       paid: bills.filter((b) => b.status === 'PAID').length,
-      pendingClaims: pendingClaims.length,
-      submittedClaims: submittedClaims.length,
+      submittedClaims: bills.filter((b) => b.status === 'CLAIM_SUBMITTED').length,
     }),
-    [bills, pendingClaims, submittedClaims],
+    [bills],
   );
 
   const revenueToday = useMemo(() => {
@@ -814,8 +482,8 @@ const BillingTotalsRow: React.FC = () => {
           <Column lg={4} md={8} sm={4}>
             <StatTile
               icon={<Hospital size={25} />}
-              label="Pending Claims"
-              value={loading ? <AISkeletonText /> : counts.pendingClaims}
+              label="Submitted Claims"
+              value={loading ? <AISkeletonText /> : counts.submittedClaims}
               style={{
                 backgroundColor: 'var(--cds-layer-background-02, #F4EBFF)',
                 color: '#8C41FF',
@@ -852,14 +520,8 @@ const BillingTotalsRow: React.FC = () => {
                 </Tag>
               </Tab>
               <Tab>
-                Pending Claims{' '}
-                <Tag type="blue" size="sm">
-                  {loading ? <AISkeletonText /> : counts.pendingClaims}
-                </Tag>
-              </Tab>
-              <Tab>
                 Submitted Claims{' '}
-                <Tag type="green" size="sm">
+                <Tag type="blue" size="sm">
                   {loading ? <AISkeletonText /> : counts.submittedClaims}
                 </Tag>
               </Tab>
@@ -888,11 +550,13 @@ const BillingTotalsRow: React.FC = () => {
                 />
               </TabPanel>
               <TabPanel>
-                <ClaimsTable claims={pendingClaims} type="PENDING" loading={claimsLoading} />
-              </TabPanel>
-
-              <TabPanel>
-                <ClaimsTable claims={submittedClaims} type="SUBMITTED" loading={claimsLoading} />
+                <BillsTab
+                  source={bills}
+                  status="CLAIM_SUBMITTED"
+                  filterDate={filterDate}
+                  setFilterDate={setFilterDate}
+                  loading={loading}
+                />
               </TabPanel>
             </TabPanels>
           </Tabs>
