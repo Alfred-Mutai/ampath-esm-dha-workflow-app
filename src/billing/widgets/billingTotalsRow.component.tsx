@@ -89,11 +89,11 @@ async function fetchBills(): Promise<Bill[]> {
         status = 'CLAIM_SUBMITTED';
         paymentMode = 'SHA';
       } else {
-        status = 'PAID'; // Everything else counts as Paid Cash
+        status = 'PAID';
         paymentMode = 'CASH';
       }
     } else {
-      status = 'PAID'; // fallback for any unexpected status
+      status = 'PAID';
       paymentMode = 'CASH';
     }
     bills.push({
@@ -102,9 +102,9 @@ async function fetchBills(): Promise<Bill[]> {
       receiptNo: billNode.receiptNumber ?? 'N/A',
       patient: patientName,
       raisedBy,
-      paymentMode, // <- new field included
+      paymentMode,
       date: `${dateStr}, ${timeStr}`,
-      status, // <- adjusted status
+      status,
       total: totalAmount.toFixed(2),
       items: services.join(', '),
       createdAt,
@@ -367,7 +367,7 @@ const BillingTotalsRow: React.FC = () => {
     };
 
     loadBills();
-  }, []); // empty dependency → run only once on mount
+  }, []);
 
   const counts = useMemo(
     () => ({
