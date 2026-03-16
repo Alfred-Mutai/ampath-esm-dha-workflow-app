@@ -1,5 +1,16 @@
-import React from 'react';
-import { Modal, ModalBody, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tag } from '@carbon/react';
+import React, { useMemo, useState } from 'react';
+import {
+  Modal,
+  ModalBody,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  Tag,
+  TextInput,
+} from '@carbon/react';
 import styles from './daily-report-patient-list.scss';
 import { type ServiceQueueReportPatientList } from '../../../shared/types';
 
@@ -14,6 +25,21 @@ const DailyReportPatientListModal: React.FC<DailyReportPatientListModalProps> = 
   onModalClose,
   patientList,
 }) => {
+  const [searchString, setSearchString] = useState<string>();
+  const filteredPatientList = useMemo(() => filterQueueBySearchString(), [patientList, searchString]);
+
+  function filterQueueBySearchString(): ServiceQueueReportPatientList[] {
+    if (!searchString) {
+      return patientList;
+    }
+    return patientList.filter((p) => {
+      return p.person_name.trim().toLowerCase().includes(searchString.trim().toLowerCase());
+    });
+  }
+
+  const handlePatientListSearch = (searchTerm: string) => {
+    setSearchString(searchTerm);
+  };
   return (
     <>
       <Modal
@@ -27,7 +53,17 @@ const DailyReportPatientListModal: React.FC<DailyReportPatientListModalProps> = 
         secondaryButtonText="Cancel"
       >
         <ModalBody>
-          <div className={styles.serveModalLayout}>
+          <div className={styles.checkedInlLayout}>
+            <div className={styles.actionHeaderSection}>
+              <div className={styles.searchInput}>
+                <TextInput
+                  id="queue-search"
+                  labelText=""
+                  onChange={(e) => handlePatientListSearch(e.target.value)}
+                  placeholder="Enter patient name to filter"
+                />
+              </div>
+            </div>
             <div className={styles.serveModalContentSection}>
               <Table>
                 <TableHead>
@@ -43,7 +79,7 @@ const DailyReportPatientListModal: React.FC<DailyReportPatientListModalProps> = 
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {patientList.map((val, index) => (
+                  {filteredPatientList.map((val, index) => (
                     <TableRow id={`${val.queue_entry_id}`}>
                       <TableCell>{index + 1}</TableCell>
                       <TableCell>{val.person_name}</TableCell>

@@ -1,0 +1,26 @@
+.checkedInlLayout {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    row-gap: 10px;
+
+    .actionHeaderSection {
+        display: flex;
+        flex-direction: row;
+        justify-content: flex-end;
+        width: 100%;
+        column-gap: 15px;
+
+        .searchInput {
+            width: 40%;
+        }
+    }
+
+    .serveModalContentSection {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        row-gap: 10px;
+    }
+
+}
