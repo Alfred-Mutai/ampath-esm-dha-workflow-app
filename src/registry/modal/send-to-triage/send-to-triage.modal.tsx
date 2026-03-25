@@ -742,7 +742,8 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
                         onChange={($event) => priorityChangeHandler($event.target.value)}
                       >
                         <SelectItem value="" text="Select" />;
-                        <SelectItem value={QUEUE_PRIORITIES_UUIDS.NORMAL_PRIORITY_UUID} text="NORMAL" />;
+                        <SelectItem value={QUEUE_PRIORITIES_UUIDS.NORMAL_PRIORITY_UUID} text="PRIORITY" />;
+                        <SelectItem value={QUEUE_PRIORITIES_UUIDS.NOT_URGENT_PRIORITY_UUID} text="NON URGENT" />;
                         <SelectItem value={QUEUE_PRIORITIES_UUIDS.EMERGENCY_PRIORITY_UUID} text="EMERGENCY" />;
                       </Select>
                     </div>

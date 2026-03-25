@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import styles from './service-queue-patient-banner.scss';
-import { Button, InlineLoading, Tag } from '@carbon/react';
-import { getTagTypeByPriority } from '../../../shared/utils/get-tag-type';
-import { usePatient, useSession } from '@openmrs/esm-framework';
+import { Button, Tag } from '@carbon/react';
+import { getTagClassByPriority } from '../../../shared/utils/get-tag-type';
+import { useSession } from '@openmrs/esm-framework';
 import { getActiveQueueEntryByPatientUuid } from '../../service-queues.resource';
 import { type QueueEntry } from '../../../types/types';
 import MovePatientModal from '../../modals/move/move-patient.component';
@@ -51,6 +51,16 @@ const ServiceQueuePatientBanner: React.FC<ServiceQueuePatientBannerProps> = ({ r
     redirectToRegistryPage();
   };
 
+  function getPriorityDisplayName(name: string) {
+    if (name === 'NORMAL PRIORITY') {
+      return 'PRIORITY';
+    } else if (name === 'NOT URGENT') {
+      return 'NON URGENT PRIORITY';
+    } else {
+      return name;
+    }
+  }
+
   if (!isPatientChart) {
     return null;
   }
@@ -64,8 +74,8 @@ const ServiceQueuePatientBanner: React.FC<ServiceQueuePatientBannerProps> = ({ r
                 <span>{currentQueueEntry.queue.display}</span>
               </div>
               <div>
-                <Tag size="md" type={getTagTypeByPriority(currentQueueEntry.priority.display)}>
-                  {currentQueueEntry.priority.display}
+                <Tag size="md" className={styles[getTagClassByPriority(currentQueueEntry.priority.display)]}>
+                  {getPriorityDisplayName(currentQueueEntry.priority.display)}
                 </Tag>
               </div>
               <div>

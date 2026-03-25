@@ -16,7 +16,7 @@ import { type QueueEntryResult } from '../../registry/types';
 import React, { useMemo, useState } from 'react';
 import styles from './queue-list.component.scss';
 import { QueueEntryPriority, QueueEntryStatus, type TagColor } from '../../types/types';
-import { getTagTypeByPriority } from '../../shared/utils/get-tag-type';
+import { getTagClassByPriority } from '../../shared/utils/get-tag-type';
 import { useSession } from '@openmrs/esm-framework';
 import { checkInRoom, checkOutRoom, isCheckedIn } from './check-in.service';
 
@@ -52,14 +52,19 @@ const QueueList: React.FC<QueueListProps> = ({
     () => sortQueueByPriorityAndWaitTime(queueEntries, QueueEntryPriority.Emergency),
     [queueEntries],
   );
-  const normalEntries = useMemo(
-    () => sortQueueByPriorityAndWaitTime(queueEntries, QueueEntryPriority.Normal),
+  const priorityEntries = useMemo(
+    () => sortQueueByPriorityAndWaitTime(queueEntries, QueueEntryPriority.Priority),
+    [queueEntries],
+  );
+
+  const nonUrgentEntries = useMemo(
+    () => sortQueueByPriorityAndWaitTime(queueEntries, QueueEntryPriority.NonUrgent),
     [queueEntries],
   );
   const sortedQueueEntries = useMemo(() => generatePatientWaitingList(), [queueEntries]);
   const filteredQueueEntries = useMemo(() => filterQueueBySearchString(), [queueEntries, searchString]);
   function generatePatientWaitingList() {
-    return [...urgentEntries, ...normalEntries];
+    return [...urgentEntries, ...priorityEntries, ...nonUrgentEntries];
   }
 
   function sortQueueByPriorityAndWaitTime(queueEntries: QueueEntryResult[], priority: QueueEntryPriority) {
@@ -202,7 +207,7 @@ const QueueList: React.FC<QueueListProps> = ({
                     </Tag>
                   </TableCell>
                   <TableCell>
-                    <Tag size="md" type={getTagTypeByPriority(val.priority)}>
+                    <Tag size="md" className={styles[getTagClassByPriority(val.priority)]}>
                       {val.priority}
                     </Tag>
                   </TableCell>

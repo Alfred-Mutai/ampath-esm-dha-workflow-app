@@ -1,4 +1,4 @@
-import { Button, Modal, ModalBody, Select, SelectItem, TextArea } from '@carbon/react';
+import { Button, InlineLoading, Modal, ModalBody, Select, SelectItem, TextArea } from '@carbon/react';
 import React, { useEffect, useState } from 'react';
 import styles from './move-patient.component.scss';
 import { type ServiceQueue } from '../../../registry/types';
@@ -24,6 +24,7 @@ const MovePatientModal: React.FC<MovePatientModalProps> = ({
   const [selectedComment, setSelectedComment] = useState<string>();
   const [selectedPriority, setSelectedPriority] = useState<string>();
   const [selectedNewService, setSelectedNewService] = useState<ServiceQueue>();
+  const [loading, setLoading] = useState<boolean>(false);
   useEffect(() => {
     getQueues();
   }, [locationUuid]);
@@ -38,6 +39,10 @@ const MovePatientModal: React.FC<MovePatientModalProps> = ({
     setServiceQueues(res);
   };
   const transtionQueueEntry = async () => {
+    if (loading) {
+      showAlert('error', 'Trsnefering patient', 'Transfering patient...please wait');
+    }
+    setLoading(true);
     const payload = getTransitionQueueEntryPayload();
     try {
       const resp = await transitionQueueEntry(payload);
@@ -45,6 +50,7 @@ const MovePatientModal: React.FC<MovePatientModalProps> = ({
       onTransferSuccess();
     } catch (e) {
       showAlert('error', e.message, '');
+      setLoading(false);
     }
   };
 
@@ -72,6 +78,7 @@ const MovePatientModal: React.FC<MovePatientModalProps> = ({
   const handleCommentChange = (comment: string) => {
     setSelectedComment(comment);
   };
+  const placeHolderFunction = () => {};
   return (
     <>
       <Modal
@@ -80,8 +87,8 @@ const MovePatientModal: React.FC<MovePatientModalProps> = ({
         size="md"
         onSecondarySubmit={() => onModalClose()}
         onRequestClose={() => onModalClose()}
-        onRequestSubmit={transtionQueueEntry}
-        primaryButtonText="Transfer"
+        onRequestSubmit={loading ? placeHolderFunction : transtionQueueEntry}
+        primaryButtonText={loading ? <InlineLoading description="Transfering..." /> : 'Transfer'}
         secondaryButtonText="Cancel"
       >
         <ModalBody>
@@ -114,7 +121,8 @@ const MovePatientModal: React.FC<MovePatientModalProps> = ({
                     onChange={(e) => priorityChangeHandler(e.target.value)}
                   >
                     <SelectItem value="" text="Select" />;
-                    <SelectItem value={QUEUE_PRIORITIES_UUIDS.NORMAL_PRIORITY_UUID} text="NORMAL" />;
+                    <SelectItem value={QUEUE_PRIORITIES_UUIDS.NORMAL_PRIORITY_UUID} text="PRIORITY" />;
+                    <SelectItem value={QUEUE_PRIORITIES_UUIDS.NOT_URGENT_PRIORITY_UUID} text="NON URGENT" />;
                     <SelectItem value={QUEUE_PRIORITIES_UUIDS.EMERGENCY_PRIORITY_UUID} text="EMERGENCY" />;
                   </Select>
                 </div>
