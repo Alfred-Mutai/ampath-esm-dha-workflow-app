@@ -107,6 +107,36 @@ export const configSchema = {
     _description: 'Billable services e.g consultation',
     _default: '',
   },
+  cashConsultationOrderTypeUuid: {
+    _type: Type.String,
+    _description: 'CASH Consultation Order type uuid',
+    _default: '',
+  },
+  shaConsultationOrderTypeUuid: {
+    _type: Type.String,
+    _description: 'SHA Consultation Order type uuid',
+    _default: '',
+  },
+  cashConsulationConceptUuid: {
+    _type: Type.String,
+    _description: 'Cash Consultation concept uuid',
+    _default: '',
+  },
+  shaConsulationConceptUuid: {
+    _type: Type.String,
+    _description: 'SHA Consultation concept uuid',
+    _default: '',
+  },
+  outPatientCareSettingUuid: {
+    _type: Type.String,
+    _description: 'Outpatient care settings uuid',
+    _default: '',
+  },
+  orderEncounterTypeUuid: {
+    _type: Type.String,
+    _description: 'Outpatient care settings uuid',
+    _default: '',
+  },
 };
 
 export type Config = {
@@ -154,6 +184,12 @@ export interface ConfigObject {
   claimsBaseUrl: string;
   claimsKey: string;
   registrationBillableServices: Array<string>;
+  cashConsultationOrderTypeUuid: string;
+  cashConsulationConceptUuid: string;
+  shaConsultationOrderTypeUuid: string;
+  shaConsulationConceptUuid: string;
+  outPatientCareSettingUuid: string;
+  orderEncounterTypeUuid: string;
   // vitals: VitalsConfigObject;
 }
 

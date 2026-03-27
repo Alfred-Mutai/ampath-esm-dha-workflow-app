@@ -41,6 +41,7 @@ import {
   type PaymentMode,
   type CreateBillDto,
   type CashPoint,
+  type CreateOrderEncounterDto,
 } from '../../../shared/types';
 import { PatientCategories } from '../../../shared/constants/patient-category';
 import { VisitTypeUuids } from '../../../shared/constants/visit-types';
@@ -48,6 +49,7 @@ import { type Bill } from '../../../billing/types';
 import { fetchPatientBills } from '../../../billing/invoice/bill.resource';
 import { type QueueEntry } from '../../../types/types';
 import { getActiveQueueEntryByPatientUuid } from '../../../service-queues/service-queues.resource';
+import { createOrderEncounter } from '../../../shared/services/encounters.resource';
 
 interface SendToTriageModalProps {
   patients: Patient[];
@@ -92,7 +94,13 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
   const [loading, setLoading] = useState<boolean>(false);
   const session = useSession();
   const locationUuid = session.sessionLocation.uuid;
-  const { registrationBillableServices } = useConfig();
+  const {
+    registrationBillableServices,
+    cashConsulationConceptUuid,
+    shaConsulationConceptUuid,
+    outPatientCareSettingUuid,
+    orderEncounterTypeUuid,
+  } = useConfig();
 
   const facilityCashPoints = useMemo(() => getfacilityCashpoints(), [cashPoints, locationUuid]);
 
@@ -178,7 +186,7 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
     }
     setLoading(true);
     try {
-      const newVisit = await createPatientVisit();
+      const newVisit: Visit = await createPatientVisit();
       if (newVisit) {
         const addToTriageQueueDto: QueueEntryDto = generateAddToTriageDto(newVisit);
         const queueEntryResp = await createQueueEntry(addToTriageQueueDto);
@@ -197,6 +205,8 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
               setBillCreated(true);
               showAlert('success', 'Bill succesfully created', '');
             }
+            // create consulation order
+            await createOrder(selectedPatient.uuid, newVisit.uuid);
           } else {
             return false;
           }
@@ -555,6 +565,55 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
       return false;
     }
     return selectedPaymentMode.name.trim().toLowerCase().includes(paymentMode.trim().toLowerCase());
+  }
+
+  function generateOrderEncounterPayload(patientUuid: string, visitUuid: string): CreateOrderEncounterDto {
+    return {
+      patient: patientUuid,
+      location: locationUuid,
+      encounterType: orderEncounterTypeUuid,
+      visit: visitUuid,
+      obs: [],
+      orders: [
+        {
+          action: 'NEW',
+          type: 'order',
+          patient: patientUuid,
+          careSetting: outPatientCareSettingUuid,
+          orderer: session.currentProvider.uuid ?? 'pd25871c-1359-11df-a1f1-0026b9348838',
+          encounter: null,
+          concept: getOrderConcept(selectedPaymentMode),
+          accessionNumber: null,
+          urgency: 'ROUTINE',
+          scheduledDate: null,
+        },
+      ],
+    };
+  }
+  function getOrderConcept(paymentMode: PaymentMode) {
+    const paymentModeName = paymentMode.name.toLowerCase().trim();
+    if (paymentModeName.includes('cash')) {
+      return cashConsulationConceptUuid;
+    } else if (paymentModeName.includes('sha')) {
+      return shaConsulationConceptUuid;
+    } else {
+      return '';
+    }
+  }
+  async function createOrder(patientUuid: string, visitUuid: string) {
+    const createOrderPayload = generateOrderEncounterPayload(patientUuid, visitUuid);
+    try {
+      const resp = await createOrderEncounter(createOrderPayload);
+      if (resp) {
+        showAlert('success', 'Consultation order created', 'Consultation order has been succesfully created');
+      }
+    } catch (error) {
+      showAlert(
+        'error',
+        'Error creating consulation order',
+        'An error occurred while generating the consultation order. Please contact support',
+      );
+    }
   }
 
   return (

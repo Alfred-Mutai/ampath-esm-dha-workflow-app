@@ -126,3 +126,27 @@ export type ServiceQueueDailyPatientListReportResp = {
     results: ServiceQueueReportPatientList[];
   };
 };
+
+export type OrderAction = 'NEW';
+export type OrderUrgency = 'ROUTINE';
+export type Order = {
+  action: OrderAction;
+  type: string;
+  patient: string;
+  careSetting: string;
+  orderer: string;
+  encounter: string;
+  concept: string;
+  accessionNumber: string;
+  urgency: OrderUrgency;
+  scheduledDate: null;
+};
+
+export type CreateOrderEncounterDto = {
+  patient: string;
+  location: string;
+  encounterType: string;
+  visit: string;
+  obs: any[];
+  orders: Order[];
+};
