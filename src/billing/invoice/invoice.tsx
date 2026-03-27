@@ -726,8 +726,8 @@ const BillDetails: React.FC = () => {
                         lineHeight: 1.5,
                       }}
                     >
-                      Please select the Cash item(s) above and click <strong>"Pay Cash"</strong> to continue. SHA claims
-                      (if applicable) will be available once all Cash payments are completed.
+                      Please select cash item(s) to continue. SHA claims (if any) will be available after all cash
+                      payments are completed.
                     </p>
                   </Tile>
                 )}
@@ -766,7 +766,7 @@ const BillDetails: React.FC = () => {
                       <Button
                         disabled={loading || checkingClaim}
                         size="sm"
-                        kind="secondary"
+                        kind="tertiary"
                         renderIcon={View}
                         onClick={handleCheckSHAClaim}
                       >
@@ -918,21 +918,25 @@ const BillDetails: React.FC = () => {
 
                 <Stack gap={3}>
                   {/* Status */}
-                  <Tag type={totalBalance === 0 ? 'green' : totalBalance < billTotal ? 'teal' : 'red'}>
-                    {totalBalance === 0 && <CheckmarkFilled size={12} style={{ marginRight: 4 }} />}
-                    {totalBalance > 0 && totalBalance < billTotal && (
-                      <WarningAlt size={12} style={{ marginRight: 4 }} />
-                    )}
-                    {totalBalance === billTotal && <PendingFilled size={12} style={{ marginRight: 4 }} />}
-                    {statusText}
-                  </Tag>
+                  {loading ? (
+                    <SkeletonText width="100%" />
+                  ) : (
+                    <Tag type={totalBalance === 0 ? 'green' : totalBalance < billTotal ? 'teal' : 'red'}>
+                      {totalBalance === 0 && <CheckmarkFilled size={12} style={{ marginRight: 4 }} />}
+                      {totalBalance > 0 && totalBalance < billTotal && (
+                        <WarningAlt size={12} style={{ marginRight: 4 }} />
+                      )}
+                      {totalBalance === billTotal && <PendingFilled size={12} style={{ marginRight: 4 }} />}
+                      {statusText}
+                    </Tag>
+                  )}
 
                   {/* Divider */}
                   <hr style={{ border: 'none', borderTop: '1px solid #e0e0e0' }} />
 
                   {/* Total */}
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Total</span>
+                    <span style={{fontWeight: 'bold'}}>Total</span>
                     <strong>
                       {loading ? (
                         <SkeletonText width="100px" />
@@ -947,7 +951,7 @@ const BillDetails: React.FC = () => {
 
                   {/* Paid */}
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: '#24a148' }}>Paid</span>
+                    <span style={{ color: '#24a148', fontWeight: 'bold' }}>Paid</span>
                     <strong style={{ color: '#24a148' }}>
                       {loading ? (
                         <SkeletonText width="100px" />
@@ -962,7 +966,7 @@ const BillDetails: React.FC = () => {
 
                   {/* Claimed */}
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: '#0f62fe' }}>Claimed</span>
+                    <span style={{ color: '#0f62fe', fontWeight: 'bold' }}>Claimed</span>
                     <strong style={{ color: '#0f62fe' }}>
                       {loading ? (
                         <SkeletonText width="100px" />
@@ -977,7 +981,7 @@ const BillDetails: React.FC = () => {
 
                   {/* Waived */}
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: '#8a3ffc' }}>Waived</span>
+                    <span style={{ color: '#8a3ffc', fontWeight: 'bold' }}>Waived</span>
                     <strong style={{ color: '#8a3ffc' }}>
                       {loading ? (
                         <SkeletonText width="100px" />
@@ -995,7 +999,7 @@ const BillDetails: React.FC = () => {
 
                   {/* Balance */}
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ fontWeight: 500 }}>Balance</span>
+                    <span style={{ fontWeight: 'bold' }}>Balance</span>
                     <strong
                       style={{
                         color: totalBalance > 0 ? '#da1e28' : '#24a148',
@@ -1128,13 +1132,6 @@ const BillDetails: React.FC = () => {
         onRequestSubmit={applySHAClaim}
       >
         <Stack gap={4}>
-          {/* ===== Warning ===== */}
-          <Tile>
-            <p style={{ color: '#da1e28', fontWeight: 500, marginBottom: '0.5rem' }}>
-              Ensure all cash items are settled before submitting this claim.
-            </p>
-          </Tile>
-
           {/* ===== Info ===== */}
           <Tile>
             <p style={{ marginBottom: '0.5rem' }}>

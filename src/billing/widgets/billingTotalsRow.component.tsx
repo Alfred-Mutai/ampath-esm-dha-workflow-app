@@ -18,7 +18,7 @@ import {
   DatePicker,
   DatePickerInput,
 } from '@carbon/react';
-import { Money, WarningAlt, CheckmarkFilled, Hospital, PendingFilled } from '@carbon/react/icons';
+import { Money, WarningAlt, CheckmarkFilled, Hospital, PendingFilled, Receipt, Calendar } from '@carbon/react/icons';
 import { ConfigurableLink, navigate } from '@openmrs/esm-framework';
 import { spacing05 } from '@carbon/themes';
 import './billingTotalsRow.component.scss';
@@ -194,7 +194,7 @@ const StatusTag = ({ status }: { status: BillStatus }) => {
 const { Table, TableHead, TableRow, TableHeader, TableBody, TableCell } = DataTable;
 
 const BillsTable = ({
-  rows
+  rows,
 }: {
   rows: Bill[];
   search: string;
@@ -453,6 +453,85 @@ const BillingTotalsRow: React.FC = () => {
   return (
     <Stack gap={4} className="cds--pt-06">
       {/* Stats Tiles */}
+      <div
+        style={{
+          padding: spacing05,
+          paddingBottom: 0,
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '1rem',
+            paddingBottom: spacing05,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <Receipt
+              size={36}
+              style={{
+                color: 'var(--omrs-color-primary, #005D5D)',
+                flexShrink: 0,
+              }}
+            />
+
+            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <p className="cds--heading-04" style={{ margin: 0, fontWeight: 600, color: '#003B3B' }}>
+                Billing Dashboard
+              </p>
+
+              <p
+                className="cds--label"
+                style={{
+                  margin: 0,
+                  opacity: 0.7,
+                  fontStyle: 'italic',
+                  letterSpacing: 0.5,
+                }}
+              >
+                Summary of billing activity
+              </p>
+            </div>
+          </div>
+
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              backgroundColor: 'var(--cds-interactive-02,#E0F4F4)',
+              color: 'var(--omrs-color-primary, #005D5D)',
+              padding: '0.25rem 0.75rem',
+              borderRadius: '0.5rem',
+              fontWeight: 600,
+              fontSize: '0.95rem',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              minHeight: '36px',
+            }}
+          >
+            <Calendar size={18} style={{ color: 'var(--omrs-color-primary, #005D5D)', flexShrink: 0 }} />
+            <span>
+              {filterDate.toLocaleDateString('en-GB', {
+                weekday: 'short',
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
+              })}
+            </span>
+          </div>
+        </div>
+
+        <hr
+          style={{
+            border: 'none',
+            borderTop: '1px solid #e0e0e0',
+            margin: 0,
+          }}
+        />
+      </div>
+
       <div style={{ padding: spacing05 }}>
         <Grid fullWidth>
           <Column lg={4} md={8} sm={4}>
