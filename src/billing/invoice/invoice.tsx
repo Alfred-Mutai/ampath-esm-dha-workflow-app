@@ -50,7 +50,6 @@ import EligibilityTags from '../../registry/eligibility/eliigibility-tags/eligib
 
 type LineItemStatus = 'PENDING' | 'PAID' | 'CLAIMED' | 'WAIVED';
 
-
 type LineItem = {
   id: string;
   service: string;
@@ -247,16 +246,11 @@ const BillDetails: React.FC = () => {
 
   // All Cash items fully paid
   const allCashSettled = items
-  .filter((i) =>
-    CASH_MODES.includes((i.payerType ?? '').toUpperCase())
-  )
-  .every((i) => (i.status ?? '').toUpperCase() === 'PAID');
+    .filter((i) => CASH_MODES.includes((i.payerType ?? '').toUpperCase()))
+    .every((i) => (i.status ?? '').toUpperCase() === 'PAID');
 
   const selectedCashItems = items.filter(
-    (i) =>
-      i.selected &&
-      CASH_MODES.includes((i.payerType ?? '').toUpperCase()) &&
-      i.status === 'PENDING'
+    (i) => i.selected && CASH_MODES.includes((i.payerType ?? '').toUpperCase()) && i.status === 'PENDING',
   );
 
   // const totalBalance = items.reduce((acc, i) => acc + getBalance(i), 0);
@@ -390,8 +384,7 @@ const BillDetails: React.FC = () => {
       const selectedPaymentType = selectedCashItems[0]?.payerType?.toUpperCase();
 
       const paymentMode = paymentModesResponse.results.find(
-        (mode) =>
-          (mode.name ?? '').toUpperCase() === selectedPaymentType,
+        (mode) => (mode.name ?? '').toUpperCase() === selectedPaymentType,
       );
 
       if (!paymentMode) {
@@ -409,9 +402,7 @@ const BillDetails: React.FC = () => {
       const paymentUuid = paymentMode.uuid;
 
       const selectedPaymentName =
-        selectedCashItems.length > 0
-          ? selectedCashItems[0]?.payerType || 'Payment'
-          : 'Payment';
+        selectedCashItems.length > 0 ? selectedCashItems[0]?.payerType || 'Payment' : 'Payment';
 
       // 2️⃣ Prepare payload for line item payments
       const payload = {
@@ -474,10 +465,7 @@ const BillDetails: React.FC = () => {
     }
   };
 
-  const paymentName =
-  selectedCashItems.length > 0
-    ? selectedCashItems[0].payerType
-    : 'Payment';
+  const paymentName = selectedCashItems.length > 0 ? selectedCashItems[0].payerType : 'Payment';
 
   const handleCheckSHAClaim = async () => {
     if (!billId) return showSnackbar({ kind: 'error', title: 'SHA Claim Status', subtitle: 'Bill ID is required' });
@@ -574,9 +562,7 @@ const BillDetails: React.FC = () => {
 
       const paymentModesResponse = await fetchPaymentModes();
 
-      const shaMode = paymentModesResponse.results.find((mode) =>
-        INSURANCE_MODES.includes(mode.name.toUpperCase()),
-      );
+      const shaMode = paymentModesResponse.results.find((mode) => INSURANCE_MODES.includes(mode.name.toUpperCase()));
 
       if (!shaMode) {
         showAlert('error', 'SHA Claim', 'SHA payment mode not found. Please contact support.');
@@ -811,8 +797,8 @@ const BillDetails: React.FC = () => {
                         lineHeight: 1.5,
                       }}
                     >
-                      Please select cash/M-Pesa item(s) to continue. SHA claims (if any) will be available after all cash
-                      payments are completed.
+                      Please select cash/M-Pesa item(s) to continue. SHA claims (if any) will be available after all
+                      cash payments are completed.
                     </p>
                   </Tile>
                 )}
