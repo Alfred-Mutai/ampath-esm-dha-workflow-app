@@ -3,7 +3,7 @@ import { useMemo, useRef, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { validationSchema, type CreateOrderBillFormSchema } from "./schema";
-import { FetchResponse, OpenmrsResource, ResponsiveWrapper, showSnackbar, useConfig, useDebounce, useLayoutType } from "@openmrs/esm-framework";
+import { ExtensionSlot, FetchResponse, OpenmrsResource, ResponsiveWrapper, showSnackbar, useConfig, useDebounce, useLayoutType } from "@openmrs/esm-framework";
 import { useTranslation } from "react-i18next";
 import { Column, FilterableMultiSelect, Select, SelectItem, Form, FormGroup, Stack, TextInput, InlineNotification, ButtonSet, Button, InlineLoading, Search, Layer, Tile, FormLabel } from "@carbon/react";
 import styles from './create-order-bill-form.scss';
@@ -82,6 +82,10 @@ const CreateOrderBillForm: React.FC<CreateOrderBillFormProps> = ({
         }
         return false;
     }, [identifiers]);
+
+    const crIdentifierId = useMemo(() => {
+        return identifiers?.find(i => i.identifierType.uuid == IdentifierTypesUuids.CLIENT_REGISTRY_NO_UUID).identifier
+    }, [identifiers])
 
     const servicePrices = useMemo(() => {
         if (billableItem && billableItem.length && identifiers) {
@@ -326,6 +330,10 @@ const CreateOrderBillForm: React.FC<CreateOrderBillFormProps> = ({
                                 );
                             }}
                         />
+                    </Column>
+
+                    <Column>
+                        <ExtensionSlot name='billing-claims-slot' state={{ clientRegistryId: crIdentifierId, onSelectChange: () => { } }} />
                     </Column>
                 </Stack>
             </div>

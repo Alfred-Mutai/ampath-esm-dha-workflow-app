@@ -39,7 +39,9 @@
       "name": "registry-dashboard-link",
       "component": "registryDashboardLink",
       "slot": "homepage-dashboard-slot",
-      "privileges": ["O3 View Client Registry Dashboard"],
+      "privileges": [
+        "O3 View Client Registry Dashboard"
+      ],
       "meta": {
         "name": "registry",
         "slot": "client-registry-dashboard-slot",
@@ -53,13 +55,17 @@
       "component": "registryExtension",
       "name": "registry",
       "slot": "client-registry-dashboard-slot",
-      "privileges": ["O3 View Client Registry Dashboard"]
+      "privileges": [
+        "O3 View Client Registry Dashboard"
+      ]
     },
     {
       "name": "triage-dashboard-link",
       "component": "triageDashboardLink",
       "slot": "homepage-dashboard-slot",
-      "privileges": ["O3 View Triage Dashboard"],
+      "privileges": [
+        "O3 View Triage Dashboard"
+      ],
       "meta": {
         "name": "triage",
         "slot": "triage-queue-dashboard-slot",
@@ -72,13 +78,17 @@
       "component": "triageQueueExtension",
       "name": "triage",
       "slot": "triage-queue-dashboard-slot",
-      "privileges": ["O3 View Triage Dashboard"]
+      "privileges": [
+        "O3 View Triage Dashboard"
+      ]
     },
     {
       "name": "consultation-dashboard-link",
       "component": "consultationDashboardLink",
       "slot": "homepage-dashboard-slot",
-      "privileges": ["O3 View Consultation Dashboard"],
+      "privileges": [
+        "O3 View Consultation Dashboard"
+      ],
       "meta": {
         "name": "consultation",
         "slot": "consultation-dashboard-slot",
@@ -91,13 +101,17 @@
       "component": "consultationQueue",
       "name": "consultation",
       "slot": "consultation-dashboard-slot",
-      "privileges": ["O3 View Consultation Dashboard"]
+      "privileges": [
+        "O3 View Consultation Dashboard"
+      ]
     },
     {
       "name": "mnch-dashboard-link",
       "component": "mnchQueueDashboardLink",
       "slot": "homepage-dashboard-slot",
-      "privileges": ["O3 View MNCH Dashboard"],
+      "privileges": [
+        "O3 View MNCH Dashboard"
+      ],
       "meta": {
         "name": "mnch",
         "slot": "mnch-dashboard-slot",
@@ -110,13 +124,17 @@
       "component": "MNCHRoot",
       "name": "mnch",
       "slot": "mnch-dashboard-slot",
-      "privileges": ["O3 View MNCH Dashboard"]
+      "privileges": [
+        "O3 View MNCH Dashboard"
+      ]
     },
     {
       "name": "pharmacy-dashboard-link",
       "component": "pharmacyDashboardLink",
       "slot": "homepage-dashboard-slot",
-      "privileges": ["O3 View Pharmacy Dashboard"],
+      "privileges": [
+        "O3 View Pharmacy Dashboard"
+      ],
       "meta": {
         "name": "dispensing",
         "slot": "dispensing-dashboard-slot",
@@ -129,7 +147,9 @@
       "name": "bookings-dashboard-link",
       "component": "bookingsDashboardLink",
       "slot": "homepage-dashboard-slot",
-      "privileges": ["O3 View Bookings Dashboard"],
+      "privileges": [
+        "O3 View Bookings Dashboard"
+      ],
       "meta": {
         "name": "bookings",
         "slot": "bookings-dashboard-slot",
@@ -142,12 +162,16 @@
       "component": "bookings",
       "name": "bookings",
       "slot": "bookings-dashboard-slot",
-      "privileges": ["O3 View Bookings Dashboard"]
+      "privileges": [
+        "O3 View Bookings Dashboard"
+      ]
     },
     {
       "name": "service-queue-admin-dashboard-link",
       "component": "serviceQueuesAdminLink",
-      "privileges": ["O3 View Service Queue Admin Panel"],
+      "privileges": [
+        "O3 View Service Queue Admin Panel"
+      ],
       "slot": "app-menu-slot",
       "meta": {
         "name": "service-queue-admin",
@@ -161,13 +185,17 @@
       "component": "serviceQueueAdmin",
       "name": "service-queue-admin",
       "slot": "service-queue-admin-dashboard-slot",
-      "privileges": ["O3 View Service Queue Admin Panel"]
+      "privileges": [
+        "O3 View Service Queue Admin Panel"
+      ]
     },
     {
       "name": "admissions-dashboard-link",
       "component": "admissionsDashboardLink",
       "slot": "homepage-dashboard-slot",
-      "privileges": ["O3 View Admissions Dashboard"],
+      "privileges": [
+        "O3 View Admissions Dashboard"
+      ],
       "meta": {
         "name": "admissions-dashboard",
         "slot": "admissions-dashboard-slot",
@@ -180,7 +208,9 @@
       "component": "admissionsDashboard",
       "name": "admissions-dashboard",
       "slot": "admissions-dashboard-slot",
-      "privileges": ["O3 View Admissions Dashboard"]
+      "privileges": [
+        "O3 View Admissions Dashboard"
+      ]
     },
     {
       "component": "serviceQueueBannerComponent",
@@ -215,7 +245,9 @@
       "name": "ampath-billing-dashboard-link",
       "component": "billingDashboardLink",
       "slot": "homepage-dashboard-slot",
-      "privileges": ["O3 View Accounting Dashboard"],
+      "privileges": [
+        "O3 View Accounting Dashboard"
+      ],
       "meta": {
         "name": "billing",
         "slot": "ampath-billing-dashboard-slot",
@@ -228,12 +260,19 @@
       "component": "billingRoot",
       "name": "billing",
       "slot": "ampath-billing-dashboard-slot",
-      "privileges": ["O3 View Accounting Dashboard"]
+      "privileges": [
+        "O3 View Accounting Dashboard"
+      ]
     },
-     {
+    {
       "name": "ampath-billing-checkin-form",
       "slot": "extra-visit-attribute-slot",
       "component": "visitBillingForm"
+    },
+    {
+      "name": "claims",
+      "slot": "billing-claims-slot",
+      "component": "claims"
     }
   ],
   "workspaces": [

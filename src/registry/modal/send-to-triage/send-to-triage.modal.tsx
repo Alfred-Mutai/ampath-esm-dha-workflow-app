@@ -16,7 +16,7 @@ import {
   TextInput,
 } from '@carbon/react';
 import styles from './send-to-triage.modal.scss';
-import { type Patient, useSession, showSnackbar, type Visit, useConfig } from '@openmrs/esm-framework';
+import { type Patient, useSession, showSnackbar, type Visit, useConfig, ExtensionSlot } from '@openmrs/esm-framework';
 import {
   type HieClient,
   type CreateVisitDto,
@@ -52,6 +52,7 @@ import { getActiveQueueEntryByPatientUuid } from '../../../service-queues/servic
 import { createOrderEncounter } from '../../../shared/services/encounters.resource';
 import { type ConfigObject } from '../../../config-schema';
 import { PatientTypes } from '../../../shared/constants/patient-type';
+import ClaimsComponent from '../../../claims/claims.component';
 
 interface SendToTriageModalProps {
   patients: Patient[];
@@ -132,7 +133,7 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
         text: 'Self-Referral',
         id: PatientTypes.SELF_RERERRAL_UUID,
       },
-     {
+      {
         text: 'Referral from another Facility',
         id: PatientTypes.REFERRAL_FROM_ANOTHER_FACILITY_UUID,
       },
@@ -143,6 +144,15 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
     ],
     [client],
   );
+
+  const patientIdentifiers = useMemo(() => {
+    if (selectedPatient) {
+      const identifiers = selectedPatient.identifiers;
+      return {
+        crIdentifierId: identifiers?.find(i => i.identifierType.uuid == "e88dc246-3614-4ee3-8141-1f2a83054e72").identifier
+      }
+    }
+  }, [selectedPatient])
 
   const paymentDetails = Object.values(PaymentDetail).map((value) => {
     return {
@@ -454,7 +464,7 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
       showAlert('error', 'Please select a visit', '');
       return false;
     }
-    if(!selectedPatientType){
+    if (!selectedPatientType) {
       showAlert('error', 'Please select a patient type', '');
       return false;
     }
@@ -502,17 +512,17 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
         value: selectedPaymentMode.uuid,
       });
     }
-    if(selectedPatientType) {
-        attributes.push({
-          attributeType: 'fbc0702d-b4c9-4968-be63-af8ad3ad6239',
-          value: selectedPatientType,
-        });
+    if (selectedPatientType) {
+      attributes.push({
+        attributeType: 'fbc0702d-b4c9-4968-be63-af8ad3ad6239',
+        value: selectedPatientType,
+      });
     }
-    if(selectedPaymentDetail === PaymentDetail.NonPaying){
-        attributes.push({
-            attributeType: 'df0362f9-782e-4d92-8bb2-3112e9e9eb3c',
-            value: 'true',
-        });
+    if (selectedPaymentDetail === PaymentDetail.NonPaying) {
+      attributes.push({
+        attributeType: 'df0362f9-782e-4d92-8bb2-3112e9e9eb3c',
+        value: 'true',
+      });
     }
     return attributes;
   }
@@ -531,10 +541,10 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
       });
     }
   }
-  function getTriageServiceQueues(serviceQueues: ServiceQueue[]){
-      return serviceQueues.filter((sq)=>{
-          return registrationServicequeues.includes(sq.uuid ?? '')
-      });
+  function getTriageServiceQueues(serviceQueues: ServiceQueue[]) {
+    return serviceQueues.filter((sq) => {
+      return registrationServicequeues.includes(sq.uuid ?? '')
+    });
   }
 
   async function getPaymentMethods() {
@@ -616,6 +626,7 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
     if (!selectedPaymentMode) {
       return false;
     }
+    console.log(selectedPaymentMode);
     return selectedPaymentMode.name.trim().toLowerCase().includes(paymentMode.trim().toLowerCase());
   }
 
@@ -712,14 +723,14 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
                 </div>
                 <div className={styles.formSection}>
                   <div className={styles.formRow}>
-                     <div className={styles.formControl}>
-                          <ComboBox
-                            onChange={patientTypeHandler}
-                            id="patient-type-combobox"
-                            items={patientTypeOptions}
-                            itemToString={(item) => (item ? item.text : '')}
-                            titleText="Patient Type"
-                          />
+                    <div className={styles.formControl}>
+                      <ComboBox
+                        onChange={patientTypeHandler}
+                        id="patient-type-combobox"
+                        items={patientTypeOptions}
+                        itemToString={(item) => (item ? item.text : '')}
+                        titleText="Patient Type"
+                      />
                     </div>
                     <div className={styles.formControl}>
                       <Select
@@ -771,6 +782,13 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
                           </Select>
                         </div>
                       </div>
+                      {/* If using SHA claim */}
+                      {
+                        hasSelectedPaymentMode('SHIF') ? (<>
+                          {/* <ClaimsComponent clientRegistryId={patientIdentifiers.crIdentifierId} onSelectChange={() => { }} /> */}
+                          <ExtensionSlot name='billing-claims-slot' state={{ clientRegistryId: patientIdentifiers?.crIdentifierId, onSelectChange: () => { } }} />
+                        </>) : (<></>)
+                      }
                       {hasSelectedPaymentMode('insurance') ? (
                         <>
                           <div className={styles.formRow}>

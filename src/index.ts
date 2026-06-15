@@ -154,3 +154,8 @@ export const visitBillingForm = getAsyncLifecycle(
   () => import('./billing/extensions/visit-billing/visit-billing.extension'),
   options,
 );
+
+export const claims = getAsyncLifecycle(
+  () => import('./claims/claims.component'),
+  options,
+);
