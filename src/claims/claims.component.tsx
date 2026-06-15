@@ -1,6 +1,6 @@
-import { Button, Row, Select, SelectItem, Tag, TextInput } from "@carbon/react";
+import { Button, InlineLoading, Row, Select, SelectItem, Tag, TextInput } from "@carbon/react";
 import React, { useEffect, useState } from "react";
-import { createClaimsVisit, fetchBenefitUtilization, fetchClientSubBenefits, fetchConsentToken, fetchInterventions, getServiceType } from "./claims.resource";
+import { createClaimsVisit, fetchConsentToken, getServiceType, useBenefitUtilizations, useClientSubBenefits, useInterventions } from "./claims.resource";
 import { type BenefitUtilization, type InterventionResults, type ClientSubBenefitResults, type Intervention, type ClientSubBenefit, VisitType } from "./index";
 import { addIntervention } from "./interventions.resource";
 
@@ -12,50 +12,21 @@ interface ClaimsComponentProps {
 }
 
 const ClaimsComponent: React.FC<ClaimsComponentProps> = ({ clientRegistryId, visitType, isNewVisit = true, onSelectChange }) => {
-    const [subBenefits, setSubBenefits] = useState<ClientSubBenefitResults>();
-    const [interventions, setInterventions] = useState<InterventionResults>();
-    const [benefitUtilizations, setBenefitUtilizations] = useState<Array<BenefitUtilization>>();
     const [selectedIntervention, setSelectedIntervention] = useState<Intervention>();
     const [selectedSubBenefitCode, setSelectedSubBenefitCode] = useState<ClientSubBenefit>();
     const [isBenefitEligible, setIsBenefitEligible] = useState(false);
     const [otp, setOtp] = useState("");
 
-    useEffect(() => {
-        if (clientRegistryId) {
-            const fn = async () => {
-                let results = await fetchClientSubBenefits(clientRegistryId);
-                setSubBenefits(results);
-            }
-            fn();
-        }
-    }, [clientRegistryId]);
+    const { clientSubBenefits, isLoadingClientSubBenefits } = useClientSubBenefits(clientRegistryId);
+    const { interventions, isLoadingInterventions } = useInterventions(clientRegistryId, selectedSubBenefitCode?.code);
+    const { benefitUtilizations, isLoadingBenefitUtilization } = useBenefitUtilizations(clientRegistryId, selectedIntervention?.code, selectedIntervention?.paymentMechanism?.toUpperCase() === "CAPITATION");
 
     useEffect(() => {
-        if (clientRegistryId && selectedSubBenefitCode) {
-            const fn = async () => {
-                let results = await fetchInterventions(clientRegistryId, selectedSubBenefitCode.code);
-                setInterventions(results);
-            }
-            fn();
+        if (benefitUtilizations) {
+            const benefitUtilization = benefitUtilizations[0];
+            setIsBenefitEligible(benefitUtilization.computationalDetail.eligibility);
         }
-    }, [clientRegistryId, selectedSubBenefitCode]);
-
-    useEffect(() => {
-        if (clientRegistryId && selectedIntervention) {
-            const isCapitation = selectedIntervention.paymentMechanism.toUpperCase() === "CAPITATION";
-            const fn = async () => {
-                let results = await fetchBenefitUtilization(clientRegistryId, selectedIntervention.code);
-                if (results) {
-                    const benefitUtilization = results[0];
-                    setIsBenefitEligible(benefitUtilization.computationalDetail.eligibility);
-                    setBenefitUtilizations(results);
-                }
-            }
-            if (!isCapitation) {
-                fn();
-            }
-        }
-    }, [clientRegistryId, selectedIntervention]);
+    }, [benefitUtilizations]);
 
     const handleStartVisit = async () => {
         try {
@@ -78,60 +49,73 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({ clientRegistryId, vis
 
     return <>
         {/* Benefits */}
-        <Select
-            id="client-sub-benefits"
-            labelText="Client sub benefits"
-            onChange={($event) => {
-                const value = $event.target.value;
-                setSelectedSubBenefitCode(subBenefits.results.find(sB => sB.code === value));
-                return onSelectChange("client-sub-benefits", value)
-            }}
-        >
-            <SelectItem
-                value=""
-                text="--Select Sub Benefit--"
-            />
-            {subBenefits && subBenefits.results &&
-                subBenefits.results.map((subBenefit) => {
-                    return (
-                        <SelectItem
-                            value={subBenefit.code}
-                            text={`${subBenefit.name} (${subBenefit.code})`}
-                        />
-                    );
-                })}
-        </Select>
+        {
+            isLoadingClientSubBenefits ?
+                <InlineLoading description="Loading client sub-benefits" />
+                :
+                <Select
+                    id="client-sub-benefits"
+                    labelText="Client sub benefits"
+                    onChange={($event) => {
+                        const value = $event.target.value;
+                        setSelectedSubBenefitCode(clientSubBenefits.find(sB => sB.code === value));
+                        return onSelectChange("client-sub-benefits", value)
+                    }}
+                >
+                    <SelectItem
+                        value=""
+                        text="--Select Sub Benefit--"
+                    />
+                    {clientSubBenefits &&
+                        clientSubBenefits.map((subBenefit) => {
+                            return (
+                                <SelectItem
+                                    value={subBenefit.code}
+                                    text={`${subBenefit.name} (${subBenefit.code})`}
+                                />
+                            );
+                        })}
+                </Select>
+        }
         {/* Interventions */}
         <Row>
-            <Select
-                id="interventions"
-                labelText="Interventions"
-                onChange={($event) => {
-                    const value = $event.target.value;
-                    setSelectedIntervention(interventions.results.find(i => i.code === value));
-                    return onSelectChange("interventions", value)
-                }}
-            >
-                <SelectItem
-                    value=""
-                    text="--Select Intervention--"
-                />
-                {interventions && interventions.results &&
-                    interventions.results.map((intervention) => {
-                        return (
-                            <SelectItem
-                                value={intervention.code}
-                                text={`${intervention.name} (${intervention.code})`}
-                            />
-                        );
-                    })}
-            </Select>
             {
-                benefitUtilizations ? (
-                    isBenefitEligible ?
-                        <Tag type="green">Eligible</Tag>
-                        : <Tag type="red">Not Eligible</Tag>
-                ) : <></>
+                isLoadingInterventions ?
+                    <InlineLoading description="Loading interventions" />
+                    :
+                    <Select
+                        id="interventions"
+                        labelText="Interventions"
+                        onChange={($event) => {
+                            const value = $event.target.value;
+                            setSelectedIntervention(interventions.find(i => i.code === value));
+                            return onSelectChange("interventions", value)
+                        }}
+                    >
+                        <SelectItem
+                            value=""
+                            text="--Select Intervention--"
+                        />
+                        {interventions &&
+                            interventions.map((intervention) => {
+                                return (
+                                    <SelectItem
+                                        value={intervention.code}
+                                        text={`${intervention.name} (${intervention.code})`}
+                                    />
+                                );
+                            })}
+                    </Select>
+            }
+            {
+                isLoadingBenefitUtilization ?
+                    <InlineLoading description="Checking eligibility" />
+                    :
+                    benefitUtilizations ? (
+                        isBenefitEligible ?
+                            <Tag type="green">Eligible</Tag>
+                            : <Tag type="red">Not Eligible</Tag>
+                    ) : <></>
             }
             {
                 selectedIntervention ?
@@ -144,14 +128,14 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({ clientRegistryId, vis
                     : <></>
             }
         </Row>
-        <TextInput
+        {/* <TextInput
             id="text-input-1"
             labelText="OTP"
             onChange={(e) => setOtp(e.target.value)}
             size="md"
             type="text"
         />
-        <Button onClick={handleStartVisit}>Start Visit</Button>
+        <Button onClick={handleStartVisit}>Start Visit</Button> */}
     </>
 }
 

@@ -1,3 +1,5 @@
+import { useConfig, useSession } from "@openmrs/esm-framework";
+
 export const getUrl = () => {
     const baseUrl = "https://ilm-dev.dha.go.ke/uat-middleware";
     const version = "/api/v1"
@@ -42,4 +44,16 @@ export async function fetchUrl<T>(url: string, { method = "GET", headers, payloa
     }
 
     return response.json() as Promise<T>;
+}
+
+export const useHie = () => {
+    const { hieBaseUrl } = useConfig({
+        externalModuleName: '@ampath/esm-dha-workflow-app',
+    });
+    const { sessionLocation } = useSession();
+
+    return {
+        hieBaseUrl,
+        locationUuid: sessionLocation?.uuid
+    }
 }

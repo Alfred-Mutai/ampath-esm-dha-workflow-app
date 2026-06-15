@@ -1,23 +1,64 @@
-import { ServiceType, type BenefitUtilization, type ClientSubBenefitResults, type InterventionResults, type ClaimResult, type Intervention, VisitType } from "./index";
-import { fetchUrl, getUrl } from "./utils";
+import useSWR from "swr";
+import { ServiceType, type BenefitUtilization, type InterventionResults, type ClaimResult, type Intervention, VisitType, type ClientSubBenefit } from "./index";
+import { fetchUrl, getUrl, useHie } from "./utils";
+import { openmrsFetch } from "@openmrs/esm-framework";
 
-export async function fetchClientSubBenefits(clientRegistryId: string) {
-    const endPoint = `/patients/sub-benefits?patient_id=${clientRegistryId}`;
-    const url = getUrl() + endPoint;
-    return await fetchUrl<ClientSubBenefitResults>(url);
-}
+export const useClientSubBenefits = (clientRegistryId: string) => {
+    const { hieBaseUrl, locationUuid } = useHie();
+    const url = clientRegistryId ? `${hieBaseUrl}/sub-benefits?patient_id=${clientRegistryId}&locationUuid=${locationUuid}` : null;
 
-export async function fetchInterventions(clientRegistryId: string, subBenefitCode: string) {
-    const endPoint = `/patients/benefits/interventions?patient_id=${clientRegistryId}&sub_benefit_code=${subBenefitCode}`;
-    const url = getUrl() + endPoint;
-    return await fetchUrl<InterventionResults>(url);
-}
+    const {
+        data,
+        error,
+        isLoading
+    } = useSWR<{ data: Array<ClientSubBenefit> }>(url, openmrsFetch);
 
-export async function fetchBenefitUtilization(clientRegistryId: string, interventionCode: string) {
-    const endPoint = `/patients/benefits/utilization?patient_id=${clientRegistryId}&intervention_code=${interventionCode}`;
-    const url = getUrl() + endPoint;
-    return await fetchUrl<Array<BenefitUtilization>>(url);
-}
+    const results = data?.data;
+
+    return {
+        clientSubBenefits: results,
+        error,
+        isLoadingClientSubBenefits: isLoading
+    };
+};
+
+export const useInterventions = (clientRegistryId: string, subBenefitCode: string) => {
+    const { hieBaseUrl, locationUuid } = useHie();
+    const url = clientRegistryId && subBenefitCode ? `${hieBaseUrl}/interventions?patient_id=${clientRegistryId}&locationUuid=${locationUuid}&sub_benefit_code=${subBenefitCode}` : null;
+
+    const {
+        data,
+        error,
+        isLoading
+    } = useSWR<{ data: Array<Intervention> }>(url, openmrsFetch);
+
+    const results = data?.data;
+
+    return {
+        interventions: results,
+        error,
+        isLoadingInterventions: isLoading
+    };
+};
+
+export const useBenefitUtilizations = (clientRegistryId: string, interventionCode: string, isCapitation: boolean) => {
+    const { hieBaseUrl, locationUuid } = useHie();
+    const url = clientRegistryId && interventionCode && !isCapitation ? `${hieBaseUrl}/benefits-utilization?patient_id=${clientRegistryId}&locationUuid=${locationUuid}&intervention_code=${interventionCode}` : null;
+
+    const {
+        data,
+        error,
+        isLoading
+    } = useSWR<{ data: Array<BenefitUtilization> }>(url, openmrsFetch);
+
+    const results = data?.data;
+
+    return {
+        benefitUtilizations: results,
+        error,
+        isLoadingBenefitUtilization: isLoading
+    };
+};
 
 export async function createClaimsVisit(interventionCode: string, crIdentifier: string, serviceType: ServiceType, { auth_guid, otp }: { auth_guid?: string, otp?: string } = {}) {
     const endPoint = `/claims/visit`;
