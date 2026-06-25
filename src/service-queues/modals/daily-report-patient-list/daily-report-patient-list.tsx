@@ -75,6 +75,7 @@ const DailyReportPatientListModal: React.FC<DailyReportPatientListModalProps> = 
                     <TableHeader>Phone Number</TableHeader>
                     <TableHeader>Identifiers</TableHeader>
                     <TableHeader>Queue Room</TableHeader>
+                    <TableHeader>Current Queue Room</TableHeader>
                     <TableHeader>Status</TableHeader>
                   </TableRow>
                 </TableHead>
@@ -88,6 +89,7 @@ const DailyReportPatientListModal: React.FC<DailyReportPatientListModalProps> = 
                       <TableCell>{val.phone_number}</TableCell>
                       <TableCell>{val.identifiers}</TableCell>
                       <TableCell>{val.queue_room_name}</TableCell>
+                      <TableCell>{val.current_queue_room ?? ''}</TableCell>
                       <TableCell>
                         <Tag size="md" type={val.served_status === 'SERVED' ? 'blue' : 'gray'}>
                           {val.served_status}

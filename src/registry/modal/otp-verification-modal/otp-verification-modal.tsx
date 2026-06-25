@@ -14,6 +14,7 @@ import { requestCustomOtp, validateCustomOtp } from '../../registry.resource';
 import { maskAllButFirstAndLastThree } from '../../utils/mask-data';
 import OTPInput from '../../../shared/ui/otp-input/otp-input.component';
 import Timer from '../../../shared/ui/timer/timer.component';
+import { formatPhoneNumberForOTP } from '../../utils/phone-number-formatter';
 
 interface OtpVerificationModalpProps {
   requestCustomOtpDto: RequestCustomOtpDto;
@@ -63,7 +64,7 @@ const OtpVerificationModal: React.FC<OtpVerificationModalpProps> = ({
         ...requestCustomOtpDto,
         identificationNumber: alternativeIdNo ?? '',
         identificationType: HieIdentificationType.NationalID,
-        phoneNumber: alternativePhoneNo ?? ''
+        phoneNumber: alternativePhoneNo ? formatPhoneNumberForOTP(alternativePhoneNo) : ''
       };
     } else {
       payload = requestCustomOtpDto;

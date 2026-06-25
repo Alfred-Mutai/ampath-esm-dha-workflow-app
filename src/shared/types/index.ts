@@ -116,6 +116,7 @@ export type ServiceQueueReportPatientList = {
   identifiers: string;
   phone_number: string;
   served_status: string;
+  current_queue_room: string;
 };
 
 export type ServiceQueueDailyPatientListReportResp = {

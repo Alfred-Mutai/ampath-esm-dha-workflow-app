@@ -99,11 +99,6 @@ const EligibilityTags: React.FC<EligibilityTags> = ({ crId, locationUuid }) => {
                         </div>
                       );
                     })}
-                    <div>
-                      <Button kind="ghost" size="sm" onClick={showEligibilityDetailsModal}>
-                        View
-                      </Button>
-                    </div>
                   </>
                 ) : (
                   <div>
@@ -117,18 +112,6 @@ const EligibilityTags: React.FC<EligibilityTags> = ({ crId, locationUuid }) => {
               <></>
             )}
           </>
-        )}
-        {displayEligibilityDetailsModal ? (
-          <>
-            <ClientEligibilityDetailsModal
-              onModalClose={handleModalClose}
-              onSubmit={handleModalClose}
-              open={displayEligibilityDetailsModal}
-              hieClientEligibility={clientEligibility}
-            />
-          </>
-        ) : (
-          <></>
         )}
       </div>
     </>

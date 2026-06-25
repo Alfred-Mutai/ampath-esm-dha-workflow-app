@@ -4,7 +4,6 @@ export type IdentifierType = 'National ID' | 'Alien ID' | 'Passport' | 'Mandate 
 
 export const IDENTIFIER_TYPES: IdentifierType[] = [
   'National ID',
-  'Birth Certificate',
   'Alien ID',
   'Mandate Number',
   'Refugee ID'

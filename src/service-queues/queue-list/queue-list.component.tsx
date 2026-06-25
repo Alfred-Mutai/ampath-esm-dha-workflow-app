@@ -241,6 +241,7 @@ const QueueList: React.FC<QueueListProps> = ({
                 <TableRow id={val.queue_entry_uuid}>
                   <TableCell>{index + 1}</TableCell>
                   <TableCell>
+                    <div className={val.hide_in_queue === 1? styles.flaggedPatient: styles.unflaggedPatient}>
                     {checkIn && val.status !== QueueEntryStatus.Waiting ? (
                       <Link href={`${window.spaBase}/patient/${val.patient_uuid}/chart/`}>
                         {formatPatientName(val)}
@@ -248,6 +249,7 @@ const QueueList: React.FC<QueueListProps> = ({
                     ) : (
                       <>{formatPatientName(val)}</>
                     )}
+                    </div>
                   </TableCell>
                   <TableCell>{val.age ?? ''}</TableCell>
                   <TableCell>{val.phone_number ?? ''}</TableCell>
@@ -265,8 +267,10 @@ const QueueList: React.FC<QueueListProps> = ({
                     </Tag>
                   </TableCell>
                   <TableCell>{`${val.wait_time_in_min} minute(s)`}</TableCell>
-                  <TableCell>
-                    {val.status === QueueEntryStatus.Waiting ? (
+                  {
+                     val.hide_in_queue === 0 ? (<>
+                      <TableCell>
+                    {val.status === QueueEntryStatus.Waiting && val.hide_in_queue === 0 ? (
                       <>
                         <Button kind="ghost" disabled={!checkIn} onClick={() => handleServePatient(val)}>
                           Serve
@@ -289,6 +293,11 @@ const QueueList: React.FC<QueueListProps> = ({
                       </>
                     )}
                   </TableCell>
+                     </>): (<>
+                      <TableCell></TableCell>
+                     </>)
+                  }
+                 
                 </TableRow>
               ))}
             </TableBody>

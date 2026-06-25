@@ -27,6 +27,7 @@ import { registerHieClientInAmrs } from '../resources/hie-amrs-automatic-registr
 import { getErrorMessages } from './utils/error-handler';
 import EligibilityTags from './eligibility/eliigibility-tags/eligibility-tags';
 import { IdentifierTypesUuids } from '../resources/identifier-types';
+import { formatPhoneNumberForOTP } from './utils/phone-number-formatter';
 
 interface RegistryComponentProps {}
 const RegistryComponent: React.FC<RegistryComponentProps> = () => {
@@ -101,7 +102,7 @@ const RegistryComponent: React.FC<RegistryComponentProps> = () => {
         identificationNumber: identifierValue,
         identificationType: identifierType,
         locationUuid,
-        phoneNumber: principal?.phone ?? ''
+        phoneNumber: principal?.phone ? formatPhoneNumberForOTP(principal.phone ?? '') : ''
       };
   }
 
@@ -118,12 +119,10 @@ const RegistryComponent: React.FC<RegistryComponentProps> = () => {
       showAlert('error', 'No default location selected', '');
       return false;
     }
-    /*
     if(!payload.phoneNumber){
       showAlert('error', 'No phone number selected', '');
       return false;
     }
-      */
     return true;
   };
   const showAlert = (alertType: 'error' | 'success', title: string, subtitle: string) => {
@@ -434,10 +433,10 @@ const RegistryComponent: React.FC<RegistryComponentProps> = () => {
                       <></>
                     )}
 
-                    {displayOtpModal ? (
+                    {displayOtpModal && requestCustomOtpDto ? (
                       <OtpVerificationModal
                         requestCustomOtpDto={requestCustomOtpDto}
-                        phoneNumber={principal.phone}
+                        phoneNumber={formatPhoneNumberForOTP(principal.phone)}
                         open={displayOtpModal}
                         onModalClose={handleModelClose}
                         onOtpSuccessfullVerification={handleOtpSuccessfullVerification}

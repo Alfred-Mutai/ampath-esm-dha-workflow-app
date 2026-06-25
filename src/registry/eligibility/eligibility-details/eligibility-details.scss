@@ -1,0 +1,38 @@
+.clientEligibilityDetailsLayout{
+    display: flex;
+    flex-direction: column;
+    row-gap: 10px;
+    width: 100%;
+    padding: 15px 15px;
+    .sectionHeader{
+        display: flex;
+        flex-direction: row;
+        width: 100%;
+    }
+    .sectionContent{
+        display: flex;
+        flex-direction: column;
+        row-gap: 10px;
+        width: 100%;
+    }
+}
+
+.clientDetails{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+.detailData{
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 0.75rem
+}
+.detailText{
+    min-width: 150px;
+}
+.schemeTable{
+    display: flex;
+    flex-direction: row;
+    min-width: 80vw;
+    overflow-x: scroll;
+}

@@ -68,25 +68,13 @@ const ServiceQueueComponent: React.FC<ServiceQueueComponentProps> = ({ serviceTy
     }
   }, [serviceTypeUuid, locationUuid]);
 
-  const filterOutClients = (queueEntries: QueueEntryResult[]) => {
-    if (!queueEntries) {
-      return [];
-    }
-    return queueEntries.filter((q) => {
-      if ('hide_in_queue' in q) {
-        return q.hide_in_queue === 0;
-      } else {
-        return true;
-      }
-    });
-  };
+
 
   const getEntryQueues = async () => {
     setLoading(true);
     try {
       const res = await getServiceQueueByLocationUuid(serviceTypeUuid, locationUuid);
-      const queueClients = filterOutClients(res);
-      setQueueEntries(queueClients);
+      setQueueEntries(res);
       setLoading(false);
     } catch (error) {
       showSnackbar({
