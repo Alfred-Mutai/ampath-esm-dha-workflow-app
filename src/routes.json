@@ -273,6 +273,10 @@
       "name": "claims",
       "slot": "billing-claims-slot",
       "component": "claims"
+    },
+    {
+      "name": "preauths-modal",
+      "component": "preauthsModal"
     }
   ],
   "workspaces": [

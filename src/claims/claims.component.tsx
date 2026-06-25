@@ -1,8 +1,9 @@
 import { Button, InlineLoading, Row, Select, SelectItem, Tag, TextInput } from "@carbon/react";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { createClaimsVisit, fetchConsentToken, getServiceType, useBenefitUtilizations, useClientSubBenefits, useInterventions } from "./claims.resource";
 import { type BenefitUtilization, type InterventionResults, type ClientSubBenefitResults, type Intervention, type ClientSubBenefit, VisitType } from "./index";
 import { addIntervention } from "./interventions.resource";
+import { showModal } from "@openmrs/esm-framework";
 
 interface ClaimsComponentProps {
     clientRegistryId: string;
@@ -28,6 +29,13 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({ clientRegistryId, vis
         }
     }, [benefitUtilizations]);
 
+    const launchPreauthsModal = useCallback(() => {
+        const dispose = showModal('preauths-modal', {
+            closeModal: () => dispose(),
+            intervention: selectedIntervention,
+        });
+    }, [selectedIntervention]);
+
     const handleStartVisit = async () => {
         try {
             if (!isNewVisit) {
@@ -43,8 +51,15 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({ clientRegistryId, vis
     }
 
     const handleAddIntervention = async () => {
-        const consentToken = await fetchConsentToken();
-        await addIntervention(consentToken, selectedIntervention.code);
+        try {
+            if (isNewVisit) {
+                return;
+            }
+            const consentToken = await fetchConsentToken();
+            await addIntervention(consentToken, selectedIntervention.code);
+        } catch (err) {
+            alert(`Error: ${err}`);
+        }
     }
 
     return <>
@@ -120,9 +135,9 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({ clientRegistryId, vis
             {
                 selectedIntervention ?
                     (selectedIntervention.needsPreauth && !selectedIntervention.needsManualPreauthApproval ?
-                        <Tag type="blue">Needs Preauth</Tag>
+                        <Tag type="blue" onClick={launchPreauthsModal}>Needs Preauth</Tag>
                         : selectedIntervention.needsPreauth && selectedIntervention.needsManualPreauthApproval ?
-                            <Tag type="blue">Needs Elective Preauth</Tag>
+                            <Tag type="blue" onClick={launchPreauthsModal}>Needs Elective Preauth</Tag>
                             : <></>
                     )
                     : <></>
