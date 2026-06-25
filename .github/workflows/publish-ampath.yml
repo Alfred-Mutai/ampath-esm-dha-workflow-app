@@ -77,6 +77,47 @@ jobs:
         env:
           YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
 
+  publish-claim-workflows:
+    runs-on: ubuntu-latest
+    needs: build
+    if: >
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/claim-workflows' &&
+      github.repository_owner == 'AMPATH'
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🛠️ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: 📦 Install dependencies
+        run: yarn install --immutable
+
+      - name: 🔧 Configure Git
+        run: |
+          git config user.email "devs@ampath.or.ke"
+          git config user.name "AMPATH CI"
+
+      - name: 🏷️ Version with claim-workflows tag
+        run: |
+          CURRENT_VERSION=$(node -e "console.log(require('./package.json').version)")
+          PRERELEASE_VERSION="${CURRENT_VERSION}-claim-workflows.${{ github.run_number }}"
+          yarn version $PRERELEASE_VERSION --immediate
+          echo "Publishing version: $PRERELEASE_VERSION"
+
+      - name: 🏗️ Build
+        run: yarn build
+
+      - name: 📦 Publish to npm with claim-workflows tag
+        run: yarn npm publish --tag claim-workflows --access public
+        env:
+          YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+
   publish-release:
     runs-on: ubuntu-latest
     needs: build
