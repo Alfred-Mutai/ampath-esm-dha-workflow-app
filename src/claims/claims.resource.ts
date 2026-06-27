@@ -1,7 +1,7 @@
 import useSWR from "swr";
 import { ServiceType, type BenefitUtilization, type InterventionResults, type ClaimResult, type Intervention, VisitType, type ClientSubBenefit } from "./index";
-import { fetchUrl, getUrl, useHie } from "./utils";
-import { openmrsFetch } from "@openmrs/esm-framework";
+import { fetchUrl, getHieBaseUrl, getUrl, useHie } from "./utils";
+import { openmrsFetch, restBaseUrl } from "@openmrs/esm-framework";
 
 export const useClientSubBenefits = (clientRegistryId: string) => {
     const { hieBaseUrl, locationUuid } = useHie();
@@ -60,11 +60,13 @@ export const useBenefitUtilizations = (clientRegistryId: string, interventionCod
     };
 };
 
-export async function createClaimsVisit(interventionCode: string, crIdentifier: string, serviceType: ServiceType, { auth_guid, otp }: { auth_guid?: string, otp?: string } = {}) {
-    const endPoint = `/claims/visit`;
-    const url = getUrl() + endPoint;
+export async function createClaimsVisit(interventionCode: string, crIdentifier: string, serviceType: ServiceType, locationUuid: string, { auth_guid, otp }: { auth_guid?: string, otp?: string } = {}) {
+    const { hieBaseUrl } = await getHieBaseUrl();
+    const url = `${hieBaseUrl}/claims-visit`;
+
 
     let payload = {
+        locationUuid,
         intervention_codes: [interventionCode],
         patient_id: crIdentifier,
         service_type: serviceType // Type of service Options: CAPITATION, OUTPATIENT, INPATIENT, EMERGENCY
@@ -78,8 +80,17 @@ export async function createClaimsVisit(interventionCode: string, crIdentifier: 
         payload["auth_guid"] = auth_guid;
     }
 
-    return await fetchUrl<ClaimResult>(url, { method: "POST", payload });
+    const result = await openmrsFetch<ClaimResult>(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        // signal: abortController.signal,
+        body: payload,
+    });
+    return result.data;
 }
+
 
 // Preauths
 export async function createPreauth() {

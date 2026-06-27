@@ -1,5 +1,5 @@
 import { Order } from "@openmrs/esm-patient-common-lib";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { validationSchema, type CreateOrderBillFormSchema } from "./schema";
@@ -35,6 +35,9 @@ const CreateOrderBillForm: React.FC<CreateOrderBillFormProps> = ({
     const conceptUuid = order?.concept?.uuid;
     const { nonSHAPaymentModes, consultationBillableServiceNames } = useConfig<ConfigObject>();
     const [searchTerm, setSearchTerm] = useState('');
+    const [triggerAddIntervention, setTriggerAddIntervention] = useState<boolean>(false);
+    const [interventionResult, setInterventionResult] = useState();
+    const [pendingSubmitData, setPendingSubmitData] = useState<CreateOrderBillFormSchema | null>(null);
     const debouncedSearchTerm = useDebounce(searchTerm.trim());
     const searchInputRef = useRef(null);
     const searchResults = useMemo(() => {
@@ -57,6 +60,14 @@ const CreateOrderBillForm: React.FC<CreateOrderBillFormProps> = ({
             quantity: quantity ?? 1
         }
     });
+
+    const selectedServicePrice = watch('unitPrice');
+
+    const selectedServicePriceUuid = useMemo(() => {
+        if (selectedServicePrice) {
+            return selectedServicePrice.split("#")[1];
+        }
+    }, [selectedServicePrice]);
 
     const initialPriceName = useMemo(() => {
         let priceName = "";
@@ -109,85 +120,123 @@ const CreateOrderBillForm: React.FC<CreateOrderBillFormProps> = ({
         return null;
     }, [billableItem, initialPriceName]);
 
+    const onAddIntervention = (result) => {
+        setInterventionResult(result);
+    }
+
+    const handleFormSubmit = async (data) => {
+        const unitPriceTxt = data?.unitPrice;
+        const serviceUuid = unitPriceTxt?.split("#")[0];
+        const servicePriceUuid = unitPriceTxt?.split("#")[1];
+        const lineItemOrder = order?.orderNumber?.split("-")[1] ?? null;
+
+        const billableItems = lineItems
+            .filter((item) => item.uuid === serviceUuid)
+            .map((item, index) => {
+                const price = item.servicePrices?.find(service => service.uuid === servicePriceUuid)?.price || 0;
+                const paymentStatus = price == 0 ? "PAID" : "PENDING";
+                return {
+                    billableService: item.uuid,
+                    quantity: data.quantity,
+                    item: conceptUuid,
+                    price: price,
+                    priceName: item.servicePrices?.find(service => service.uuid === servicePriceUuid)?.name || 'Default',
+                    priceUuid: servicePriceUuid || '',
+                    lineItemOrder: Number(lineItemOrder) ?? index,
+                    paymentStatus: paymentStatus,
+                }
+            });
+        let billPayload = {};
+
+        let response: FetchResponse<{ uuid: string, lineItems: Array<{ lineItemOrder: number; uuid: string }> }> | undefined;
+
+        if (currentDayBills && currentDayBills.length) {
+            const bill = currentDayBills[0];
+            const billUuid = bill?.uuid;
+            const initialLineItems = generateUpdateBillLineItems(bill, lineItems);
+            const lineItemsPayload = [...initialLineItems, ...billableItems];
+            billPayload = {
+                lineItems: lineItemsPayload
+            }
+            response = await updatePatientBill(billUuid, billPayload);
+        } else {
+            billPayload = {
+                lineItems: billableItems,
+                cashPoint: cashPointUuid,
+                patient: order?.patient?.uuid,
+                status: 'PENDING',
+                payments: []
+            };
+            response = await createPatientBill(billPayload);
+        }
+
+        const billUuidResp = response?.data?.uuid;
+        const lineItemUuid = response?.data?.lineItems?.find(v => v?.lineItemOrder === Number(lineItemOrder))?.uuid;
+
+        if (billUuidResp) {
+            const hiePayload = {
+                bill_uuid: billUuidResp,
+                order_no: order?.orderNumber,
+                line_item_uuid: lineItemUuid
+            };
+
+            try {
+                await createOrderBillInHie(hiePayload);
+            } catch (error) {
+                await removePatientBill(billUuidResp);
+                throw error;
+            }
+        } else {
+            throw new Error("Bill uuid not found!");
+        }
+
+        showSnackbar({
+            title: t('billSuccess', 'Bill created'),
+            subtitle: t('billSuccessMessage', "Patient's bill has been created successfully"),
+            kind: 'success',
+        });
+
+        mutated();
+        closeWorkspace();
+    }
+
+    useEffect(() => {
+        if (triggerAddIntervention && interventionResult && pendingSubmitData) {
+            const submitPendingData = async () => {
+                try {
+                    await handleFormSubmit(pendingSubmitData);
+                } catch (error) {
+                    showSnackbar({
+                        title: t('error', 'Error'),
+                        subtitle: error?.message || t('unknownError', 'An unknown error occurred'),
+                        kind: 'error',
+                    });
+                } finally {
+                    setPendingSubmitData(null);
+                    setTriggerAddIntervention(false);
+                }
+            };
+            void submitPendingData();
+        }
+    }, [triggerAddIntervention, interventionResult, pendingSubmitData]);
+
     const onSubmit = async (data) => {
         try {
             if (isSubmitting) {
                 return;
             }
 
-            const unitPriceTxt = data?.unitPrice;
-            const serviceUuid = unitPriceTxt?.split("#")[0];
-            const servicePriceUuid = unitPriceTxt?.split("#")[1];
-            const lineItemOrder = order?.orderNumber?.split("-")[1] ?? null;
-
-            const billableItems = lineItems
-                .filter((item) => item.uuid === serviceUuid)
-                .map((item, index) => {
-                    const price = item.servicePrices?.find(service => service.uuid === servicePriceUuid)?.price || 0;
-                    const paymentStatus = price == 0 ? "PAID" : "PENDING";
-                    return {
-                        billableService: item.uuid,
-                        quantity: data.quantity,
-                        item: conceptUuid,
-                        price: price,
-                        priceName: item.servicePrices?.find(service => service.uuid === servicePriceUuid)?.name || 'Default',
-                        priceUuid: servicePriceUuid || '',
-                        lineItemOrder: Number(lineItemOrder) ?? index,
-                        paymentStatus: paymentStatus,
-                    }
-                });
-            let billPayload = {};
-
-            let response: FetchResponse<{ uuid: string, lineItems: Array<{ lineItemOrder: number; uuid: string }> }> | undefined;
-
-            if (currentDayBills && currentDayBills.length) {
-                const bill = currentDayBills[0];
-                const billUuid = bill?.uuid;
-                const initialLineItems = generateUpdateBillLineItems(bill, lineItems);
-                const lineItemsPayload = [...initialLineItems, ...billableItems];
-                billPayload = {
-                    lineItems: lineItemsPayload
+            if (["5a66e53c-cded-463d-8cd2-ea64444145c5", "421f5d5c-f4a1-4146-bea4-62e87121b8b7"].includes(selectedServicePriceUuid)) {
+                setPendingSubmitData(data);
+                setTriggerAddIntervention(true);
+                if (interventionResult) {
+                    await handleFormSubmit(data);
+                    setPendingSubmitData(null);
+                    setTriggerAddIntervention(false);
                 }
-                response = await updatePatientBill(billUuid, billPayload);
-            } else {
-                billPayload = {
-                    lineItems: billableItems,
-                    cashPoint: cashPointUuid,
-                    patient: order?.patient?.uuid,
-                    status: 'PENDING',
-                    payments: []
-                };
-                response = await createPatientBill(billPayload);
+                return;
             }
-
-            const billUuidResp = response?.data?.uuid;
-            const lineItemUuid = response?.data?.lineItems?.find(v => v?.lineItemOrder === Number(lineItemOrder))?.uuid;
-
-            if (billUuidResp) {
-                const hiePayload = {
-                    bill_uuid: billUuidResp,
-                    order_no: order?.orderNumber,
-                    line_item_uuid: lineItemUuid
-                };
-
-                try {
-                    await createOrderBillInHie(hiePayload);
-                } catch (error) {
-                    await removePatientBill(billUuidResp);
-                    throw error;
-                }
-            } else {
-                throw new Error("Bill uuid not found!");
-            }
-
-            showSnackbar({
-                title: t('billSuccess', 'Bill created'),
-                subtitle: t('billSuccessMessage', "Patient's bill has been created successfully"),
-                kind: 'success',
-            });
-
-            mutated();
-            closeWorkspace();
+            await handleFormSubmit(data);
         } catch (error) {
             showSnackbar({
                 title: t('error', 'Error'),
@@ -331,10 +380,13 @@ const CreateOrderBillForm: React.FC<CreateOrderBillFormProps> = ({
                             }}
                         />
                     </Column>
-
-                    <Column>
-                        <ExtensionSlot name='billing-claims-slot' state={{ clientRegistryId: crIdentifierId, onSelectChange: () => { } }} />
-                    </Column>
+                    {
+                        ["5a66e53c-cded-463d-8cd2-ea64444145c5", "421f5d5c-f4a1-4146-bea4-62e87121b8b7"].includes(selectedServicePriceUuid) ?
+                            <Column>
+                                <ExtensionSlot name='billing-claims-slot' state={{ clientRegistryId: crIdentifierId, triggerAddIntervention, onSelectChange: () => { }, onAddIntervention }} />
+                            </Column> :
+                            <></>
+                    }
                 </Stack>
             </div>
 

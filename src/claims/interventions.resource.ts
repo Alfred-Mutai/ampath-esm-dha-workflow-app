@@ -1,14 +1,24 @@
-import { fetchUrl, getUrl } from "./utils";
+import { openmrsFetch } from "@openmrs/esm-framework";
+import { fetchUrl, getHieBaseUrl, getUrl } from "./utils";
 
-export async function addIntervention(consentToken: string, interventionCode: string) {
-    const endPoint = `/claims/interventions`;
-    const url = getUrl() + endPoint;
+export async function addIntervention(consentToken: string, interventionCode: string, locationUuid: string) {
+    const { hieBaseUrl } = await getHieBaseUrl();
+    const url = `${hieBaseUrl}/interventions`;
 
     const payload = {
+        locationUuid,
         consent_token: consentToken,
         intervention_code: interventionCode
     }
-    return await fetchUrl<any>(url, { method: "POST", payload });
+    // return await fetchUrl<any>(url, { method: "POST", payload });
+    return await openmrsFetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        // signal: abortController.signal,
+        body: payload,
+    });
 }
 
 export async function switchIntervention(consentToken: string, existingInterventionCode: string, newInterventionCode: string) {

@@ -1,4 +1,4 @@
-import { useConfig, useSession } from "@openmrs/esm-framework";
+import { getConfig, useConfig, useSession } from "@openmrs/esm-framework";
 
 export const getUrl = () => {
     const baseUrl = "https://ilm-dev.dha.go.ke/uat-middleware";
@@ -56,4 +56,9 @@ export const useHie = () => {
         hieBaseUrl,
         locationUuid: sessionLocation?.uuid
     }
+}
+
+export async function getHieBaseUrl() {
+    const { hieBaseUrl } = await getConfig('@ampath/esm-dha-workflow-app');
+    return { hieBaseUrl: hieBaseUrl ?? null };
 }

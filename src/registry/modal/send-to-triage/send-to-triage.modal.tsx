@@ -53,6 +53,7 @@ import { createOrderEncounter } from '../../../shared/services/encounters.resour
 import { type ConfigObject } from '../../../config-schema';
 import { PatientTypes } from '../../../shared/constants/patient-type';
 import ClaimsComponent from '../../../claims/claims.component';
+import { ClaimResult } from '../../../claims';
 
 interface SendToTriageModalProps {
   patients: Patient[];
@@ -96,6 +97,8 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
   const [billCreated, setBillCreated] = useState<boolean>(false);
   const [disableSubmission, setDisableSubmission] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
+  const [claimResult, setClaimResult] = useState<ClaimResult>();
+  const [triggerCreateVisit, setTriggerCreateVisit] = useState<boolean>(false);
   const session = useSession();
   const locationUuid = session.sessionLocation.uuid;
   const {
@@ -172,6 +175,10 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
     return <>No Client data</>;
   }
 
+  function onClaimsVisitStart(payload: ClaimResult) {
+    setClaimResult(payload);
+  }
+
   async function getPatientActiveQueue() {
     if (patients && patients.length > 0) {
       const activePatient = patients[0];
@@ -206,6 +213,28 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
       );
     });
   }
+  const handleSendToTriage = async () => {
+    if (hasSelectedPaymentMode('SHIF')) {
+      if (claimResult) {
+        await sendToTriage();
+      } else {
+        setTriggerCreateVisit(true);
+      }
+      return;
+    }
+    await sendToTriage();
+  }
+
+  useEffect(() => {
+    if (triggerCreateVisit && claimResult) {
+      const fn = async () => {
+        await sendToTriage();
+        setTriggerCreateVisit(false);
+      };
+      void fn();
+    }
+  }, [triggerCreateVisit, claimResult]);
+
   const sendToTriage = async () => {
     if (disableSubmission) {
       showAlert(
@@ -524,6 +553,14 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
         value: 'true',
       });
     }
+
+    // Claims
+    if (claimResult) {
+      attributes.push({
+        attributeType: '4962a633-c4f8-474c-857c-5c68c72fbbe3',
+        value: claimResult.authorization_code,
+      });
+    }
     return attributes;
   }
   async function getServiceQueues() {
@@ -686,7 +723,7 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
         size="md"
         onSecondarySubmit={() => onModalClose({ success: false })}
         onRequestClose={() => onModalClose({ success: false })}
-        onRequestSubmit={sendToTriage}
+        onRequestSubmit={handleSendToTriage}
         primaryButtonText={loading ? 'Sending...please wait' : 'Send to Triage'}
         secondaryButtonText="Cancel"
       >
@@ -786,7 +823,7 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
                       {
                         hasSelectedPaymentMode('SHIF') ? (<>
                           {/* <ClaimsComponent clientRegistryId={patientIdentifiers.crIdentifierId} onSelectChange={() => { }} /> */}
-                          <ExtensionSlot name='billing-claims-slot' state={{ clientRegistryId: patientIdentifiers?.crIdentifierId, onSelectChange: () => { } }} />
+                          <ExtensionSlot name='billing-claims-slot' state={{ clientRegistryId: patientIdentifiers?.crIdentifierId, patientUuid: selectedPatient.uuid, triggerCreateVisit, onSelectChange: () => { }, onClaimsVisitStart }} />
                         </>) : (<></>)
                       }
                       {hasSelectedPaymentMode('insurance') ? (
