@@ -31,6 +31,7 @@ const CreateOrderBillForm: React.FC<CreateOrderBillFormProps> = ({
     const { currentDayBills } = usePatientBills(order?.patient?.uuid);
     const { identifiers } = usePatientIdentifiers(order?.patient?.uuid);
     const { cashPoints } = useCashPoint();
+    const patientUuid = order?.patient?.uuid;
     const cashPointUuid = cashPoints?.[0]?.uuid ?? '';
     const conceptUuid = order?.concept?.uuid;
     const { nonSHAPaymentModes, consultationBillableServiceNames } = useConfig<ConfigObject>();
@@ -383,7 +384,7 @@ const CreateOrderBillForm: React.FC<CreateOrderBillFormProps> = ({
                     {
                         ["5a66e53c-cded-463d-8cd2-ea64444145c5", "421f5d5c-f4a1-4146-bea4-62e87121b8b7"].includes(selectedServicePriceUuid) ?
                             <Column>
-                                <ExtensionSlot name='billing-claims-slot' state={{ clientRegistryId: crIdentifierId, triggerAddIntervention, onSelectChange: () => { }, onAddIntervention }} />
+                                <ExtensionSlot name='billing-claims-slot' state={{ clientRegistryId: crIdentifierId, patientUuid, isNewVisit: false, triggerAddIntervention, onSelectChange: () => { }, onAddIntervention }} />
                             </Column> :
                             <></>
                     }

@@ -1,9 +1,9 @@
 import { Button, InlineLoading, Row, Select, SelectItem, Tag, TextInput } from "@carbon/react";
 import React, { useCallback, useEffect, useState } from "react";
-import { createClaimsVisit, fetchConsentToken, getServiceType, useBenefitUtilizations, useClientSubBenefits, useInterventions } from "./claims.resource";
+import { createClaimsVisit, fetchConsentToken, getServiceType, useBenefitUtilizations, useClientSubBenefits, useInterventions, usePatientVisit } from "./claims.resource";
 import { type BenefitUtilization, type InterventionResults, type ClientSubBenefitResults, type Intervention, type ClientSubBenefit, VisitType, type ClaimResult } from "./index";
 import { addIntervention } from "./interventions.resource";
-import { showModal, showSnackbar, useSession, useVisit } from "@openmrs/esm-framework";
+import { showModal, showSnackbar, useSession, useVisit, Visit } from "@openmrs/esm-framework";
 import { useTranslation } from "react-i18next";
 
 interface ClaimsComponentProps {
@@ -19,7 +19,7 @@ interface ClaimsComponentProps {
 }
 
 const ClaimsComponent: React.FC<ClaimsComponentProps> = ({ clientRegistryId, patientUuid, visitType, isNewVisit = true, triggerCreateVisit = false, triggerAddIntervention = false, onSelectChange, onClaimsVisitStart, onAddIntervention }) => {
-    const visit = useVisit(patientUuid);
+    const { activeVisit } = useVisit(patientUuid);
     const [selectedIntervention, setSelectedIntervention] = useState<Intervention>();
     const [selectedSubBenefitCode, setSelectedSubBenefitCode] = useState<ClientSubBenefit>();
     const [isBenefitEligible, setIsBenefitEligible] = useState(false);
@@ -48,10 +48,6 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({ clientRegistryId, pat
     }, [triggerCreateVisit]);
 
     useEffect(() => {
-        console.log(visit);
-    }, [visit])
-
-    useEffect(() => {
         if (triggerAddIntervention) {
             const fn = async () => {
                 await handleAddIntervention();
@@ -73,7 +69,7 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({ clientRegistryId, pat
                 return;
             }
             const serviceType = getServiceType(selectedIntervention, visitType);
-            const claimVisit = await createClaimsVisit(selectedIntervention.code, clientRegistryId, serviceType, sessionLocation?.uuid, { otp: "544768" });
+            const claimVisit = await createClaimsVisit(selectedIntervention.code, clientRegistryId, serviceType, sessionLocation?.uuid, { otp: "581155" });
             onClaimsVisitStart(claimVisit);
 
             showSnackbar({
@@ -90,12 +86,17 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({ clientRegistryId, pat
         }
     }
 
+    const getConsentToken = () => {
+        const consentToken = activeVisit.attributes?.find(atr => atr?.attributeType?.uuid === "4962a633-c4f8-474c-857c-5c68c72fbbe3")?.value ?? "";
+        return consentToken;
+    }
+
     const handleAddIntervention = async () => {
         try {
             if (isNewVisit) {
                 return;
             }
-            const consentToken = visit.currentVisit.attributes.find(atr => atr.uuid === "4962a633-c4f8-474c-857c-5c68c72fbbe3").display;
+            const consentToken = getConsentToken();
             await addIntervention(consentToken, selectedIntervention.code, sessionLocation?.uuid);
 
             showSnackbar({

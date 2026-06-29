@@ -7,8 +7,8 @@ export async function addIntervention(consentToken: string, interventionCode: st
 
     const payload = {
         locationUuid,
-        consent_token: consentToken,
-        intervention_code: interventionCode
+        consentToken: consentToken,
+        interventionCode: interventionCode
     }
     // return await fetchUrl<any>(url, { method: "POST", payload });
     return await openmrsFetch(url, {

@@ -1,7 +1,8 @@
 import useSWR from "swr";
+import dayjs from "dayjs";
 import { ServiceType, type BenefitUtilization, type InterventionResults, type ClaimResult, type Intervention, VisitType, type ClientSubBenefit } from "./index";
 import { fetchUrl, getHieBaseUrl, getUrl, useHie } from "./utils";
-import { openmrsFetch, restBaseUrl } from "@openmrs/esm-framework";
+import { openmrsFetch, restBaseUrl, useSession, Visit } from "@openmrs/esm-framework";
 
 export const useClientSubBenefits = (clientRegistryId: string) => {
     const { hieBaseUrl, locationUuid } = useHie();
@@ -91,6 +92,32 @@ export async function createClaimsVisit(interventionCode: string, crIdentifier: 
     return result.data;
 }
 
+export const usePatientVisit = (patientUuid: string) => {
+    console.log("patientUuid");
+    console.log(patientUuid);
+    console.log("patientUuid");
+    const sessionLocation = useSession();
+
+    const url = patientUuid
+        ? `${restBaseUrl}/visit?patient=${patientUuid}&${sessionLocation?.sessionLocation?.uuid}&includeInactive=false&fromStartDate=${dayjs().startOf('day').toISOString()}&v=full&limit=1`
+        : null;
+
+    const {
+        data,
+        error,
+        isLoading
+    } = useSWR<{
+        data: {
+            results: Array<Visit>
+        }
+    }>(url, openmrsFetch);
+
+    return {
+        data: data?.data?.results,
+        error,
+        isLoading
+    };
+}
 
 // Preauths
 export async function createPreauth() {
