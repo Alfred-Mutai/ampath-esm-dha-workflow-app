@@ -52,6 +52,10 @@ import { getActiveQueueEntryByPatientUuid } from '../../../service-queues/servic
 import { createOrderEncounter } from '../../../shared/services/encounters.resource';
 import { type ConfigObject } from '../../../config-schema';
 import { PatientTypes } from '../../../shared/constants/patient-type';
+import ClaimsConsentModal from '../otp-verification-modal/claims-consent';
+import { OtpFormData, type OTPWhitelistRequest } from '../../hie.types';
+import { createOTPWhitelisting, sendClaimsOTP } from '../../hie.resource';
+import { usePatient } from '../../../context/patient-context';
 import ClaimsComponent from '../../../claims/claims.component';
 import { ClaimResult } from '../../../claims';
 
@@ -99,16 +103,23 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
   const [loading, setLoading] = useState<boolean>(false);
   const [claimResult, setClaimResult] = useState<ClaimResult>();
   const [triggerCreateVisit, setTriggerCreateVisit] = useState<boolean>(false);
+  const [showConsent, setShowSoncent] = useState<boolean>(false);
   const session = useSession();
   const locationUuid = session.sessionLocation.uuid;
+  const [submitting, setSubmitting] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [whitelistRequest, setWhitelistRequest] = useState(null);
+  const [otpVerified, setOtpVerified] = useState(false);
   const {
     registrationBillableServices,
     cashConsulationConceptUuid,
     shaConsulationConceptUuid,
     outPatientCareSettingUuid,
     orderEncounterTypeUuid,
-    registrationServicequeues
+    registrationServicequeues,
   } = useConfig<ConfigObject>();
+
+  const { patient } = usePatient();
 
   const facilityCashPoints = useMemo(() => getfacilityCashpoints(), [cashPoints, locationUuid]);
 
@@ -223,7 +234,7 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
       return;
     }
     await sendToTriage();
-  }
+  };
 
   useEffect(() => {
     if (triggerCreateVisit && claimResult) {
@@ -369,6 +380,7 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
   const visitTypeChangeHandler = (selectedVisitType: { selectedItem: { id: string; text: string } }) => {
     const vt = selectedVisitType.selectedItem.id;
     setSelectedVisitType(vt);
+    setShowSoncent(true);
   };
   const isValidServiceQueueSelected = () => {
     if (!currentQueueEntry) {
@@ -716,6 +728,44 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
     }
   }
 
+  const handleWhitelistSubmit = async (payload: OTPWhitelistRequest) => {
+    return await createOTPWhitelisting(payload);
+  };
+
+  const handleSendClaimsOtp = async () => {
+    try {
+      setSubmitting(true);
+
+      const response = await sendClaimsOTP(patient!.id, locationUuid);
+
+      if (response?.message?.includes('OTP')) {
+        setOtpSent(true);
+
+        showSnackbar({
+          kind: 'success',
+          title: 'OTP Sent',
+        });
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleVerifyOtp = async (otp: string) => {
+    try {
+      setSubmitting(true);
+
+      setOtpVerified(true);
+
+      showSnackbar({
+        kind: 'success',
+        title: 'OTP Verified',
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <>
       <Modal
@@ -726,6 +776,7 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
         onRequestSubmit={handleSendToTriage}
         primaryButtonText={loading ? 'Sending...please wait' : 'Send to Triage'}
         secondaryButtonText="Cancel"
+        primaryButtonDisabled={!otpVerified || loading}
       >
         <ModalBody>
           <div className={styles.clientDetailsLayout}>
@@ -948,6 +999,23 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
                 <></>
               )}
             </div>
+            {showConsent && (
+              // <ClaimsConsentModal
+              //   onSendClaimsOtp={handleSendClaimsOtp}
+              //   onWhitelistSubmit={handleWhitelistSubmit}
+              //   onWhitelistStatusChange={setIsWhitelisted}
+              //   onOtpVerified={() => setOtpVerified(true)}
+              // />
+              <ClaimsConsentModal
+                submitting={submitting}
+                otpSent={otpSent}
+                whitelistRequest={whitelistRequest}
+                onWhitelistSubmit={handleWhitelistSubmit}
+                onSendClaimsOtp={handleSendClaimsOtp}
+                onOtpVerified={handleVerifyOtp}
+                onOtpVerificationStatusChange={setOtpVerified}
+              />
+            )}
           </div>
         </ModalBody>
       </Modal>

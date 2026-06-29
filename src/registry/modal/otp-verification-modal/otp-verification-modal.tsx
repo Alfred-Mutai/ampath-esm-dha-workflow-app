@@ -1,13 +1,6 @@
 import React, { useState } from 'react';
 import { HieIdentificationType, OtpOptions, OtpStatus, type RequestCustomOtpDto } from '../../types';
-import {
-  FormLabel,
-  Modal,
-  ModalBody,
-  RadioButton,
-  RadioButtonGroup,
-  TextInput,
-} from '@carbon/react';
+import { FormLabel, Modal, ModalBody, RadioButton, RadioButtonGroup, TextInput } from '@carbon/react';
 import styles from './otp-verification-modal.scss';
 import { showSnackbar } from '@openmrs/esm-framework';
 import { requestCustomOtp, validateCustomOtp } from '../../registry.resource';
@@ -34,9 +27,14 @@ const OtpVerificationModal: React.FC<OtpVerificationModalpProps> = ({
   const [otpStatus, setOtpStatus] = useState<string>(OtpStatus.Draft);
   const [loading, setLoading] = useState<boolean>(false);
   const [sessionId, setSessionId] = useState<string>('');
-  const [overrideOtp, setOverideOtp] = useState<OtpOptions>(requestCustomOtpDto.phoneNumber ? OtpOptions.NoOverride : OtpOptions.Override);
+  const [overrideOtp, setOverideOtp] = useState<OtpOptions>(
+    requestCustomOtpDto.phoneNumber ? OtpOptions.NoOverride : OtpOptions.Override,
+  );
   const [alternativeIdNo, setAlternativeIdNo] = useState<string>();
   const [alternativePhoneNo, setAlternativePhoneNo] = useState<string>();
+  const [isWhitelisted, setIsWhitelisted] = useState(false);
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [formComplete, setFormComplete] = useState(false);
 
   const handleSendOtp = async () => {
     if (!requestCustomOtpDto.identificationNumber && !alternativeIdNo) {
@@ -64,7 +62,7 @@ const OtpVerificationModal: React.FC<OtpVerificationModalpProps> = ({
         ...requestCustomOtpDto,
         identificationNumber: alternativeIdNo ?? '',
         identificationType: HieIdentificationType.NationalID,
-        phoneNumber: alternativePhoneNo ? formatPhoneNumberForOTP(alternativePhoneNo) : ''
+        phoneNumber: alternativePhoneNo ?? '',
       };
     } else {
       payload = requestCustomOtpDto;
@@ -190,14 +188,14 @@ const OtpVerificationModal: React.FC<OtpVerificationModalpProps> = ({
                       onChange={(v) => handleOtpOverrideSelection(v as OtpOptions)}
                       name="override-button-default-group"
                     >
-                      {
-                        requestCustomOtpDto?.phoneNumber &&  <RadioButton
-                        id="no-override"
-                        labelText={`Send Code to Phone ${maskAllButFirstAndLastThree(phoneNumber)}?`}
-                        value={OtpOptions.NoOverride}
-                      />
-                      }
-                     
+                      {requestCustomOtpDto?.phoneNumber && (
+                        <RadioButton
+                          id="no-override"
+                          labelText={`Send Code to Phone ${maskAllButFirstAndLastThree(phoneNumber)}?`}
+                          value={OtpOptions.NoOverride}
+                        />
+                      )}
+
                       <RadioButton
                         id="override"
                         labelText="Send OTP to alternative contact"
@@ -218,7 +216,7 @@ const OtpVerificationModal: React.FC<OtpVerificationModalpProps> = ({
                             placeholder="Enter National ID"
                           />
                         </div>
-                         <div className={styles.formControl}>
+                        <div className={styles.formControl}>
                           <TextInput
                             id="override-phone"
                             labelText="Alternative Phone number"

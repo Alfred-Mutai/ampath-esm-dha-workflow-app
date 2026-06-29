@@ -14,7 +14,13 @@ import {
 } from '@carbon/react';
 import React, { useState } from 'react';
 import styles from './registry.component.scss';
-import { type ClientRegistrySearchRequest, type HieClient, IDENTIFIER_TYPES, type IdentifierType, type RequestCustomOtpDto } from './types';
+import {
+  type ClientRegistrySearchRequest,
+  type HieClient,
+  IDENTIFIER_TYPES,
+  type IdentifierType,
+  type RequestCustomOtpDto,
+} from './types';
 import { fetchClientRegistryData } from './registry.resource';
 import { type Patient, showSnackbar, useSession } from '@openmrs/esm-framework';
 import OtpVerificationModal from './modal/otp-verification-modal/otp-verification-modal';
@@ -28,6 +34,7 @@ import { getErrorMessages } from './utils/error-handler';
 import EligibilityTags from './eligibility/eliigibility-tags/eligibility-tags';
 import { IdentifierTypesUuids } from '../resources/identifier-types';
 import { formatPhoneNumberForOTP } from './utils/phone-number-formatter';
+import { usePatient } from '../context/patient-context';
 
 interface RegistryComponentProps {}
 const RegistryComponent: React.FC<RegistryComponentProps> = () => {
@@ -43,7 +50,8 @@ const RegistryComponent: React.FC<RegistryComponentProps> = () => {
   const [displaytriageModal, setDisplaytriageModal] = useState<boolean>(false);
   const [requestCustomOtpDto, setRequestCustomOtpDto] = useState<RequestCustomOtpDto>();
   const session = useSession();
-  const locationUuid = session.sessionLocation.uuid;
+  const locationUuid = session!.sessionLocation!.uuid;
+  const { setPatient } = usePatient();
 
   const handleSearchPatient = async () => {
     setLoading(true);
@@ -51,7 +59,6 @@ const RegistryComponent: React.FC<RegistryComponentProps> = () => {
       const searchClientPayload = getSearchClientDto();
 
       if (!isValidSeatchClientPayload(searchClientPayload)) return false;
-
 
       const result = await fetchClientRegistryData(searchClientPayload);
       const patients = Array.isArray(result) ? result : [];
@@ -62,6 +69,7 @@ const RegistryComponent: React.FC<RegistryComponentProps> = () => {
       }
 
       const patient = patients[0];
+      setPatient(patient);
       setPrincipal(patient);
       showAlert('success', 'Client Data Loaded', 'Patient fetched successfully');
     } catch (err: any) {
@@ -73,15 +81,15 @@ const RegistryComponent: React.FC<RegistryComponentProps> = () => {
     }
   };
 
-  const getSearchClientDto = (): ClientRegistrySearchRequest =>{
-     return {
-        identificationNumber: identifierValue,
-        identificationType: identifierType,
-        locationUuid,
-      };
-  }
+  const getSearchClientDto = (): ClientRegistrySearchRequest => {
+    return {
+      identificationNumber: identifierValue,
+      identificationType: identifierType,
+      locationUuid,
+    };
+  };
 
-   const isValidSeatchClientPayload = (payload: ClientRegistrySearchRequest): boolean => {
+  const isValidSeatchClientPayload = (payload: ClientRegistrySearchRequest): boolean => {
     if (!payload.identificationNumber) {
       showAlert('error', 'Please enter a valid identification number', '');
       return false;
@@ -97,7 +105,7 @@ const RegistryComponent: React.FC<RegistryComponentProps> = () => {
     return true;
   };
 
-  const generateCustomSmsPayload = (): RequestCustomOtpDto =>{
+  const generateCustomSmsPayload = (): RequestCustomOtpDto => {
     return {
         identificationNumber: identifierValue,
         identificationType: identifierType,
@@ -137,11 +145,10 @@ const RegistryComponent: React.FC<RegistryComponentProps> = () => {
   };
   const handleOtpVerification = () => {
     const smsPayload = generateCustomSmsPayload();
-    if(isValidCustomSmsPayload(smsPayload )) {
-       setRequestCustomOtpDto(smsPayload);
-       setDisplayOtpModal(true);
+    if (isValidCustomSmsPayload(smsPayload)) {
+      setRequestCustomOtpDto(smsPayload);
+      setDisplayOtpModal(true);
     }
-    
   };
   const handleModelClose = () => {
     setDisplayOtpModal(false);

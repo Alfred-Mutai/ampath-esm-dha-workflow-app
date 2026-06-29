@@ -76,7 +76,7 @@ export const workflowRegistryLink = getAsyncLifecycle(() => import('./widgets/wo
 
 export const registryDashboardLink = getSyncLifecycle(createDashboardLink(registryDashboardMeta), options);
 
-export const registryExtension = getAsyncLifecycle(() => import('./registry/registry.component'), options);
+export const registryExtension = getAsyncLifecycle(() => import('./registry/registry-entry'), options);
 
 export const queueDashboardLink = getSyncLifecycle(createDashboardLink(queueDashboardMeta), options);
 
@@ -155,12 +155,6 @@ export const visitBillingForm = getAsyncLifecycle(
   options,
 );
 
-export const claims = getAsyncLifecycle(
-  () => import('./claims/claims.component'),
-  options,
-);
+export const claims = getAsyncLifecycle(() => import('./claims/claims.component'), options);
 
-export const preauthsModal = getAsyncLifecycle(
-  () => import('./claims/modals/preauth.component'),
-  options,
-);
+export const preauthsModal = getAsyncLifecycle(() => import('./claims/modals/preauth.component'), options);

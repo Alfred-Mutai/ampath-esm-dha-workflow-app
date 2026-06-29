@@ -32,7 +32,7 @@ export async function requestCustomOtp(payload: RequestCustomOtpDto): Promise<Re
     identificationNumber: payload.identificationNumber,
     identificationType: payload.identificationType,
     locationUuid: payload.locationUuid,
-    phoneNumber: payload.phoneNumber
+    phoneNumber: payload.phoneNumber,
   };
   return postJson<RequestCustomOtpResponse>(url, formattedPayload);
 }
