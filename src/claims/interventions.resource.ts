@@ -11,7 +11,7 @@ export async function addIntervention(consentToken: string, interventionCode: st
         interventionCode: interventionCode
     }
     // return await fetchUrl<any>(url, { method: "POST", payload });
-    return await openmrsFetch(url, {
+    const result = await openmrsFetch(url, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -19,6 +19,8 @@ export async function addIntervention(consentToken: string, interventionCode: st
         // signal: abortController.signal,
         body: payload,
     });
+
+    return result?.data;
 }
 
 export async function switchIntervention(consentToken: string, existingInterventionCode: string, newInterventionCode: string) {

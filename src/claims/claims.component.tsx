@@ -13,17 +13,17 @@ interface ClaimsComponentProps {
     isNewVisit?: boolean;
     triggerCreateVisit?: boolean;
     triggerAddIntervention?: boolean;
+    otp?: string;
     onSelectChange: (key, value) => void;
     onClaimsVisitStart?: (payload: ClaimResult) => void;
-    onAddIntervention?: () => void;
+    onAddIntervention?: (intervention: any) => void;
 }
 
-const ClaimsComponent: React.FC<ClaimsComponentProps> = ({ clientRegistryId, patientUuid, visitType, isNewVisit = true, triggerCreateVisit = false, triggerAddIntervention = false, onSelectChange, onClaimsVisitStart, onAddIntervention }) => {
+const ClaimsComponent: React.FC<ClaimsComponentProps> = ({ clientRegistryId, patientUuid, visitType, isNewVisit = true, triggerCreateVisit = false, triggerAddIntervention = false, otp = null, onSelectChange, onClaimsVisitStart, onAddIntervention }) => {
     const { activeVisit } = useVisit(patientUuid);
     const [selectedIntervention, setSelectedIntervention] = useState<Intervention>();
     const [selectedSubBenefitCode, setSelectedSubBenefitCode] = useState<ClientSubBenefit>();
     const [isBenefitEligible, setIsBenefitEligible] = useState(false);
-    const [otp, setOtp] = useState("");
 
     const { clientSubBenefits, isLoadingClientSubBenefits } = useClientSubBenefits(clientRegistryId);
     const { interventions, isLoadingInterventions } = useInterventions(clientRegistryId, selectedSubBenefitCode?.code);
@@ -69,7 +69,7 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({ clientRegistryId, pat
                 return;
             }
             const serviceType = getServiceType(selectedIntervention, visitType);
-            const claimVisit = await createClaimsVisit(selectedIntervention.code, clientRegistryId, serviceType, sessionLocation?.uuid, { otp: "581155" });
+            const claimVisit = await createClaimsVisit(selectedIntervention.code, clientRegistryId, serviceType, sessionLocation?.uuid, { otp });
             onClaimsVisitStart(claimVisit);
 
             showSnackbar({
@@ -97,7 +97,8 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({ clientRegistryId, pat
                 return;
             }
             const consentToken = getConsentToken();
-            await addIntervention(consentToken, selectedIntervention.code, sessionLocation?.uuid);
+            const intervention = await addIntervention(consentToken, selectedIntervention.code, sessionLocation?.uuid);
+            onAddIntervention(intervention);
 
             showSnackbar({
                 title: t('addInterventionSuccess', 'Intervention added successfully'),

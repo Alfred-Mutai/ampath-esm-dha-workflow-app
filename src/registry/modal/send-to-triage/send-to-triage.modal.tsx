@@ -110,6 +110,7 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
   const [otpSent, setOtpSent] = useState(false);
   const [whitelistRequest, setWhitelistRequest] = useState(null);
   const [otpVerified, setOtpVerified] = useState(false);
+  const [otp, setOtp] = useState(null);
   const {
     registrationBillableServices,
     cashConsulationConceptUuid,
@@ -757,6 +758,8 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
 
       setOtpVerified(true);
 
+      setOtp(otp);
+
       showSnackbar({
         kind: 'success',
         title: 'OTP Verified',
@@ -874,7 +877,7 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
                       {
                         hasSelectedPaymentMode('SHIF') ? (<>
                           {/* <ClaimsComponent clientRegistryId={patientIdentifiers.crIdentifierId} onSelectChange={() => { }} /> */}
-                          <ExtensionSlot name='billing-claims-slot' state={{ clientRegistryId: patientIdentifiers?.crIdentifierId, patientUuid: selectedPatient.uuid, triggerCreateVisit, onSelectChange: () => { }, onClaimsVisitStart }} />
+                          <ExtensionSlot name='billing-claims-slot' state={{ clientRegistryId: patientIdentifiers?.crIdentifierId, patientUuid: selectedPatient.uuid, triggerCreateVisit, otp, onSelectChange: () => { }, onClaimsVisitStart }} />
                         </>) : (<></>)
                       }
                       {hasSelectedPaymentMode('insurance') ? (
