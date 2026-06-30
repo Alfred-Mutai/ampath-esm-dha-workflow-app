@@ -12,13 +12,13 @@ interface patientBillDetailsProps {
 }
 const PatientBillDetails: React.FC<patientBillDetailsProps> = ({ patientUuid, locationUuid, billingDate }) => {
   const [patientBillDetails, setPatientBillDetails] = useState<PatientFacilityBillDetails[]>([]);
-  const facilityPatientDetail = useMemo(()=>{
-      return patientBillDetails[0] ?? null;
-  },[patientBillDetails]);
+  const facilityPatientDetail = useMemo(() => {
+    return patientBillDetails[0] ?? null;
+  }, [patientBillDetails]);
 
   useEffect(() => {
-    if(locationUuid && patientUuid && billingDate){
-         getPatientBillDetails();
+    if (locationUuid && patientUuid && billingDate) {
+      getPatientBillDetails();
     }
   }, [locationUuid, patientUuid, billingDate]);
   async function getPatientBillDetails() {
@@ -47,39 +47,39 @@ const PatientBillDetails: React.FC<patientBillDetailsProps> = ({ patientUuid, lo
     <>
       <div className={styles.bdLayout}>
         <div className={styles.bdHeader}>
-           {
-             facilityPatientDetail ? (<>
-               <div className={styles.pdCol}>
-                  <strong>Name:</strong> { facilityPatientDetail.patient_name}
-               </div>
-               <div className={styles.pdCol}>
-                  <strong>CashPoint:</strong> { facilityPatientDetail.cash_point}
-               </div>
-               <div className={styles.pdCol}>
-                   <strong>Bill Date:</strong> { facilityPatientDetail.bill_date}
-               </div>
-               <div className={styles.pdCol}>
-                   <strong>CR:</strong> { facilityPatientDetail.cr_no}
-               </div>
-                <div className={styles.pdCol}>
-                   <strong>AMRS Universl ID:</strong> { facilityPatientDetail.amrs_universal_id}
-               </div>
-             </>): (<></>)
-           }
+          {facilityPatientDetail ? (
+            <>
+              <div className={styles.pdCol}>
+                <strong>Name:</strong> {facilityPatientDetail.patient_name}
+              </div>
+              <div className={styles.pdCol}>
+                <strong>CashPoint:</strong> {facilityPatientDetail.cash_point}
+              </div>
+              <div className={styles.pdCol}>
+                <strong>Bill Date:</strong> {facilityPatientDetail.bill_date}
+              </div>
+              <div className={styles.pdCol}>
+                <strong>CR:</strong> {facilityPatientDetail.cr_no}
+              </div>
+              <div className={styles.pdCol}>
+                <strong>AMRS Universl ID:</strong> {facilityPatientDetail.amrs_universal_id}
+              </div>
+            </>
+          ) : (
+            <></>
+          )}
         </div>
         <div>
-        <Tabs>
-          <TabList scrollDebounceWait={200}>
-            <Tab>Bill Details</Tab>
-            <Tab>Claim</Tab>
-          </TabList>
-          <TabPanels>
-            <TabPanel>
-                {patientBillDetails && <BillDetails patientBillDetails={patientBillDetails} />}
-            </TabPanel>
-            <TabPanel>Claim</TabPanel>
-          </TabPanels>
-        </Tabs>
+          <Tabs>
+            <TabList scrollDebounceWait={200}>
+              <Tab>Bill Details</Tab>
+              <Tab>Claim</Tab>
+            </TabList>
+            <TabPanels>
+              <TabPanel>{patientBillDetails && <BillDetails patientBillDetails={patientBillDetails} />}</TabPanel>
+              <TabPanel>Claim</TabPanel>
+            </TabPanels>
+          </Tabs>
         </div>
       </div>
     </>

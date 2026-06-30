@@ -7,7 +7,13 @@ import {
   type PatientFacilityBillsDto,
   type PatientFacilityBillDetailsResponse,
   type PatientFacilityBillDetails,
+  type ClaimVisitsDto,
+  type ClaimVisitReponse,
+  type ProviderClaimPreviewDto,
+  type ClaimsVisit,
 } from './dashboard/v2/types';
+import { getHieBaseUrl } from '../claims/utils';
+
 
 export async function fetchFacilityBills(facilityBillsDto: FacilityBillsDto): Promise<FacilityBill[]> {
   const etlBaseUrl = await getEtlBaseUrl();
@@ -25,4 +31,38 @@ export async function fetchPatientFacilityBillDetails(
   const response = await openmrsFetch(patientfacilityBillDetailsUrl);
   const data = (await response.json()) as PatientFacilityBillDetailsResponse;
   return data.results ?? [];
+}
+
+export async function fetchFacilityClaimVisits(claimVisitsDto: ClaimVisitsDto): Promise<ClaimVisitReponse[]> {
+ const claimVisitsFilter:ClaimVisitsDto = {};
+ if(claimVisitsDto.consentToken){
+    claimVisitsFilter['consentToken'] = claimVisitsDto.consentToken;
+ }
+ if(claimVisitsDto.locationUuid){
+    claimVisitsFilter['locationUuid'] = claimVisitsDto.locationUuid;
+ }
+ if(claimVisitsDto.visitDate){
+   claimVisitsFilter['visitDate'] = claimVisitsDto.visitDate;
+ }
+  const { hieBaseUrl } = await getHieBaseUrl();
+  const queryString = new URLSearchParams(claimVisitsFilter).toString();
+  const response = await openmrsFetch(`${hieBaseUrl}/claims-visit?${queryString}`);
+  const data = (await response.json()) as ClaimVisitReponse[];
+  return data ?? [];
+}
+
+export async function fetchProviderClaimPreview(
+  providerClaimPreviewDto: ProviderClaimPreviewDto,
+): Promise<ClaimsVisit> {
+  const { hieBaseUrl } = await getHieBaseUrl();
+  const providerClaimPreviewUrl = `${hieBaseUrl}/claim-preview/provider`;
+  const response = await openmrsFetch(providerClaimPreviewUrl,{
+    method: 'POST',
+    headers: {
+        'content-type': 'application/json'
+    },
+    body: JSON.stringify(providerClaimPreviewDto)
+  });
+  const data = (await response.json()) as ClaimsVisit;
+  return data ?? null;
 }

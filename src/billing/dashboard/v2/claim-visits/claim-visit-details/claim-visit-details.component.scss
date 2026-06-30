@@ -1,0 +1,27 @@
+.cvLayout{
+    display: flex;
+    flex-direction: column;
+    padding: 15px 15px;
+    row-gap: 10px;
+    width: 100%;
+    .cvHeaderSection{
+        display: flex;
+        flex-direction: row;
+        column-gap: 15px;
+        width: 100%;
+    }
+    .cvContentSection{
+        display: flex;
+        flex-direction: column;
+        .cvRow{
+            display: flex;
+            flex-direction: row;
+            width: 100%;
+            flex-wrap: wrap;
+            .cvWidth{
+                display: flex;
+                width: 45%;
+            }
+        }
+    }
+}
