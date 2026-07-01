@@ -57,7 +57,7 @@ import { OtpFormData, type OTPWhitelistRequest } from '../../hie.types';
 import { createOTPWhitelisting, sendClaimsOTP } from '../../hie.resource';
 import { usePatient } from '../../../context/patient-context';
 import ClaimsComponent from '../../../claims/claims.component';
-import { ClaimResult } from '../../../claims';
+import { type ClaimResult, type Intervention } from '../../../claims';
 
 interface SendToTriageModalProps {
   patients: Patient[];
@@ -105,12 +105,13 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
   const [triggerCreateVisit, setTriggerCreateVisit] = useState<boolean>(false);
   const [showConsent, setShowSoncent] = useState<boolean>(false);
   const session = useSession();
-  const locationUuid = session.sessionLocation.uuid;
+  const locationUuid = session?.sessionLocation?.uuid;
   const [submitting, setSubmitting] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const [whitelistRequest, setWhitelistRequest] = useState(null);
   const [otpVerified, setOtpVerified] = useState(false);
   const [otp, setOtp] = useState(null);
+  const [selectedIntervention, setSelectedIntervention] = useState<Intervention | undefined>();
   const {
     registrationBillableServices,
     cashConsulationConceptUuid,
@@ -164,10 +165,11 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
     if (selectedPatient) {
       const identifiers = selectedPatient.identifiers;
       return {
-        crIdentifierId: identifiers?.find(i => i.identifierType.uuid == "e88dc246-3614-4ee3-8141-1f2a83054e72").identifier
-      }
+        crIdentifierId: identifiers?.find((i) => i.identifierType.uuid == 'e88dc246-3614-4ee3-8141-1f2a83054e72')
+          .identifier,
+      };
     }
-  }, [selectedPatient])
+  }, [selectedPatient]);
 
   const paymentDetails = Object.values(PaymentDetail).map((value) => {
     return {
@@ -593,7 +595,7 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
   }
   function getTriageServiceQueues(serviceQueues: ServiceQueue[]) {
     return serviceQueues.filter((sq) => {
-      return registrationServicequeues.includes(sq.uuid ?? '')
+      return registrationServicequeues.includes(sq.uuid ?? '');
     });
   }
 
@@ -737,7 +739,7 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
     try {
       setSubmitting(true);
 
-      const response = await sendClaimsOTP(patient!.id, locationUuid);
+      const response = await sendClaimsOTP(patient!.id, locationUuid!, selectedIntervention?.code);
 
       if (response?.message?.includes('OTP')) {
         setOtpSent(true);
@@ -874,12 +876,25 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
                         </div>
                       </div>
                       {/* If using SHA claim */}
-                      {
-                        hasSelectedPaymentMode('SHIF') ? (<>
+                      {hasSelectedPaymentMode('SHIF') ? (
+                        <>
                           {/* <ClaimsComponent clientRegistryId={patientIdentifiers.crIdentifierId} onSelectChange={() => { }} /> */}
-                          <ExtensionSlot name='billing-claims-slot' state={{ clientRegistryId: patientIdentifiers?.crIdentifierId, patientUuid: selectedPatient.uuid, triggerCreateVisit, otp, onSelectChange: () => { }, onClaimsVisitStart }} />
-                        </>) : (<></>)
-                      }
+                          <ExtensionSlot
+                            name="billing-claims-slot"
+                            state={{
+                              clientRegistryId: patientIdentifiers?.crIdentifierId,
+                              patientUuid: selectedPatient!.uuid,
+                              triggerCreateVisit,
+                              otp,
+                              onSelectChange: () => {},
+                              onClaimsVisitStart,
+                              onInterventionChange: setSelectedIntervention,
+                            }}
+                          />
+                        </>
+                      ) : (
+                        <></>
+                      )}
                       {hasSelectedPaymentMode('insurance') ? (
                         <>
                           <div className={styles.formRow}>

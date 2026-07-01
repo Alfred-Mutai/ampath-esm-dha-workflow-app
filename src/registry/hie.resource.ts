@@ -112,15 +112,48 @@ export async function createOTPWhitelisting(payload: OTPWhitelistRequest): Promi
   return data;
 }
 
-export async function sendClaimsOTP(patientId: string, locationUuid: string, intervention?: string): Promise<any> {
+export async function sendClaimsOTP(patientId: string, locationUuid: string, interventionCode: string): Promise<any> {
   const hieBaseUrl = await getHieBaseUrl();
 
   const payload = {
-    intervention_codes: ['SHA-09-047'],
+    intervention_codes: [interventionCode],
     patient_id: patientId,
     locationUuid: locationUuid,
   };
   const url = `${hieBaseUrl}/claims-otp`;
+  const response = await openmrsFetch(url, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    const errorText = data.message || 'Failed to fetch OTP';
+    throw new Error(`Request failed with ${response.status}: ${errorText}`);
+  }
+
+  return data;
+}
+
+export async function biometricsAuthorize(
+  patient: HieClient,
+  locationUuid: string,
+  interventionCode: string,
+  serviceType: string,
+): Promise<any> {
+  const hieBaseUrl = await getHieBaseUrl();
+
+  const payload = {
+    intervention_codes: [`${interventionCode}`],
+    patient_id: patient.id,
+    locationUuid: locationUuid,
+  };
+  const url = `${hieBaseUrl}/client/biometrics-authorize`;
   const response = await openmrsFetch(url, {
     method: 'POST',
     headers: {

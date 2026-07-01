@@ -1,4 +1,4 @@
-import { openmrsFetch, OpenmrsResource, restBaseUrl } from "@openmrs/esm-framework";
+import { openmrsFetch, OpenmrsResource, restBaseUrl, useSession } from "@openmrs/esm-framework";
 import { useState } from "react";
 import useSWR from 'swr';
 import { getHieBaseUrl } from "../../../shared/utils/get-base-url";
@@ -57,10 +57,18 @@ export const usePatientBills = (patientUuid: string, billStatus: string = 'PENDI
 };
 
 export const useCashPoint = () => {
-    const url = `/ws/rest/v1/billing/cashPoint`;
+    const sessionLocation = useSession();
+    const customRepresentation = "custom:(uuid,name,description,location:(uuid,display))";
+    const url = `/ws/rest/v1/billing/cashPoint?v=${customRepresentation}`;
     const { data, isLoading, error } = useSWR<{ data: { results: Array<OpenmrsResource> } }>(url, openmrsFetch);
 
-    return { isLoading, error, cashPoints: data?.data?.results ?? [] };
+    let cashPoints = data?.data?.results;
+
+    if (cashPoints) {
+        cashPoints = cashPoints?.filter(cp => cp?.location?.uuid === sessionLocation?.sessionLocation?.uuid);
+    }
+
+    return { isLoading, error, cashPoints: cashPoints ?? [] };
 };
 
 export const createPatientBill = (payload) => {

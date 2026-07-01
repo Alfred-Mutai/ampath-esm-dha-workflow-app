@@ -107,12 +107,12 @@ const RegistryComponent: React.FC<RegistryComponentProps> = () => {
 
   const generateCustomSmsPayload = (): RequestCustomOtpDto => {
     return {
-        identificationNumber: identifierValue,
-        identificationType: identifierType,
-        locationUuid,
-        phoneNumber: principal?.phone ? formatPhoneNumberForOTP(principal.phone ?? '') : ''
-      };
-  }
+      identificationNumber: identifierValue,
+      identificationType: identifierType,
+      locationUuid,
+      phoneNumber: principal?.phone ? formatPhoneNumberForOTP(principal.phone ?? '') : '',
+    };
+  };
 
   const isValidCustomSmsPayload = (payload: RequestCustomOtpDto): boolean => {
     if (!payload.identificationNumber) {
@@ -127,7 +127,7 @@ const RegistryComponent: React.FC<RegistryComponentProps> = () => {
       showAlert('error', 'No default location selected', '');
       return false;
     }
-    if(!payload.phoneNumber){
+    if (!payload.phoneNumber) {
       showAlert('error', 'No phone number selected', '');
       return false;
     }
