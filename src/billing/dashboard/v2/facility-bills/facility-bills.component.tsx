@@ -106,7 +106,7 @@ const FacilityBills: React.FC<facilityBillsProps> = ({ billingDate, locationUuid
       ) : (
         <></>
       )}
-      {currentView === BillingView.BillDetails ? (
+      {currentView === BillingView.BillDetails && selectedPatientUuid ? (
         <>
           <div>
             <Button kind="primary" onClick={() => toggleView(BillingView.Bills, '')}>

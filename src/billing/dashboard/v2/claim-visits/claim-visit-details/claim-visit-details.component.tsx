@@ -104,7 +104,7 @@ const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({ claimsVisit }) =>
           </div>
           <div className={styles.cvRow}>
             <div className={styles.cvRow}>
-              <h6>Dignosis</h6>
+              <h6>Diagnosis</h6>
             </div>
             <div className={styles.cvRow}>
               {claimsVisit.claim_diagnoses && <ClaimDiagnosisDetails claimDiagnosiss={claimsVisit.claim_diagnoses} />}

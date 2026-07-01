@@ -11,9 +11,11 @@ import {
   type ClaimVisitReponse,
   type ProviderClaimPreviewDto,
   type ClaimsVisit,
+  type PatientPaymentsDto,
+  type PatientPaymentReponse,
+  type PatientPayment,
 } from './dashboard/v2/types';
 import { getHieBaseUrl } from '../claims/utils';
-
 
 export async function fetchFacilityBills(facilityBillsDto: FacilityBillsDto): Promise<FacilityBill[]> {
   const etlBaseUrl = await getEtlBaseUrl();
@@ -65,4 +67,37 @@ export async function fetchProviderClaimPreview(
   });
   const data = (await response.json()) as ClaimsVisit;
   return data ?? null;
+}
+
+export async function fetchPatientClaimVisit(
+  claimVisitsDto: ClaimVisitsDto,
+): Promise<ClaimVisitReponse[]> {
+  const claimVisitsFilter:ClaimVisitsDto = {};
+ if(claimVisitsDto.consentToken){
+    claimVisitsFilter['consentToken'] = claimVisitsDto.consentToken;
+ }
+ if(claimVisitsDto.patientId){
+    claimVisitsFilter['patientId'] = claimVisitsDto.patientId;
+ }
+ if(claimVisitsDto.locationUuid){
+    claimVisitsFilter['locationUuid'] = claimVisitsDto.locationUuid;
+ }
+ if(claimVisitsDto.visitDate){
+   claimVisitsFilter['visitDate'] = claimVisitsDto.visitDate;
+ }
+  const { hieBaseUrl } = await getHieBaseUrl();
+  const queryString = new URLSearchParams(claimVisitsFilter).toString();
+  const response = await openmrsFetch(`${hieBaseUrl}/claims-visit?${queryString}`);
+  const data = (await response.json()) as ClaimVisitReponse[];
+  return data ?? [];
+}
+
+export async function fetchPatientBillPayments(
+  patientPaymentsDto: PatientPaymentsDto,
+): Promise<PatientPayment[]>{
+  const etlBaseUrl = await getEtlBaseUrl();
+  const patientPaymentsUrl = `${etlBaseUrl}/bill/patient/payment?billingDate=${patientPaymentsDto.billingDate}&patientUuid=${patientPaymentsDto.patientUuid}`;
+  const response = await openmrsFetch(patientPaymentsUrl);
+  const data = (await response.json()) as PatientPaymentReponse;
+  return data.results ?? [];
 }

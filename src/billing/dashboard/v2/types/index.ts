@@ -52,6 +52,7 @@ export type ClaimVisitsDto = {
   locationUuid?: string;
   consentToken?: string;
   visitDate?: string;
+  patientId?: string;
 };
 
 export type ClaimVisitInvoince = {
@@ -182,3 +183,26 @@ export type ProviderClaimPreviewDto = {
   consentToken: string;
   locationUuid: string;
 };
+
+export type PatientPaymentsDto = {
+  billingDate: string;
+  patientUuid: string;
+};
+
+export type PatientPayment = {
+  bill_id: number;
+  receipt_number: string;
+  patient_id: number;
+  status: string;
+  patient_uuid: string;
+  cashier_bill_payment_uuid: string;
+  payment_mode_id: number;
+  amount: number;
+  amount_tendered: number;
+  payment_time: string;
+  payment_mode: string;
+};
+
+export type PatientPaymentReponse = {
+  results: PatientPayment[];
+}

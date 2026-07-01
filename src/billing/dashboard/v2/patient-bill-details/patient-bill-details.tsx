@@ -1,10 +1,21 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import styles from './patient-bill-details.scss';
-import { type PatientFacilityBillsDto, type PatientFacilityBillDetails } from '../types';
-import { fetchPatientFacilityBillDetails } from '../../../billing-claims.resource';
+import {
+  type PatientFacilityBillsDto,
+  type PatientFacilityBillDetails,
+  type ClaimVisitsDto,
+  type PatientPaymentsDto,
+  type PatientPayment,
+} from '../types';
+import {
+  fetchPatientBillPayments,
+  fetchPatientClaimVisit,
+  fetchPatientFacilityBillDetails,
+} from '../../../billing-claims.resource';
 import { showSnackbar } from '@openmrs/esm-styleguide';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from '@carbon/react';
 import BillDetails from './bill-details/bill-details';
+import PatientClaimDetails from './claim-details/patient-claim-details.component';
 interface patientBillDetailsProps {
   patientUuid: string;
   locationUuid: string;
@@ -12,6 +23,9 @@ interface patientBillDetailsProps {
 }
 const PatientBillDetails: React.FC<patientBillDetailsProps> = ({ patientUuid, locationUuid, billingDate }) => {
   const [patientBillDetails, setPatientBillDetails] = useState<PatientFacilityBillDetails[]>([]);
+  const [consentToken, setConsentToken] = useState<string>('');
+  const [crId, setCrId] = useState<string>('');
+  const [patientBillPayments, setPatientBillPayments] = useState<PatientPayment[]>([]);
   const facilityPatientDetail = useMemo(() => {
     return patientBillDetails[0] ?? null;
   }, [patientBillDetails]);
@@ -19,14 +33,21 @@ const PatientBillDetails: React.FC<patientBillDetailsProps> = ({ patientUuid, lo
   useEffect(() => {
     if (locationUuid && patientUuid && billingDate) {
       getPatientBillDetails();
+      getPatientPayments();
     }
   }, [locationUuid, patientUuid, billingDate]);
+  useEffect(() => {
+    if (patientBillDetails) {
+      getPatientClaimVisit();
+    }
+  }, [patientBillDetails]);
   async function getPatientBillDetails() {
     const patientBillPayload = generatePatientBillPayload();
     try {
       const data = await fetchPatientFacilityBillDetails(patientBillPayload);
       if (data) {
         setPatientBillDetails(data);
+        setCrId(data[0].cr_no);
       }
     } catch (error) {
       showSnackbar({
@@ -41,6 +62,61 @@ const PatientBillDetails: React.FC<patientBillDetailsProps> = ({ patientUuid, lo
       locationUuid: locationUuid,
       billingDate: billingDate,
       patientUuid: patientUuid,
+    };
+  }
+  async function getPatientClaimVisit() {
+    const claimVisitPayload = getPatientClaimVisitPayload();
+    if (!isValidClaimVisitPayload(claimVisitPayload)) {
+      return;
+    }
+    try {
+      const resp = await fetchPatientClaimVisit(claimVisitPayload);
+      if (resp && resp.length > 0) {
+        setConsentToken(resp[0].authorizationCode);
+      } else {
+        setConsentToken('');
+      }
+    } catch (error) {
+      showSnackbar({
+        title: 'Error fetching patient claim visit',
+        kind: 'error',
+        subtitle: 'An error occurred while fetching the patient claim visit',
+      });
+    }
+  }
+  function getPatientClaimVisitPayload(): ClaimVisitsDto {
+    return {
+      patientId: crId,
+      visitDate: billingDate,
+    };
+  }
+  function isValidClaimVisitPayload(claimVisitsDto: ClaimVisitsDto): boolean {
+    if (!claimVisitsDto.patientId || !claimVisitsDto.visitDate) {
+      return false;
+    }
+    return true;
+  }
+  async function getPatientPayments() {
+    const patientPaymentPayload = getPatientPaymentsPayload();
+    try {
+      const resp = await fetchPatientBillPayments(patientPaymentPayload);
+      if (resp && resp.length > 0) {
+        setPatientBillPayments(resp);
+      } else {
+        setPatientBillPayments([]);
+      }
+    } catch (error) {
+      showSnackbar({
+        title: 'Error fetching patient bill payments',
+        kind: 'error',
+        subtitle: 'An error occurred while fetching the patient bill payments',
+      });
+    }
+  }
+  function getPatientPaymentsPayload(): PatientPaymentsDto {
+    return {
+      patientUuid: patientUuid,
+      billingDate: billingDate,
     };
   }
   return (
@@ -76,8 +152,20 @@ const PatientBillDetails: React.FC<patientBillDetailsProps> = ({ patientUuid, lo
               <Tab>Claim</Tab>
             </TabList>
             <TabPanels>
-              <TabPanel>{patientBillDetails && <BillDetails patientBillDetails={patientBillDetails} />}</TabPanel>
-              <TabPanel>Claim</TabPanel>
+              <TabPanel>
+                {patientBillDetails && (
+                  <BillDetails patientBillDetails={patientBillDetails} patientPayments={patientBillPayments} />
+                )}
+              </TabPanel>
+              <TabPanel>
+                {locationUuid && consentToken ? (
+                  <>
+                    <PatientClaimDetails locationUuid={locationUuid} consentToken={consentToken} />
+                  </>
+                ) : (
+                  <></>
+                )}
+              </TabPanel>
             </TabPanels>
           </Tabs>
         </div>
