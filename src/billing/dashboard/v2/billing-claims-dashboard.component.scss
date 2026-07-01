@@ -4,4 +4,15 @@
     width: 100%;
     padding: 2% 2%;
     row-gap: 10px;
+    .bcContent{
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        row-gap: 10px;
+        .bcContentFilters{
+            display: flex;
+            flex-direction: row;
+            justify-content: flex-end;
+        }
+    }
 }

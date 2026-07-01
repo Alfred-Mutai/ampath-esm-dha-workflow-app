@@ -2,30 +2,32 @@ import React, { useEffect } from 'react';
 import { useState } from 'react';
 import { type FacilityBillsDto, type FacilityBill, BillingView } from '../types';
 import { Button, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@carbon/react';
-import { showSnackbar, useSession } from '@openmrs/esm-framework';
+import { showSnackbar } from '@openmrs/esm-framework';
 import { fetchFacilityBills } from '../../../billing-claims.resource';
 import styles from './facility-bills.component.scss';
 import PatientBillDetails from '../patient-bill-details/patient-bill-details';
 
-interface facilityBillsProps {}
-const FacilityBills: React.FC<facilityBillsProps> = () => {
+interface facilityBillsProps {
+  billingDate: string;
+  locationUuid: string;
+}
+const FacilityBills: React.FC<facilityBillsProps> = ({ billingDate, locationUuid }) => {
   const [facilityBills, setFacilityBills] = useState<FacilityBill[]>([]);
   const [currentView, setCurrentView] = useState<BillingView>(BillingView.Bills);
-  const [selectedPatientUuid,setSelectedPatientUuid] = useState<string>('');
-  const session = useSession();
-  const locationUuid = session.sessionLocation?.uuid ?? '';
-  const billingDate = new Date().toISOString().split('T')[0] ?? '';
+  const [selectedPatientUuid, setSelectedPatientUuid] = useState<string>('');
   useEffect(() => {
-    if (locationUuid) {
+    if (locationUuid && billingDate) {
       getFacilityBills();
     }
-  }, []);
+  }, [billingDate, locationUuid]);
   async function getFacilityBills() {
     const facilityBillsPayload = generateFacilityBillsPayload();
     try {
       const data = await fetchFacilityBills(facilityBillsPayload);
       if (data) {
         setFacilityBills(data);
+      } else {
+        setFacilityBills([]);
       }
     } catch (error) {
       showSnackbar({
@@ -41,25 +43,25 @@ const FacilityBills: React.FC<facilityBillsProps> = () => {
       billingDate: billingDate,
     };
   }
-  function toggleView(newView: BillingView,patientUuid: string) {
+
+  function toggleView(newView: BillingView, patientUuid: string) {
     setCurrentView(newView);
     setSelectedPatientUuid(patientUuid);
   }
-  function formatStatusColumn(status: string){
+  function formatStatusColumn(status: string) {
     const statusArr = status.split(',');
-    
-    if(statusArr.length > 0){
-        const hasPendingBill = statusArr.some((s)=>{
+
+    if (statusArr.length > 0) {
+      const hasPendingBill = statusArr.some((s) => {
         return s === 'PENDING';
-        });
-        if(hasPendingBill){
-             return 'PENDING'
-        }else{
-            return 'PAID';
-        }
-         
-    }else{
-        return status;
+      });
+      if (hasPendingBill) {
+        return 'PENDING';
+      } else {
+        return 'PAID';
+      }
+    } else {
+      return status;
     }
   }
   return (
@@ -85,7 +87,10 @@ const FacilityBills: React.FC<facilityBillsProps> = () => {
                         <TableCell>{index + 1}</TableCell>
                         <TableCell>{fb.bill_date}</TableCell>
                         <TableCell>
-                          <div className={styles.clickableData} onClick={() => toggleView(BillingView.BillDetails,fb.patient_uuid)}>
+                          <div
+                            className={styles.clickableData}
+                            onClick={() => toggleView(BillingView.BillDetails, fb.patient_uuid)}
+                          >
                             {fb.patient_name}
                           </div>
                         </TableCell>
@@ -101,20 +106,24 @@ const FacilityBills: React.FC<facilityBillsProps> = () => {
       ) : (
         <></>
       )}
-      {
-        currentView === BillingView.BillDetails ? (<>
-        <div>
-           <Button kind='primary' onClick={()=>toggleView(BillingView.Bills,'')}>Back</Button>
-        </div>
-        <div>
-         <PatientBillDetails 
-           locationUuid={locationUuid}
-           billingDate={billingDate}
-           patientUuid={selectedPatientUuid}
-         />
-         </div>
-        </>):(<></>)
-      }
+      {currentView === BillingView.BillDetails ? (
+        <>
+          <div>
+            <Button kind="primary" onClick={() => toggleView(BillingView.Bills, '')}>
+              Back
+            </Button>
+          </div>
+          <div>
+            <PatientBillDetails
+              locationUuid={locationUuid}
+              billingDate={billingDate}
+              patientUuid={selectedPatientUuid}
+            />
+          </div>
+        </>
+      ) : (
+        <></>
+      )}
     </>
   );
 };
