@@ -1,5 +1,7 @@
 import { openmrsFetch, restBaseUrl } from '@openmrs/esm-framework';
 import { type CreateBillDto, type BillableService, type PaymentMode, type CashPoint } from '../types';
+import { getHieBaseUrl } from '../utils/get-base-url';
+import { postJson } from '../../registry/registry.resource';
 
 export async function fetchPaymentModes(): Promise<PaymentMode[]> {
   const paymentModeUrl = `${restBaseUrl}/billing/paymentMode`;
@@ -25,8 +27,7 @@ export async function createBill(createBillDto: CreateBillDto) {
     },
     body: JSON.stringify(createBillDto),
   });
-  const result = await response.json();
-  return result.results ?? [];
+  return response.data;
 }
 
 export async function fetchCashPoints(): Promise<CashPoint[]> {
@@ -35,4 +36,10 @@ export async function fetchCashPoints(): Promise<CashPoint[]> {
   const resp = await openmrsFetch(cashPointUrl);
   const data = await resp.json();
   return data.results ?? [];
+}
+
+export const createOrderBillInHie = async (payload) => {
+    const hieBaseUrl = await getHieBaseUrl();
+    const url = `${hieBaseUrl}/bill-order`;
+    return postJson<{ bill_uuid: string }>(url, payload);
 }

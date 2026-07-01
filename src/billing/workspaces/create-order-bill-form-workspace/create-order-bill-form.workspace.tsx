@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { validationSchema, type CreateOrderBillFormSchema } from "./schema";
-import { ExtensionSlot, FetchResponse, OpenmrsResource, ResponsiveWrapper, showSnackbar, useConfig, useDebounce, useLayoutType } from "@openmrs/esm-framework";
+import { ExtensionSlot, FetchResponse, OpenmrsResource, ResponsiveWrapper, showSnackbar, useConfig, useDebounce, useLayoutType, useVisit } from "@openmrs/esm-framework";
 import { useTranslation } from "react-i18next";
 import { Column, FilterableMultiSelect, Select, SelectItem, Form, FormGroup, Stack, TextInput, InlineNotification, ButtonSet, Button, InlineLoading, Search, Layer, Tile, FormLabel } from "@carbon/react";
 import styles from './create-order-bill-form.scss';
@@ -13,6 +13,8 @@ import { createOrderBillInHie, createPatientBill, removePatientBill, updatePatie
 import { generateUpdateBillLineItems } from "../../utils";
 import { IdentifierTypesUuids } from "../../../resources/identifier-types";
 import { type ConfigObject } from "../../../config-schema";
+import { type ClaimIntervention } from "../../../claims";
+import { getConsentToken, getServiceType } from "../../../shared/services/claims.resource";
 
 interface CreateOrderBillFormProps {
     closeWorkspace: () => void;
@@ -27,6 +29,7 @@ const CreateOrderBillForm: React.FC<CreateOrderBillFormProps> = ({
 }) => {
     const { t } = useTranslation();
     const isTablet = useLayoutType() === 'tablet';
+    const { activeVisit } = useVisit(order?.patient?.uuid);
     const { lineItems, isLoading: isLoadingLineItems } = useBillableItems(); //useBillableItems(serviceTypeUuid);
     const { currentDayBills } = usePatientBills(order?.patient?.uuid);
     const { identifiers } = usePatientIdentifiers(order?.patient?.uuid);
@@ -37,7 +40,7 @@ const CreateOrderBillForm: React.FC<CreateOrderBillFormProps> = ({
     const { nonSHAPaymentModes, consultationBillableServiceNames } = useConfig<ConfigObject>();
     const [searchTerm, setSearchTerm] = useState('');
     const [triggerAddIntervention, setTriggerAddIntervention] = useState<boolean>(false);
-    const [interventionResult, setInterventionResult] = useState();
+    const [interventionResult, setInterventionResult] = useState<ClaimIntervention>();
     const [pendingSubmitData, setPendingSubmitData] = useState<CreateOrderBillFormSchema | null>(null);
     const debouncedSearchTerm = useDebounce(searchTerm.trim());
     const searchInputRef = useRef(null);
@@ -121,7 +124,7 @@ const CreateOrderBillForm: React.FC<CreateOrderBillFormProps> = ({
         return null;
     }, [billableItem, initialPriceName]);
 
-    const onAddIntervention = (result) => {
+    const onAddIntervention = (result: ClaimIntervention) => {
         setInterventionResult(result);
     }
 
@@ -175,11 +178,41 @@ const CreateOrderBillForm: React.FC<CreateOrderBillFormProps> = ({
         const lineItemUuid = response?.data?.lineItems?.find(v => v?.lineItemOrder === Number(lineItemOrder))?.uuid;
 
         if (billUuidResp) {
-            const hiePayload = {
+            let hiePayload = {
                 bill_uuid: billUuidResp,
                 order_no: order?.orderNumber,
                 line_item_uuid: lineItemUuid
             };
+
+            if (interventionResult) {
+                const electivePreauth = interventionResult.requires_oncology_preauth || interventionResult.requires_optical_preauth || interventionResult.requires_radiology_preauth
+                    || interventionResult.requires_renal_preauth || interventionResult.requires_surgical_preauth;
+                const requiresPreauth = interventionResult.needs_preauth;
+                const requiredPreauthDocumentTypes = interventionResult.required_preauth_document_types;
+                const applicableDocumentTypes = interventionResult.applicable_document_types;
+
+                let intervention = {
+                    intervention_code: interventionResult.intervention_code,
+                    consent_token: getConsentToken(activeVisit),
+                    service_type: getServiceType(interventionResult, "OUTPATIENT"),
+                    requires_preauth: requiresPreauth,
+                    normal_preauth: requiresPreauth && !electivePreauth,
+                    elective_preauth: electivePreauth
+                }
+
+                if (applicableDocumentTypes && applicableDocumentTypes.length) {
+                    intervention["applicable_document_types"] = applicableDocumentTypes.join(",");
+                }
+
+                if (requiredPreauthDocumentTypes && requiredPreauthDocumentTypes.length) {
+                    intervention["required_preauth_document_types"] = requiredPreauthDocumentTypes.join(",");
+                }
+
+                hiePayload = {
+                    ...hiePayload,
+                    ...intervention
+                }
+            }
 
             try {
                 await createOrderBillInHie(hiePayload);

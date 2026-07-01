@@ -1,5 +1,6 @@
 import { openmrsFetch } from "@openmrs/esm-framework";
 import { fetchUrl, getHieBaseUrl, getUrl } from "./utils";
+import { ClaimIntervention } from ".";
 
 export async function addIntervention(consentToken: string, interventionCode: string, locationUuid: string) {
     const { hieBaseUrl } = await getHieBaseUrl();
@@ -11,14 +12,25 @@ export async function addIntervention(consentToken: string, interventionCode: st
         interventionCode: interventionCode
     }
     // return await fetchUrl<any>(url, { method: "POST", payload });
-    const result = await openmrsFetch(url, {
+    const result = await openmrsFetch<ClaimIntervention>(url, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
         // signal: abortController.signal,
         body: payload,
+    }).catch((error) => {
+        const message = error?.responseBody?.message ?? "";
+        if (typeof message === "object") {
+            throw `${message?.join(",")}`;
+        }
+        throw message;
     });
+
+    if (result?.data && "error" in result.data && "message" in result.data) {
+        const message = result.data.message ?? "";
+        throw message;
+    }
 
     return result?.data;
 }

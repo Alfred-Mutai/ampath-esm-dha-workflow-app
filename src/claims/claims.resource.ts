@@ -88,7 +88,19 @@ export async function createClaimsVisit(interventionCode: string, crIdentifier: 
         },
         // signal: abortController.signal,
         body: payload,
+    }).catch((error) => {
+        const message = error?.responseBody?.message ?? "";
+        if (typeof message === "object") {
+            throw `${message?.join(",")}`;
+        }
+        throw message;
     });
+
+    if (result?.data && "error" in result.data && "message" in result.data) {
+        const message = result.data.message ?? "";
+        throw message;
+    }
+
     return result.data;
 }
 

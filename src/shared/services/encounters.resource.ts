@@ -1,5 +1,6 @@
 import { type Encounter, openmrsFetch, restBaseUrl } from '@openmrs/esm-framework';
 import { type CreateOrderEncounterDto } from '../types';
+import { Order } from '@openmrs/esm-patient-common-lib';
 
 export async function fetchPatientEncountersByType(patientUuid: string, encounterTypeUuid: string) {
   const res = await openmrsFetch(
@@ -22,6 +23,11 @@ export async function createOrderEncounter(createOrderEncounterDto: CreateOrderE
     },
     body: JSON.stringify(createOrderEncounterDto),
   });
-  const result = await response.json();
-  return result ?? null;
+  return response.data;
+}
+
+export async function getOrder(uuid: string): Promise<Order> {
+  const url = `${restBaseUrl}/order/${uuid}`;
+  const response = await openmrsFetch(url);
+  return response.data;
 }

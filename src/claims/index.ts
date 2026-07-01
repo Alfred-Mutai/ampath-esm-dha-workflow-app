@@ -1,84 +1,86 @@
 export interface ClientSubBenefit {
-    id: number;
-    code: string;
-    name: string;
-    accessPoint: string;
-    fund: string;
-    parentBenefit: string;
-    parentBenefitCode: string;
+  id: number;
+  code: string;
+  name: string;
+  accessPoint: string;
+  fund: string;
+  parentBenefit: string;
+  parentBenefitCode: string;
 }
 
 export interface ClientSubBenefitResults {
-    results: ClientSubBenefit[];
+  results: ClientSubBenefit[];
 }
 
 export interface Intervention {
-    id: number;
-    accessPoint: string;
-    name: string;
-    code: string;
-    paymentMechanism: string;
-    needsPreauth: boolean;
-    needsManualPreauthApproval: boolean;
-    overallTariff: string;
-    kephLevelTarriff: string;
-    fund: string;
-    fallBackOverallTariff: string;
-    tariffPerAdditionalKilometer: string;
-    level2Tariff: string;
-    level3Tariff: string;
-    level4Tariff: string;
-    level5Tariff: string;
-    level6Tariff: string;
-    requiresSurgicalPreauth: boolean;
-    requiresRenalPreauth: boolean;
-    requiresOncologyPreauth: boolean;
-    requiresRadiologyPreauth: boolean;
-    requiresOpticalPreauth: boolean;
-    applicableSchemes: string[];
+  id: number;
+  accessPoint: string;
+  name: string;
+  code: string;
+  paymentMechanism: string;
+  needsPreauth: boolean;
+  needsManualPreauthApproval: boolean;
+  overallTariff: string;
+  kephLevelTarriff: string;
+  fund: string;
+  fallBackOverallTariff: string;
+  tariffPerAdditionalKilometer: string;
+  level2Tariff: string;
+  level3Tariff: string;
+  level4Tariff: string;
+  level5Tariff: string;
+  level6Tariff: string;
+  requiresSurgicalPreauth: boolean;
+  requiresRenalPreauth: boolean;
+  requiresOncologyPreauth: boolean;
+  requiresRadiologyPreauth: boolean;
+  requiresOpticalPreauth: boolean;
+  applicableSchemes: string[];
+  requiredPreauthDocumentTypes: string[];
+  applicableDocumentTypes: string[];
 }
 
 export interface InterventionResults {
-    results: Intervention[];
+  results: Intervention[];
 }
 
 export interface FundUtilizationLimit {
-    fundType: string;
-    utilisedAmount: string;
-    maxAmount: string;
-    availableAmount: string;
+  fundType: string;
+  utilisedAmount: string;
+  maxAmount: string;
+  availableAmount: string;
 }
 
 export interface IntermediatePeriodUsage {
-    individualUtilisedDuringPeriod: number;
-    individualMaxDuringPeriod: number;
-    period: string;
-    lastUsageDate: string;
+  individualUtilisedDuringPeriod: number;
+  individualMaxDuringPeriod: number;
+  period: string;
+  lastUsageDate: string;
 }
 
 export interface ComputationalDetail {
-    individualLimitAvailableCount: number;
-    householdLimitAvailableCount: number;
-    coverageStartDate: string;
-    coverageEndDate: string;
-    limitAvailableAmount: string;
-    nextAvailableDate: string;
-    eligibility: boolean;
-    intermediatePeriodUsage: IntermediatePeriodUsage;
+  individualLimitAvailableCount: number;
+  householdLimitAvailableCount: number;
+  coverageStartDate: string;
+  coverageEndDate: string;
+  limitAvailableAmount: string;
+  nextAvailableDate: string;
+  eligibility: boolean;
+  intermediatePeriodUsage: IntermediatePeriodUsage;
 }
 
 export interface BenefitUtilization {
-    crId: string;
-    code: string;
-    limitScope: string;
-    nextAvailability: string;
-    utilizationDays: number;
-    individualMaxLimit: number;
-    householdMaxLimit: number;
-    individualUtilisedLimit: number;
-    householdUtilisedLimit: number;
-    fundUtilizationLimit: FundUtilizationLimit[];
-    computationalDetail: ComputationalDetail;
+  crId: string;
+  code: string;
+  limitScope: string;
+  nextAvailability: string;
+  utilizationDays: number;
+  individualMaxLimit: number;
+  householdMaxLimit: number;
+  individualUtilisedLimit: number;
+  householdUtilisedLimit: number;
+  fundUtilizationLimit: FundUtilizationLimit[];
+  computationalDetail: ComputationalDetail;
 }
 
 export type ServiceType = "CAPITATION" | "OUTPATIENT" | "INPATIENT" | "EMERGENCY";
@@ -88,7 +90,7 @@ export type PreauthType = "NORMAL" | "SURGICAL" | "ONCOLOGY" | "RENAL" | "IMAGIN
 export type VisitType = "INPATIENT" | "OUTPATIENT";
 
 // Claim visit
-interface ClaimIntervention {
+export interface ClaimIntervention {
   id: string;
   intervention_code: string;
   intervention_name: string;
