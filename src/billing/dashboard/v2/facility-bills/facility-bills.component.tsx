@@ -52,14 +52,20 @@ const FacilityBills: React.FC<facilityBillsProps> = ({ billingDate, locationUuid
     const statusArr = status.split(',');
 
     if (statusArr.length > 0) {
+       const hasPostedBill = statusArr.some((s) => {
+        return s === 'POSTED';
+      });
+      if(hasPostedBill){
+        return 'PARTIALLY PAID'
+      }
       const hasPendingBill = statusArr.some((s) => {
         return s === 'PENDING';
       });
       if (hasPendingBill) {
         return 'PENDING';
-      } else {
-        return 'PAID';
       }
+
+      return 'PAID';
     } else {
       return status;
     }

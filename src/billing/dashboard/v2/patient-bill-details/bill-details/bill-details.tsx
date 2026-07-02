@@ -1,16 +1,29 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { type PatientPayment, type PatientFacilityBillDetails } from '../../types';
 import styles from './bill-details.scss';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@carbon/react';
+import { OverflowMenu, OverflowMenuItem, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@carbon/react';
 import { formatDate, parseDate } from '@openmrs/esm-framework';
+import BillItemPaymentModal from '../modals/bill-item-payment/bill-item-payment.modal';
 
 interface billDetailsProps {
   patientBillDetails: PatientFacilityBillDetails[];
   patientPayments: PatientPayment[];
 }
 const BillDetails: React.FC<billDetailsProps> = ({ patientBillDetails, patientPayments }) => {
+  const [showPaymentModal,setShowPaymentModal] = useState<boolean>(false);
+  const [selectedBillItem,setSelectedBillItem] = useState<PatientFacilityBillDetails | null>(null);
   if (!patientBillDetails && !patientPayments) {
     return <>No Data</>;
+  }
+  function handleBillItemPayment(patientBillDetail: PatientFacilityBillDetails){
+      setSelectedBillItem(patientBillDetail);
+      setShowPaymentModal(true);
+  }
+  function handleClosePayModal(){
+     setShowPaymentModal(false);
+  }
+  function handleSuccessfullPayment(){
+    handleClosePayModal();
   }
   return (
     <>
@@ -27,11 +40,12 @@ const BillDetails: React.FC<billDetailsProps> = ({ patientBillDetails, patientPa
                     <TableRow>
                       <TableHeader>No</TableHeader>
                       <TableHeader>Bill Item</TableHeader>
+                      <TableHeader>Intervention Code</TableHeader>
+                      <TableHeader>Order No</TableHeader>
+                      <TableHeader>Service Type</TableHeader>
                       <TableHeader>Payer</TableHeader>
                       <TableHeader>Quantity</TableHeader>
                       <TableHeader>Total</TableHeader>
-                      <TableHeader>Status</TableHeader>
-                      <TableHeader>Select</TableHeader>
                       <TableHeader>Actions</TableHeader>
                     </TableRow>
                   </TableHead>
@@ -43,12 +57,22 @@ const BillDetails: React.FC<billDetailsProps> = ({ patientBillDetails, patientPa
                             <TableRow key={b.patient_uuid}>
                               <TableCell>{index + 1}</TableCell>
                               <TableCell>{b.billable_service}</TableCell>
+                              <TableCell>{b.intervention_code ?? ''}</TableCell>
+                              <TableCell>{b.order_no ?? ''}</TableCell>
+                              <TableCell>{b.service_type ?? ''}</TableCell>
                               <TableCell>{b.payment_scheme}</TableCell>
                               <TableCell>{b.item_quantity}</TableCell>
                               <TableCell>Ksh {b.item_total_price}</TableCell>
-                              <TableCell>{b.paid_status}</TableCell>
-                              <TableCell></TableCell>
-                              <TableCell></TableCell>
+                              <TableCell>
+                                {
+                                  (b.paid_status === 'PENDING' ||  b.paid_status === 'POSTED') ? (<>
+                                   <OverflowMenu aria-label="overflow-menu">
+                                      <OverflowMenuItem itemText="Pay" onClick={() => handleBillItemPayment(b)} />
+                                    </OverflowMenu>
+                                  </>): (<></>)
+                                }
+                                
+                              </TableCell>
                             </TableRow>
                           </>
                         );
@@ -88,7 +112,8 @@ const BillDetails: React.FC<billDetailsProps> = ({ patientBillDetails, patientPa
                               <TableCell>{p.payment_mode}</TableCell>
                               <TableCell>Ksh {p.amount}</TableCell>
                               <TableCell>Ksh {p.amount_tendered}</TableCell>
-                              <TableCell>{formatDate(parseDate(p.payment_time))}</TableCell>
+                              <TableCell>
+                                {formatDate(parseDate(p.payment_time))}</TableCell>
                             </TableRow>
                           </>
                         );
@@ -101,6 +126,13 @@ const BillDetails: React.FC<billDetailsProps> = ({ patientBillDetails, patientPa
         ) : (
           <></>
         )}
+        {
+          (showPaymentModal && selectedBillItem) && <BillItemPaymentModal 
+          open={showPaymentModal} 
+          billItem={selectedBillItem}
+          onClose={handleClosePayModal} 
+          onPay={handleSuccessfullPayment}/>
+        }
       </div>
     </>
   );

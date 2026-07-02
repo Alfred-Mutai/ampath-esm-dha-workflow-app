@@ -24,11 +24,11 @@ interface patientBillDetailsProps {
 const PatientBillDetails: React.FC<patientBillDetailsProps> = ({ patientUuid, locationUuid, billingDate }) => {
   const [patientBillDetails, setPatientBillDetails] = useState<PatientFacilityBillDetails[]>([]);
   const [consentToken, setConsentToken] = useState<string>('');
-  const [crId, setCrId] = useState<string>('');
   const [patientBillPayments, setPatientBillPayments] = useState<PatientPayment[]>([]);
   const facilityPatientDetail = useMemo(() => {
     return patientBillDetails[0] ?? null;
   }, [patientBillDetails]);
+  const billStatus = useMemo(()=>getBillStatus(patientBillDetails),[patientBillDetails]);
 
   useEffect(() => {
     if (locationUuid && patientUuid && billingDate) {
@@ -36,18 +36,13 @@ const PatientBillDetails: React.FC<patientBillDetailsProps> = ({ patientUuid, lo
       getPatientPayments();
     }
   }, [locationUuid, patientUuid, billingDate]);
-  useEffect(() => {
-    if (patientBillDetails) {
-      getPatientClaimVisit();
-    }
-  }, [patientBillDetails]);
   async function getPatientBillDetails() {
     const patientBillPayload = generatePatientBillPayload();
     try {
       const data = await fetchPatientFacilityBillDetails(patientBillPayload);
       if (data) {
         setPatientBillDetails(data);
-        setCrId(data[0].cr_no);
+        setConsentToken(data[0].consent_token);
       }
     } catch (error) {
       showSnackbar({
@@ -63,38 +58,6 @@ const PatientBillDetails: React.FC<patientBillDetailsProps> = ({ patientUuid, lo
       billingDate: billingDate,
       patientUuid: patientUuid,
     };
-  }
-  async function getPatientClaimVisit() {
-    const claimVisitPayload = getPatientClaimVisitPayload();
-    if (!isValidClaimVisitPayload(claimVisitPayload)) {
-      return;
-    }
-    try {
-      const resp = await fetchPatientClaimVisit(claimVisitPayload);
-      if (resp && resp.length > 0) {
-        setConsentToken(resp[0].authorizationCode);
-      } else {
-        setConsentToken('');
-      }
-    } catch (error) {
-      showSnackbar({
-        title: 'Error fetching patient claim visit',
-        kind: 'error',
-        subtitle: 'An error occurred while fetching the patient claim visit',
-      });
-    }
-  }
-  function getPatientClaimVisitPayload(): ClaimVisitsDto {
-    return {
-      patientId: crId,
-      visitDate: billingDate,
-    };
-  }
-  function isValidClaimVisitPayload(claimVisitsDto: ClaimVisitsDto): boolean {
-    if (!claimVisitsDto.patientId || !claimVisitsDto.visitDate) {
-      return false;
-    }
-    return true;
   }
   async function getPatientPayments() {
     const patientPaymentPayload = getPatientPaymentsPayload();
@@ -119,6 +82,25 @@ const PatientBillDetails: React.FC<patientBillDetailsProps> = ({ patientUuid, lo
       billingDate: billingDate,
     };
   }
+  function getBillStatus(patientBillDetails: PatientFacilityBillDetails[]) {
+    if (patientBillDetails.length > 0) {
+       const hasPostedBill = patientBillDetails.some((s) => {
+        return s.paid_status === 'POSTED';
+      });
+      if(hasPostedBill){
+        return 'PARTIALLY PAID'
+      }
+      const hasPendingBill = patientBillDetails.some((s) => {
+        return s.paid_status === 'PENDING';
+      });
+      if (hasPendingBill) {
+        return 'PENDING';
+      }
+      return 'PAID';
+    } else {
+      return status;
+    }
+  }
   return (
     <>
       <div className={styles.bdLayout}>
@@ -139,6 +121,9 @@ const PatientBillDetails: React.FC<patientBillDetailsProps> = ({ patientUuid, lo
               </div>
               <div className={styles.pdCol}>
                 <strong>AMRS Universl ID:</strong> {facilityPatientDetail.amrs_universal_id}
+              </div>
+               <div className={styles.pdCol}>
+                <strong>Bill Status:</strong> { billStatus ?? ''}
               </div>
             </>
           ) : (

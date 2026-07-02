@@ -21,6 +21,7 @@ export type PatientFacilityBillsDto = {
 };
 
 export type PatientFacilityBillDetails = {
+  bill_uuid: string;
   patient_name: string;
   cash_point: string;
   bill_date: string;
@@ -37,6 +38,10 @@ export type PatientFacilityBillDetails = {
   bill_item_time: string;
   cr_no: string;
   amrs_universal_id: string;
+  intervention_code: string;
+  consent_token: string;
+  order_no: string;
+  service_type: string;
 };
 
 export type PatientFacilityBillDetailsResponse = {
@@ -206,3 +211,25 @@ export type PatientPayment = {
 export type PatientPaymentReponse = {
   results: PatientPayment[];
 }
+
+export type BillPaymentDto = {
+  instanceType: string; // paymentModeUuid
+  amountTendered: number;
+  amount: number;
+}
+
+export type BillPaymentResponse = {
+   "uuid": string;
+    "instanceType": {
+        "uuid": string;
+        "name": string;
+        "description": string;
+        "retired": boolean;
+    },
+    "attributes": [],
+    "amount": number;
+    "amountTendered": number;
+    "dateCreated": number;
+    "voided": boolean;
+    "resourceVersion": string;
+  }

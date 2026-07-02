@@ -1,4 +1,4 @@
-import { openmrsFetch } from '@openmrs/esm-framework';
+import { openmrsFetch, restBaseUrl } from '@openmrs/esm-framework';
 import { getEtlBaseUrl } from '../shared/utils/get-base-url';
 import {
   type FacilityBillsResponse,
@@ -14,6 +14,8 @@ import {
   type PatientPaymentsDto,
   type PatientPaymentReponse,
   type PatientPayment,
+  type BillPaymentDto,
+  type BillPaymentResponse,
 } from './dashboard/v2/types';
 import { getHieBaseUrl } from '../claims/utils';
 
@@ -100,4 +102,17 @@ export async function fetchPatientBillPayments(
   const response = await openmrsFetch(patientPaymentsUrl);
   const data = (await response.json()) as PatientPaymentReponse;
   return data.results ?? [];
+}
+
+export async function payBillItem(billUuid: string,billPaymentDto: BillPaymentDto){
+  const billPaymentUrl = `${restBaseUrl}/billing/bill/${billUuid}/payment`;
+  const response = await openmrsFetch(billPaymentUrl,{
+    method: 'POST',
+    headers: {
+        'content-type': 'application/json'
+    },
+    body: JSON.stringify(billPaymentDto)
+  });
+  const data = (await response.json()) as BillPaymentResponse;
+  return data ?? null;
 }
