@@ -241,3 +241,19 @@ export type AddClaimLineDto = {
   quantity: string;
   locationUuid: string;
 };
+export type CloseClaimDto = {
+  consentToken: string;
+  locationUuid: string;
+  cancelReasonType: string;
+  cancelReasonText: string;
+};
+
+export enum ClaimCloseReasonType {
+  WrongPatient = "WRONG_PATIENT",
+  NoServiceGiven = "NO_SERVICE_GIVEN",
+  WringBenefit = "WRONG_BENEFIT",
+  ExpiredVisit = "EXPIRED_VISIT",
+  ExhaustedBenefit = "EXHAUSTED_BENEFIT",
+  TimeBarred = "TIME_BARRED",
+  OtherReasons = "OTHER_REASONS"
+};

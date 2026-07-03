@@ -5,6 +5,7 @@ import { showSnackbar } from "@openmrs/esm-framework";
 import { fetchProviderClaimPreview } from "../../../../billing-claims.resource";
 import styles from './patient-claim-details.component.scss';
 import ClaimVisitDetails from "../../claim-visits/claim-visit-details/claim-visit-details.component";
+import { InlineLoading } from "@carbon/react";
 
 interface patientClaimDetailsProps {
     consentToken: string;
@@ -20,9 +21,9 @@ const PatientClaimDetails: React.FC<patientClaimDetailsProps> = ({consentToken,l
      }
   },[consentToken,locationUuid]);
 
-  if(!claimVisit){
-     return <>No Claim Visit</>
-  }
+  if(loading){
+     return <InlineLoading description='Loading data...please wait' />
+  } 
 
   async function getPatientClaimsVisit() {
       setLoading(true);
@@ -53,7 +54,7 @@ const PatientClaimDetails: React.FC<patientClaimDetailsProps> = ({consentToken,l
   return <>
     <div className={styles.pcLayout}>
         {
-            claimVisit && <ClaimVisitDetails claimsVisit={claimVisit}/>
+            claimVisit && <ClaimVisitDetails claimsVisit={claimVisit} locationUuid={locationUuid}/>
         }
         
     </div>
