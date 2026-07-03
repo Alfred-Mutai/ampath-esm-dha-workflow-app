@@ -1,0 +1,14 @@
+.addClaimLineModalLayout{
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    row-gap: 10px;
+    width: 100%;
+    .addClaimLineModalRow{
+        display: flex;
+        flex-direction: row;
+        width: 100%;
+        column-gap: 5px;
+        padding: 5px 5px;
+    }
+}

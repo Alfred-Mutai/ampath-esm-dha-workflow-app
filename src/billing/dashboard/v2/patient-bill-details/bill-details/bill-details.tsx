@@ -4,13 +4,16 @@ import styles from './bill-details.scss';
 import { OverflowMenu, OverflowMenuItem, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@carbon/react';
 import { formatDate, parseDate } from '@openmrs/esm-framework';
 import BillItemPaymentModal from '../modals/bill-item-payment/bill-item-payment.modal';
+import AddClaimLineModal from '../modals/add-claim-line/add-claim-line.modal';
 
 interface billDetailsProps {
   patientBillDetails: PatientFacilityBillDetails[];
   patientPayments: PatientPayment[];
+  locationUuid: string;
 }
-const BillDetails: React.FC<billDetailsProps> = ({ patientBillDetails, patientPayments }) => {
+const BillDetails: React.FC<billDetailsProps> = ({ patientBillDetails, patientPayments, locationUuid }) => {
   const [showPaymentModal,setShowPaymentModal] = useState<boolean>(false);
+  const [showAddClaimLineModal,setShowAddClaimLineModal] = useState<boolean>(false);
   const [selectedBillItem,setSelectedBillItem] = useState<PatientFacilityBillDetails | null>(null);
   if (!patientBillDetails && !patientPayments) {
     return <>No Data</>;
@@ -24,6 +27,13 @@ const BillDetails: React.FC<billDetailsProps> = ({ patientBillDetails, patientPa
   }
   function handleSuccessfullPayment(){
     handleClosePayModal();
+  }
+  function handleClaimLineAddition(patientBillDetail: PatientFacilityBillDetails){
+    setSelectedBillItem(patientBillDetail);
+    setShowAddClaimLineModal(true);
+  }
+  function handleCloseAddClaimItemModal(){
+     setShowAddClaimLineModal(false);
   }
   return (
     <>
@@ -68,6 +78,10 @@ const BillDetails: React.FC<billDetailsProps> = ({ patientBillDetails, patientPa
                                   (b.paid_status === 'PENDING' ||  b.paid_status === 'POSTED') ? (<>
                                    <OverflowMenu aria-label="overflow-menu">
                                       <OverflowMenuItem itemText="Pay" onClick={() => handleBillItemPayment(b)} />
+                                        {
+                                          b.intervention_code && <OverflowMenuItem itemText="Add Claim Line" onClick={() => handleClaimLineAddition(b)} />
+                                        }
+                                      
                                     </OverflowMenu>
                                   </>): (<></>)
                                 }
@@ -132,6 +146,15 @@ const BillDetails: React.FC<billDetailsProps> = ({ patientBillDetails, patientPa
           billItem={selectedBillItem}
           onClose={handleClosePayModal} 
           onPay={handleSuccessfullPayment}/>
+        }
+        {
+          (showAddClaimLineModal && selectedBillItem) && <AddClaimLineModal 
+           open={showAddClaimLineModal}
+           billItem={selectedBillItem}
+           onClose={handleCloseAddClaimItemModal}
+           onSuccess={handleCloseAddClaimItemModal}
+           locationUuid={locationUuid}
+          />
         }
       </div>
     </>

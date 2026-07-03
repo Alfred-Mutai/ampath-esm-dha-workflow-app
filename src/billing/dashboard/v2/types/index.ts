@@ -210,26 +210,34 @@ export type PatientPayment = {
 
 export type PatientPaymentReponse = {
   results: PatientPayment[];
-}
+};
 
 export type BillPaymentDto = {
   instanceType: string; // paymentModeUuid
   amountTendered: number;
   amount: number;
-}
+};
 
 export type BillPaymentResponse = {
-   "uuid": string;
-    "instanceType": {
-        "uuid": string;
-        "name": string;
-        "description": string;
-        "retired": boolean;
-    },
-    "attributes": [],
-    "amount": number;
-    "amountTendered": number;
-    "dateCreated": number;
-    "voided": boolean;
-    "resourceVersion": string;
-  }
+  uuid: string;
+  instanceType: {
+    uuid: string;
+    name: string;
+    description: string;
+    retired: boolean;
+  };
+  attributes: [];
+  amount: number;
+  amountTendered: number;
+  dateCreated: number;
+  voided: boolean;
+  resourceVersion: string;
+};
+
+export type AddClaimLineDto = {
+  consentToken: string;
+  interventionCode: string;
+  unitPrice: string;
+  quantity: string;
+  locationUuid: string;
+};

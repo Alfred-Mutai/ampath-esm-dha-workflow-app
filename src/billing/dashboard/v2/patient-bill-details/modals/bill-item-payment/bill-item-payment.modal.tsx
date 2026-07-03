@@ -69,6 +69,7 @@ const BillItemPaymentModal: React.FC<billItemPaymentModalProps> = ({ open, onClo
   return (
     <>
       <Modal
+        modalHeading='Bill Item Payment'
         open={open}
         size="sm"
         onSecondarySubmit={onClose}

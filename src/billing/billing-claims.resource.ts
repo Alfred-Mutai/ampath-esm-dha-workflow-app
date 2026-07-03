@@ -16,6 +16,7 @@ import {
   type PatientPayment,
   type BillPaymentDto,
   type BillPaymentResponse,
+  type AddClaimLineDto,
 } from './dashboard/v2/types';
 import { getHieBaseUrl } from '../claims/utils';
 
@@ -114,5 +115,19 @@ export async function payBillItem(billUuid: string,billPaymentDto: BillPaymentDt
     body: JSON.stringify(billPaymentDto)
   });
   const data = (await response.json()) as BillPaymentResponse;
+  return data ?? null;
+}
+
+export async function addClaimItem(addClaimLineDto: AddClaimLineDto){
+  const { hieBaseUrl } = await getHieBaseUrl();
+  const addClaimLineUrl = `${hieBaseUrl}/claim-line`;
+  const response = await openmrsFetch(addClaimLineUrl,{
+    method: 'POST',
+    headers: {
+        'content-type': 'application/json'
+    },
+    body: JSON.stringify(addClaimLineDto)
+  });
+  const data = (await response.json());
   return data ?? null;
 }

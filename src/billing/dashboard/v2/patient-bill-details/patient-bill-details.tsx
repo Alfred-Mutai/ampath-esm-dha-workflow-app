@@ -139,7 +139,11 @@ const PatientBillDetails: React.FC<patientBillDetailsProps> = ({ patientUuid, lo
             <TabPanels>
               <TabPanel>
                 {patientBillDetails && (
-                  <BillDetails patientBillDetails={patientBillDetails} patientPayments={patientBillPayments} />
+                  <BillDetails 
+                  patientBillDetails={patientBillDetails} 
+                  patientPayments={patientBillPayments} 
+                  locationUuid = {locationUuid}
+                  />
                 )}
               </TabPanel>
               <TabPanel>
