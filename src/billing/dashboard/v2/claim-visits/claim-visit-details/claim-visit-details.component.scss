@@ -7,8 +7,19 @@
     .cvHeaderSection{
         display: flex;
         flex-direction: row;
-        column-gap: 15px;
+        column-gap: 5px;
         width: 100%;
+        .headerTitle{
+            display: flex;
+            flex-direction: row;
+            width: 50%;
+        }
+        .headerAction{
+            display: flex;
+            flex-direction: row;
+            justify-content: flex-end;
+            width: 50%;
+        }
     }
     .cvContentSection{
         display: flex;
@@ -25,4 +36,10 @@
             }
         }
     }
+}
+
+.claimList{
+    display: flex;
+    flex-direction: column;
+    row-gap: 10px;
 }

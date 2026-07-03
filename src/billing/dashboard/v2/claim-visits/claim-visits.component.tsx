@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from '@carbon/react';
-import ClaimVisitDetailsModal from './modal/claim-visit-details.modal';
+import ClaimVisitDetailsModal from './modal/claim-visit-details/claim-visit-details.modal';
 interface claimVisitsProps {
   locationUuid: string;
   billingDate: string;
@@ -127,6 +127,7 @@ const ClaimVisits: React.FC<claimVisitsProps> = ({ locationUuid, billingDate }) 
               open={showClaimsVisitModal}
               claimsVisit={selectedClaimVisit}
               handleClose={handleCloseClaimsModal}
+              locationUuid={locationUuid}
             />
           </>
         ) : (
