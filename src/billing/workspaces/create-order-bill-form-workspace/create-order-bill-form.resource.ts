@@ -26,7 +26,7 @@ export const useBillableItems = (serviceTypeUuid: string = "") => {
 };
 
 export const usePatientBills = (patientUuid: string, billStatus: string = 'PENDING') => {
-    const url = `${restBaseUrl}/billing/bill?patientUuid=${patientUuid}&status=${billStatus}&v=custom:(uuid,lineItems,dateCreated)`;
+    const url = `${restBaseUrl}/billing/bill?patientUuid=${patientUuid}&status=${billStatus}&v=custom:(uuid,lineItems,cashPoint,dateCreated)`;
 
     const {
         data,

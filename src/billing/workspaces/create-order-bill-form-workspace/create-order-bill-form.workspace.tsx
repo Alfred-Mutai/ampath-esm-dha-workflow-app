@@ -35,13 +35,13 @@ const CreateOrderBillForm: React.FC<CreateOrderBillFormProps> = ({
     const { identifiers } = usePatientIdentifiers(order?.patient?.uuid);
     const { cashPoints } = useCashPoint();
     const patientUuid = order?.patient?.uuid;
-    const cashPointUuid = cashPoints?.[0]?.uuid ?? '';
     const conceptUuid = order?.concept?.uuid;
     const { nonSHAPaymentModes, consultationBillableServiceNames } = useConfig<ConfigObject>();
     const [searchTerm, setSearchTerm] = useState('');
     const [triggerAddIntervention, setTriggerAddIntervention] = useState<boolean>(false);
     const [interventionResult, setInterventionResult] = useState<ClaimIntervention>();
     const [pendingSubmitData, setPendingSubmitData] = useState<CreateOrderBillFormSchema | null>(null);
+    const [isSubmitPending, setIsSubmitPending] = useState(false);
     const debouncedSearchTerm = useDebounce(searchTerm.trim());
     const searchInputRef = useRef(null);
     const searchResults = useMemo(() => {
@@ -82,6 +82,17 @@ const CreateOrderBillForm: React.FC<CreateOrderBillFormProps> = ({
         return priceName;
     }, [currentDayBills]);
 
+    const initialCashPoint = useMemo(() => {
+        let cashPoint = "";
+        if (currentDayBills && currentDayBills.length) {
+            const bill = currentDayBills[0];
+            const currentCashpoint = bill?.cashPoint;
+            cashPoint = currentCashpoint?.uuid;
+            setValue("cashPoint", cashPoint);
+        }
+        return cashPoint;
+    }, [currentDayBills]);
+
     const selectedBillableItem = useWatch({ control, name: 'billableItem' });
     const billableItem = useMemo(() => {
         if (selectedBillableItem) {
@@ -99,7 +110,7 @@ const CreateOrderBillForm: React.FC<CreateOrderBillFormProps> = ({
     }, [identifiers]);
 
     const crIdentifierId = useMemo(() => {
-        return identifiers?.find(i => i.identifierType.uuid == IdentifierTypesUuids.CLIENT_REGISTRY_NO_UUID).identifier
+        return identifiers?.find(i => i.identifierType.uuid == IdentifierTypesUuids.CLIENT_REGISTRY_NO_UUID)?.identifier
     }, [identifiers])
 
     const servicePrices = useMemo(() => {
@@ -111,6 +122,13 @@ const CreateOrderBillForm: React.FC<CreateOrderBillFormProps> = ({
         }
         return [];
     }, [billableItem, identifiers]);
+
+    const isSHAPaymentMode = useMemo(() => {
+        if (servicePrices && selectedServicePriceUuid) {
+            return servicePrices?.some((v) => v?.uuid === selectedServicePriceUuid && v?.name?.toUpperCase()?.includes("SHA"));
+        }
+        return false;
+    }, [servicePrices, selectedServicePriceUuid]);
 
     const initialUnitPriceUuid = useMemo(() => {
         if (billableItem && billableItem.length && initialPriceName) {
@@ -125,7 +143,11 @@ const CreateOrderBillForm: React.FC<CreateOrderBillFormProps> = ({
     }, [billableItem, initialPriceName]);
 
     const onAddIntervention = (result: ClaimIntervention) => {
-        setInterventionResult(result);
+        if (result) {
+            setInterventionResult(result);
+        } else {
+            setIsSubmitPending(false);
+        }
     }
 
     const handleFormSubmit = async (data) => {
@@ -133,6 +155,7 @@ const CreateOrderBillForm: React.FC<CreateOrderBillFormProps> = ({
         const serviceUuid = unitPriceTxt?.split("#")[0];
         const servicePriceUuid = unitPriceTxt?.split("#")[1];
         const lineItemOrder = order?.orderNumber?.split("-")[1] ?? null;
+        const cashPointUuid = data?.cashPoint;
 
         const billableItems = lineItems
             .filter((item) => item.uuid === serviceUuid)
@@ -260,7 +283,9 @@ const CreateOrderBillForm: React.FC<CreateOrderBillFormProps> = ({
                 return;
             }
 
-            if (["5a66e53c-cded-463d-8cd2-ea64444145c5", "421f5d5c-f4a1-4146-bea4-62e87121b8b7"].includes(selectedServicePriceUuid)) {
+            setIsSubmitPending(true);
+
+            if (isSHAPaymentMode) {
                 setPendingSubmitData(data);
                 setTriggerAddIntervention(true);
                 if (interventionResult) {
@@ -372,6 +397,38 @@ const CreateOrderBillForm: React.FC<CreateOrderBillFormProps> = ({
                     <Column>
                         <Controller
                             control={control}
+                            name="cashPoint"
+                            render={({ field }) => {
+                                return (
+                                    <>
+                                        {billableItem && billableItem.length ?
+                                            <Select id="cashPoint" labelText={t('selectCashPoint', 'Select cashpoint *')} invalid={!!errors.cashPoint}
+                                                invalidText={errors.cashPoint?.message}
+                                                onChange={(e) => {
+                                                    field.onChange(e.target.value);
+                                                }}
+                                                defaultValue={initialCashPoint ?? null}
+                                            >
+                                                <SelectItem value="" text="Select cashpoint" />
+                                                {
+                                                    cashPoints.map((cashPoint) => {
+                                                        return (
+                                                            <SelectItem value={cashPoint?.uuid} text={cashPoint?.name} />
+                                                        )
+                                                    })
+                                                }
+                                            </Select>
+                                            : <></>
+                                        }
+                                    </>
+                                );
+                            }}
+                        />
+                    </Column>
+
+                    <Column>
+                        <Controller
+                            control={control}
                             name="unitPrice"
                             render={({ field }) => {
                                 const serviceUuid = billableItem[0]?.uuid ?? "";
@@ -415,7 +472,7 @@ const CreateOrderBillForm: React.FC<CreateOrderBillFormProps> = ({
                         />
                     </Column>
                     {
-                        ["5a66e53c-cded-463d-8cd2-ea64444145c5", "421f5d5c-f4a1-4146-bea4-62e87121b8b7"].includes(selectedServicePriceUuid) ?
+                        isSHAPaymentMode ?
                             <Column>
                                 <ExtensionSlot name='billing-claims-slot' state={{ clientRegistryId: crIdentifierId, patientUuid, isNewVisit: false, triggerAddIntervention, onSelectChange: () => { }, onAddIntervention }} />
                             </Column> :
@@ -428,8 +485,8 @@ const CreateOrderBillForm: React.FC<CreateOrderBillFormProps> = ({
                 <Button kind="secondary" onClick={closeWorkspace}>
                     {t('cancel', 'Cancel')}
                 </Button>
-                <Button kind="primary" type="submit" disabled={isSubmitting || !isDirty}>
-                    {isSubmitting ? (
+                <Button kind="primary" type="submit" disabled={isSubmitting || isSubmitPending || !isDirty}>
+                    {isSubmitting || isSubmitPending ? (
                         <InlineLoading description={t('submitting', 'Submitting...')} />
                     ) : (
                         t('saveAndClose', 'Save & close')

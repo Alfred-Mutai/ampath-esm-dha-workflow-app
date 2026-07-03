@@ -247,7 +247,8 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
     });
   }
   const handleSendToTriage = async () => {
-    if (hasSelectedPaymentMode('SHIF')) {
+    setLoading(true);
+    if (hasSelectedPaymentMode('SHA')) {
       if (claimResult) {
         await sendToTriage();
       } else {
@@ -959,7 +960,7 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
                         </div>
                       </div>
                       {/* If using SHA claim */}
-                      {hasSelectedPaymentMode('SHIF') ? (
+                      {hasSelectedPaymentMode('SHA') ? (
                         <>
                           {/* <ClaimsComponent clientRegistryId={patientIdentifiers.crIdentifierId} onSelectChange={() => { }} /> */}
                           <ExtensionSlot name='billing-claims-slot' state={{ clientRegistryId: patientIdentifiers?.crIdentifierId, patientUuid: selectedPatient.uuid, triggerCreateVisit, otp, visitType, onSelectChange: () => { }, onClaimsVisitStart, onInterventionChange }} />

@@ -142,6 +142,7 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
                 kind: 'success',
             });
         } catch (err) {
+            onAddIntervention(null);
             showSnackbar({
                 title: t('addInterventionError', 'Error adding intervention'),
                 subtitle: `${err}`,
