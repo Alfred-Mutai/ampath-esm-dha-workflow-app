@@ -4,28 +4,35 @@ import styles from './biometrics-verification-modal.scss';
 import { Button } from '@carbon/react';
 import { getBiometrictsRequestUrl } from '../../hie.resource';
 import { usePatient } from '../../../context/patient-context';
+import { useSession } from '@openmrs/esm-framework';
 
 type BiometricsVerificationModalProps = {
   open: boolean;
   onClose: () => void;
+  serviceType: string;
+  interventionCode: string;
 };
 
-const BiometricsVerificationModal: React.FC<BiometricsVerificationModalProps> = ({ open, onClose }) => {
-  // let BIOMETRIC_IFRAME_URL: string = '';
-  const BIOMETRIC_ORIGIN = 'https://ilm-dev.dha.go.ke/uat-middleware';
-
+const BiometricsVerificationModal: React.FC<BiometricsVerificationModalProps> = ({
+  open,
+  onClose,
+  serviceType,
+  interventionCode,
+}) => {
   const [scanning, setScanning] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [captureResult, setCaptureResult] = useState<CaptureResult | null>(null);
   const iframeRef = React.useRef<HTMLIFrameElement | null>(null);
   const [biometricIframeUrl, setBiometricIframeUrl] = useState<string>('');
+  const session = useSession();
+  const locationUuid = session.sessionLocation?.uuid;
 
   const { patient } = usePatient();
 
   useEffect(() => {
     async function fetchBiometricUrl() {
       try {
-        const urlData = await getBiometrictsRequestUrl(patient!);
+        const urlData = await getBiometrictsRequestUrl(patient!, locationUuid!, interventionCode, serviceType);
 
         const url = urlData?.shaVerificationRequest?.requestUrl;
 
@@ -52,7 +59,7 @@ const BiometricsVerificationModal: React.FC<BiometricsVerificationModalProps> = 
       ],
       card_readers: [],
       isAuthed: true,
-      workstationID: '1305d6e5-ef87-42f1-ab44-9e7002ac22fc-00090FAA0001',
+      workstationID: '790bf760-08e6-4fbe-b892-7b877dd52f2b-F406692C85F3',
       version: '1.14.0519.1301',
     },
   };
@@ -61,8 +68,8 @@ const BiometricsVerificationModal: React.FC<BiometricsVerificationModalProps> = 
     if (!open) return;
 
     const timer = setTimeout(() => {
-      iframeRef.current?.contentWindow?.postMessage(config, BIOMETRIC_ORIGIN);
-    }, 500);
+      iframeRef.current?.contentWindow?.postMessage(config, `${biometricIframeUrl}`);
+    }, 1000);
 
     return () => clearTimeout(timer);
   }, [open]);
@@ -70,14 +77,14 @@ const BiometricsVerificationModal: React.FC<BiometricsVerificationModalProps> = 
   useEffect(() => {
     if (!open) return;
     const handler = (event: MessageEvent) => {
-      if (event.origin !== `${BIOMETRIC_ORIGIN}`) return;
+      // if (event.origin !== `${biometricIframeUrl}`) return;
 
       const data = event.data;
 
-      if (data?.type === 'BIOMETRIC_RESULT') {
-        setCaptureResult(data.payload);
-        setScanning(false);
-      }
+      // if (data?.type === 'BIOMETRIC_RESULT') {
+      setCaptureResult(data.payload);
+      setScanning(false);
+      // }
 
       if (data?.type === 'BIOMETRIC_ERROR') {
         setError(data.message || 'Biometric capture failed');
@@ -94,7 +101,7 @@ const BiometricsVerificationModal: React.FC<BiometricsVerificationModalProps> = 
     setScanning(true);
     setError(null);
 
-    iframeRef.current?.contentWindow?.postMessage({ type: 'START_CAPTURE' }, BIOMETRIC_ORIGIN);
+    iframeRef.current?.contentWindow?.postMessage({ type: 'START_CAPTURE' }, `${biometricIframeUrl}`);
   };
 
   return (
@@ -105,15 +112,15 @@ const BiometricsVerificationModal: React.FC<BiometricsVerificationModalProps> = 
           <p className={styles.centerText}>Please verify your identity using biometrics.</p>
 
           {/* Scanner zone */}
-          {biometricIframeUrl && <iframe ref={iframeRef} src={biometricIframeUrl} className={styles.iframe} />}
+          {biometricIframeUrl && <iframe ref={iframeRef} src={`${biometricIframeUrl}`} className={styles.iframe} />}
 
           <p className={`${styles.statusLabel} ${scanning ? styles.active : ''}`}>
             {scanning ? 'acquiring biometric data...' : 'awaiting input'}
           </p>
 
-          {/* <Button className={styles.button} onClick={startScan} disabled={scanning}>
+          <Button className={styles.button} onClick={startScan} disabled={scanning}>
             <span>{scanning ? 'Scanning...' : 'Scan Fingerprint'}</span>
-          </Button> */}
+          </Button>
 
           {captureResult && (
             <div className={styles.result}>

@@ -5,6 +5,8 @@ import {
   ComboBox,
   Modal,
   ModalBody,
+  ProgressIndicator,
+  ProgressStep,
   Select,
   SelectItem,
   Table,
@@ -16,7 +18,15 @@ import {
   TextInput,
 } from '@carbon/react';
 import styles from './send-to-triage.modal.scss';
-import { type Patient, useSession, showSnackbar, type Visit, useConfig, ExtensionSlot, Encounter } from '@openmrs/esm-framework';
+import {
+  type Patient,
+  useSession,
+  showSnackbar,
+  type Visit,
+  useConfig,
+  ExtensionSlot,
+  Encounter,
+} from '@openmrs/esm-framework';
 import {
   type HieClient,
   type CreateVisitDto,
@@ -24,6 +34,7 @@ import {
   type ServiceQueue,
   PaymentDetail,
   type VisitAttribute,
+  RequestCustomOtpDto,
 } from '../../types';
 import { createQueueEntry, getFacilityServiceQueues } from '../../../resources/queue.resource';
 import { QUEUE_PRIORITIES_UUIDS, QUEUE_STATUS_UUIDS } from '../../../shared/constants/concepts';
@@ -57,10 +68,16 @@ import ClaimsConsentModal from '../otp-verification-modal/claims-consent';
 import { OtpFormData, type OTPWhitelistRequest } from '../../hie.types';
 import { createOTPWhitelisting, sendClaimsOTP } from '../../hie.resource';
 import { usePatient } from '../../../context/patient-context';
-import ClaimsComponent from '../../../claims/claims.component';
-import { ClaimResult, Intervention, VisitType } from '../../../claims';
+import { type ClaimResult, type Intervention, type VisitType } from '../../../claims';
 import { Order } from '@openmrs/esm-patient-common-lib';
 import { getServiceType } from '../../../shared/services/claims.resource';
+import PaymentDetailsSection from './payment-details';
+import PaymentMethodComponent from './payment-method.component';
+import { searchPatientByCrNumber } from '../../../resources/patient-search.resource';
+import { IdentifierTypesUuids } from '../../../resources/identifier-types';
+import { formatPhoneNumberForOTP } from '../../utils/phone-number-formatter';
+import OtpVerificationModal from '../otp-verification-modal/otp-verification-modal';
+import ClientDetailsModal from '../client-details-modal/client-details-modal';
 
 interface SendToTriageModalProps {
   patients: Patient[];
@@ -114,7 +131,17 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
   const [otpSent, setOtpSent] = useState(false);
   const [whitelistRequest, setWhitelistRequest] = useState(null);
   const [otpVerified, setOtpVerified] = useState(false);
-  const [otp, setOtp] = useState(null);
+  const [selectedIntervention, setSelectedIntervention] = useState<Intervention | undefined>();
+  const [step, setStep] = useState(0);
+  const [displayOtpModal, setDisplayOtpModal] = useState<boolean>(false);
+  const [requestCustomOtpDto, setRequestCustomOtpDto] = useState<RequestCustomOtpDto>();
+  const [displayClientDetailsModal, setDisplayClientDetailsModal] = useState<boolean>(false);
+  const [principal, setPrincipal] = useState<HieClient>();
+  const [selecteddPatient, setSelecteddPatient] = useState<string>('principal');
+  const [selectedDependant, setSelectedDependant] = useState<HieClient>();
+
+  const next = () => setStep((s) => s + 1);
+  const previous = () => setStep((s) => s - 1);
   const {
     registrationBillableServices,
     cashConsulationConceptUuid,
@@ -145,13 +172,13 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
   const visitType: VisitType = useMemo(() => {
     if (selectedVisitType) {
       if (selectedVisitType === VisitTypeUuids.OPD_VISIT_TYPE_UUID) {
-        return "OUTPATIENT";
+        return 'OUTPATIENT';
       }
       if (selectedVisitType === VisitTypeUuids.INPATIENT_VISIT_TYPE_UUID) {
-        return "INPATIENT";
+        return 'INPATIENT';
       }
     }
-  }, [selectedVisitType, VisitTypeUuids])
+  }, [selectedVisitType, VisitTypeUuids]);
 
   const patientTypeOptions = useMemo(
     () => [
@@ -247,7 +274,10 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
     });
   }
   const handleSendToTriage = async () => {
-    setLoading(true);
+    if (step === 1) {
+      handleOtpVerification();
+      return;
+    }
     if (hasSelectedPaymentMode('SHA')) {
       if (claimResult) {
         await sendToTriage();
@@ -257,6 +287,43 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
       return;
     }
     await sendToTriage();
+  };
+
+  const generateCustomSmsPayload = (): RequestCustomOtpDto => {
+    return {
+      identificationNumber: patient!.identification_number,
+      identificationType: patient!.identification_type,
+      locationUuid: locationUuid,
+      phoneNumber: patient?.phone ? formatPhoneNumberForOTP(patient.phone ?? '') : '',
+    };
+  };
+
+  const isValidCustomSmsPayload = (payload: RequestCustomOtpDto): boolean => {
+    if (!payload.identificationNumber) {
+      showAlert('error', 'Please enter a valid identification number', '');
+      return false;
+    }
+    if (!payload.identificationType) {
+      showAlert('error', 'Please enter a valid identification type', '');
+      return false;
+    }
+    if (!payload.locationUuid) {
+      showAlert('error', 'No default location selected', '');
+      return false;
+    }
+    if (!payload.phoneNumber) {
+      showAlert('error', 'No phone number selected', '');
+      return false;
+    }
+    return true;
+  };
+
+  const handleOtpVerification = () => {
+    const smsPayload = generateCustomSmsPayload();
+    if (isValidCustomSmsPayload(smsPayload)) {
+      setRequestCustomOtpDto(smsPayload);
+      setDisplayOtpModal(true);
+    }
   };
 
   useEffect(() => {
@@ -309,7 +376,6 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
             // Add to bill order
             const billOrderDto = await generateBillOrderDto(encounter, createBillResp);
             await createOrderBillInHie(billOrderDto);
-
           } else {
             return false;
           }
@@ -768,19 +834,23 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
 
             return lineItem?.uuid as string;
           }
-          return "";
+          return '';
         })();
 
         let payload = {
           bill_uuid: billUuid,
           order_no: orderNumber,
-          line_item_uuid: lineItemUuid
+          line_item_uuid: lineItemUuid,
         };
 
         if (claimResult && intervention) {
           const interventionResult = intervention;
-          const electivePreauth = interventionResult.requiresOncologyPreauth || interventionResult.requiresOpticalPreauth || interventionResult.requiresRadiologyPreauth
-            || interventionResult.requiresRenalPreauth || interventionResult.requiresSurgicalPreauth;
+          const electivePreauth =
+            interventionResult.requiresOncologyPreauth ||
+            interventionResult.requiresOpticalPreauth ||
+            interventionResult.requiresRadiologyPreauth ||
+            interventionResult.requiresRenalPreauth ||
+            interventionResult.requiresSurgicalPreauth;
           const requiresPreauth = interventionResult.needsPreauth;
           const requiredPreauthDocumentTypes = interventionResult.requiredPreauthDocumentTypes;
           const applicableDocumentTypes = interventionResult.applicableDocumentTypes;
@@ -791,28 +861,26 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
             service_type: getServiceType(interventionResult, visitType),
             requires_preauth: requiresPreauth,
             normal_preauth: requiresPreauth && !electivePreauth,
-            elective_preauth: interventionResult.needsManualPreauthApproval && electivePreauth
-          }
+            elective_preauth: interventionResult.needsManualPreauthApproval && electivePreauth,
+          };
 
           if (applicableDocumentTypes && applicableDocumentTypes.length) {
-            interventionPayload["applicable_document_types"] = applicableDocumentTypes.join(",");
+            interventionPayload['applicable_document_types'] = applicableDocumentTypes.join(',');
           }
 
           if (requiredPreauthDocumentTypes && requiredPreauthDocumentTypes.length) {
-            interventionPayload["required_preauth_document_types"] = requiredPreauthDocumentTypes.join(",");
+            interventionPayload['required_preauth_document_types'] = requiredPreauthDocumentTypes.join(',');
           }
 
           payload = {
             ...payload,
-            ...interventionPayload
-          }
+            ...interventionPayload,
+          };
         }
 
         return payload;
       }
-    } catch (error) {
-
-    }
+    } catch (error) {}
   }
 
   const handleWhitelistSubmit = async (payload: OTPWhitelistRequest) => {
@@ -823,7 +891,7 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
     try {
       setSubmitting(true);
 
-      const response = await sendClaimsOTP(patient!.id, locationUuid!, intervention?.code);
+      const response = await sendClaimsOTP(patient!.id, locationUuid!, selectedIntervention?.code);
 
       if (response?.message?.includes('OTP')) {
         setOtpSent(true);
@@ -844,8 +912,6 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
 
       setOtpVerified(true);
 
-      setOtp(otp);
-
       showSnackbar({
         kind: 'success',
         title: 'OTP Verified',
@@ -855,259 +921,315 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
     }
   };
 
+  const onRequestSubmit = () => {
+    if (step === 0) {
+      setStep(1);
+    } else if (step === 1) {
+      setStep(2);
+    } else if (step === 2) {
+      setStep(3);
+    } else {
+      sendToTriage();
+    }
+  };
+
+  const lastStep =
+    selectedPaymentDetail === PaymentDetail.Paying &&
+    !hasSelectedPaymentMode('CASH') &&
+    !hasSelectedPaymentMode('MPESA')
+      ? 2
+      : 1;
+
+  const handleSecondaryAction = () => {
+    if (step === 0) {
+      onModalClose({ success: false });
+    } else {
+      setStep((prev) => prev - 1);
+    }
+  };
+
+  const handleprimaryAction = () => {
+    if (step < lastStep) {
+      setStep(step + 1);
+      return;
+    }
+
+    handleSendToTriage();
+  };
+
+  const handleOtpSuccessfullVerification = () => {
+    setDisplayOtpModal(false);
+    setDisplayClientDetailsModal(true);
+    // eslint-disable-next-line no-console
+    console.log('OTP verified successfully, proceeding to client details modal', displayClientDetailsModal);
+  };
+
+  const handleModelClose = () => {
+    setDisplayOtpModal(false);
+  };
+
+  const onClientDetailsModalClose = () => {
+    setDisplayClientDetailsModal(false);
+  };
+
+  const handleSendClientToTriage = async () => {
+    // onClientDetailsModalClose();
+    if (hasSelectedPaymentMode('SHA')) {
+      if (claimResult) {
+        await sendToTriage();
+      } else {
+        setTriggerCreateVisit(true);
+      }
+      return;
+    }
+    await sendToTriage();
+  };
+
+  const getPatient = (): HieClient => {
+    if (selecteddPatient === 'principal') {
+      return principal;
+    } else if (selecteddPatient === 'dependants') {
+      return selectedDependant;
+    } else {
+      return principal;
+    }
+  };
+
+  const handleClientDetailsSubmit = async () => {
+    onClientDetailsModalClose();
+    if (hasSelectedPaymentMode('SHA')) {
+      if (claimResult) {
+        await sendToTriage();
+      } else {
+        setTriggerCreateVisit(true);
+      }
+      return;
+    }
+    await sendToTriage();
+  };
+  const showWizard = !displayClientDetailsModal && !displayOtpModal;
+
+  const getClaimServiceType = (visitType: string) => {
+    if (visitType === VisitTypeUuids.OPD_VISIT_TYPE_UUID) {
+      return 'OUTPATIENT';
+    } else if (visitType === VisitTypeUuids.INPATIENT_VISIT_TYPE_UUID) {
+      return 'INPATIENT';
+    } else {
+      return '';
+    }
+  };
+
   return (
     <>
-      <Modal
-        open={open}
-        size="md"
-        onSecondarySubmit={() => onModalClose({ success: false })}
-        onRequestClose={() => onModalClose({ success: false })}
-        onRequestSubmit={handleSendToTriage}
-        primaryButtonText={loading ? 'Sending...please wait' : 'Send to Triage'}
-        secondaryButtonText="Cancel"
-        primaryButtonDisabled={!otpVerified || loading}
-      >
-        <ModalBody>
-          <div className={styles.clientDetailsLayout}>
-            <div className={styles.sectionHeader}>
-              <h4 className={styles.sectionTitle}>Send To Triage</h4>
-            </div>
-            {patients.length > 0 ? (
-              <div className={styles.sectionContent}>
-                <div className={styles.patientSelect}>
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableHeader>No</TableHeader>
-                        <TableHeader>Name</TableHeader>
-                        <TableHeader>Gender</TableHeader>
-                        <TableHeader>Select Patient</TableHeader>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {patients.map((p, index) => (
-                        <TableRow key={p.uuid}>
-                          <TableCell>{index + 1}</TableCell>
-                          <TableCell>{p.person.preferredName.display}</TableCell>
-                          <TableCell>{p.person.gender}</TableCell>
-                          <TableCell>
-                            <Checkbox id={p.uuid} labelText="" onChange={() => onPatientSelect(p)} />
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+      {showWizard && (
+        <>
+          <ProgressIndicator currentIndex={step}></ProgressIndicator>
+          {step === 0 && <h1 />}
+
+          {step === 1 && <h2 />}
+
+          {step === 2 && <h1 />}
+          <Modal
+            open={open}
+            size="md"
+            onSecondarySubmit={handleSecondaryAction}
+            onRequestClose={() => onModalClose({ success: false })}
+            onRequestSubmit={handleprimaryAction}
+            primaryButtonText={step === lastStep ? (loading ? 'Sending...please wait' : 'Send to Triage') : 'Next'}
+            secondaryButtonText={step === 0 ? 'Cancel' : 'Back'}
+            primaryButtonDisabled={
+              step === lastStep && selectedPaymentMode?.name === 'SHIF' && (loading || !otpVerified)
+            }
+          >
+            <ModalBody>
+              <ProgressIndicator currentIndex={step}>
+                <ProgressStep label="Payment Details" />
+                <ProgressStep label="Visit Details" />
+                <ProgressStep label="Consent" />
+              </ProgressIndicator>
+
+              <div className={styles.clientDetailsLayout}>
+                <div className={styles.sectionHeader}>
+                  <h4 className={styles.sectionTitle}>Send To Triage</h4>
                 </div>
-                <div className={styles.formSection}>
-                  <div className={styles.formRow}>
-                    <div className={styles.formControl}>
-                      <ComboBox
-                        onChange={patientTypeHandler}
-                        id="patient-type-combobox"
-                        items={patientTypeOptions}
-                        itemToString={(item) => (item ? item.text : '')}
-                        titleText="Patient Type"
-                      />
-                    </div>
-                    <div className={styles.formControl}>
-                      <Select
-                        id="payment-details"
-                        labelText="Payment Details"
-                        onChange={($event) => paymentDetailsHandler($event.target.value)}
-                      >
-                        <SelectItem value="" text="Select" />;
-                        {paymentDetails.map((pd) => {
-                          return <SelectItem value={pd.id} text={pd.label} />;
-                        })}
-                      </Select>
-                    </div>
-                  </div>
-                </div>
-                <div className={styles.formSection}>
-                  {selectedPaymentDetail === PaymentDetail.Paying ? (
-                    <>
-                      <div className={styles.formRow}>
-                        <div className={styles.formControl}>
-                          <Select
-                            id="payment-method"
-                            labelText="Payment Method"
-                            onChange={($event) => paymentMethodHandler($event.target.value)}
-                          >
-                            <SelectItem value="" text="Select" />;
-                            {paymentModes &&
-                              paymentModes.map((pm) => {
-                                return <SelectItem value={pm.uuid} text={pm.name} />;
-                              })}
-                          </Select>
-                        </div>
-                        <div className={styles.formControl}>
-                          <Select
-                            id="billable-service"
-                            labelText="Billable Services"
-                            onChange={($event) => billableServicesHandler($event.target.value)}
-                          >
-                            <SelectItem value="" text="Select" />;
-                            {filteredBillableServices &&
-                              filteredBillableServices.map((sp) => {
-                                return (
-                                  <SelectItem
-                                    value={sp.uuid}
-                                    text={`${sp.billableService.display}(${sp.name}:${sp.price})`}
+
+                {patients.length > 0 && (
+                  <div className={styles.sectionContent}>
+                    {/* ================= STEP 0 ================= */}
+                    {step === 0 && (
+                      <>
+                        <PaymentDetailsSection
+                          patients={patients}
+                          onPatientSelect={onPatientSelect}
+                          patientTypeHandler={patientTypeHandler}
+                          paymentDetailsHandler={paymentDetailsHandler}
+                        />
+
+                        {selectedPaymentDetail === PaymentDetail.Paying && (
+                          <PaymentMethodComponent
+                            paymentMethodHandler={paymentMethodHandler}
+                            paymentModes={paymentModes}
+                            billableServicesHandler={billableServicesHandler}
+                            filteredBillableServices={filteredBillableServices}
+                          />
+                        )}
+                      </>
+                    )}
+
+                    {/* ================= STEP 1 ================= */}
+                    {step === 1 && (
+                      <>
+                        {selectedPaymentDetail === PaymentDetail.Paying && (
+                          <>
+                            {hasSelectedPaymentMode('SHA') && (
+                              <ExtensionSlot
+                                name="billing-claims-slot"
+                                state={{
+                                  clientRegistryId: patientIdentifiers?.crIdentifierId,
+                                  onSelectChange: () => {},
+                                  onInterventionChange: setSelectedIntervention,
+                                }}
+                              />
+                            )}
+
+                            {hasSelectedPaymentMode('insurance') && (
+                              <div className={styles.formRow}>
+                                <div className={styles.formControl}>
+                                  <TextInput
+                                    id="insurance-scheme"
+                                    labelText="Insurance scheme"
+                                    onChange={(e) => insuranceSchemeHandler(e.target.value)}
                                   />
-                                );
-                              })}
-                          </Select>
-                        </div>
-                      </div>
-                      {/* If using SHA claim */}
-                      {hasSelectedPaymentMode('SHA') ? (
-                        <>
-                          {/* <ClaimsComponent clientRegistryId={patientIdentifiers.crIdentifierId} onSelectChange={() => { }} /> */}
-                          <ExtensionSlot name='billing-claims-slot' state={{ clientRegistryId: patientIdentifiers?.crIdentifierId, patientUuid: selectedPatient.uuid, triggerCreateVisit, otp, visitType, onSelectChange: () => { }, onClaimsVisitStart, onInterventionChange }} />
-                        </>) : (<></>)
-                      }
-                      {hasSelectedPaymentMode('insurance') ? (
-                        <>
+                                </div>
+
+                                <div className={styles.formControl}>
+                                  <TextInput
+                                    id="policy-number"
+                                    labelText="Policy number"
+                                    onChange={(e) => insurancePolicyHandler(e.target.value)}
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            <div className={styles.formRow}>
+                              <div className={styles.formControl}>
+                                <Select
+                                  id="cash-point"
+                                  labelText="Cash Point"
+                                  onChange={(e) => cashPointsHandler(e.target.value)}
+                                >
+                                  <SelectItem value="" text="Select" />
+                                  {facilityCashPoints?.map((cp) => (
+                                    <SelectItem key={cp.uuid} value={cp.uuid} text={cp.name} />
+                                  ))}
+                                </Select>
+                              </div>
+                            </div>
+                          </>
+                        )}
+
+                        {selectedPaymentDetail === PaymentDetail.NonPaying && (
                           <div className={styles.formRow}>
                             <div className={styles.formControl}>
-                              <TextInput
-                                id="insurance-scheme"
-                                labelText="Insurance scheme"
-                                onChange={(e) => insuranceSchemeHandler(e.target.value)}
-                              />
-                            </div>
-                            <div className={styles.formControl}>
-                              <TextInput
-                                id="policy-number"
-                                labelText="Policy number"
-                                onChange={(e) => insurancePolicyHandler(e.target.value)}
-                              />
+                              <Select
+                                id="patient-category"
+                                labelText="Patient Category"
+                                onChange={(e) => patientCategoryHandler(e.target.value)}
+                              >
+                                <SelectItem value="" text="Select" />
+                                <SelectItem value={PatientCategories.CCC_PATIENT_UUID} text="CCC" />
+                                <SelectItem value={PatientCategories.MCH_PATIENT_UUID} text="MCH" />
+                              </Select>
                             </div>
                           </div>
-                        </>
-                      ) : (
-                        <></>
-                      )}
-                      <div className={styles.formRow}>
-                        <div className={styles.formControl}>
-                          <Select
-                            id="cash-point"
-                            labelText="Cash Point"
-                            onChange={($event) => cashPointsHandler($event.target.value)}
-                          >
-                            <SelectItem value="" text="Select" />;
-                            {facilityCashPoints &&
-                              facilityCashPoints.map((cp) => {
-                                return <SelectItem value={cp.uuid} text={cp.name} />;
-                              })}
-                          </Select>
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <></>
-                  )}
+                        )}
 
-                  {selectedPaymentDetail === PaymentDetail.NonPaying ? (
-                    <>
-                      <div className={styles.formRow}>
-                        <div className={styles.formControl}>
-                          <Select
-                            id="patient-category"
-                            labelText="Patient Category"
-                            onChange={($event) => patientCategoryHandler($event.target.value)}
-                          >
-                            <SelectItem value="" text="Select" />;
-                            <SelectItem value={PatientCategories.CCC_PATIENT_UUID} text="CCC" />;
-                            <SelectItem value={PatientCategories.MCH_PATIENT_UUID} text="MCH" />;
-                          </Select>
+                        <div className={styles.formSection}>
+                          <div className={styles.formRow}>
+                            <div className={styles.formControl}>
+                              <ComboBox
+                                onChange={visitTypeChangeHandler}
+                                id="visit-type-combobox"
+                                items={visitTypeOptions}
+                                itemToString={(item) => (item ? item.text : '')}
+                                titleText="Visit Type"
+                              />
+                            </div>
+
+                            <div className={styles.formControl}>
+                              <Select id="service" labelText="Select a Queue Service" onChange={serviceChangeHandler}>
+                                <SelectItem value="" text="Select" />
+                                {serviceQueues?.map((sq) => (
+                                  <SelectItem key={sq.uuid} value={sq.uuid} text={sq.display} />
+                                ))}
+                              </Select>
+                            </div>
+                          </div>
+
+                          <div className={styles.formRow}>
+                            <div className={styles.formControl}>
+                              <Select
+                                id="priority"
+                                labelText="Select Priority"
+                                onChange={(e) => priorityChangeHandler(e.target.value)}
+                              >
+                                <SelectItem value="" text="Select" />
+                                <SelectItem value={QUEUE_PRIORITIES_UUIDS.NORMAL_PRIORITY_UUID} text="PRIORITY" />
+                                <SelectItem value={QUEUE_PRIORITIES_UUIDS.NOT_URGENT_PRIORITY_UUID} text="NON URGENT" />
+                                <SelectItem value={QUEUE_PRIORITIES_UUIDS.EMERGENCY_PRIORITY_UUID} text="EMERGENCY" />
+                              </Select>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </>
-                  ) : (
-                    <></>
-                  )}
-                </div>
-                <div className={styles.formSection}>
-                  <div className={styles.formRow}>
-                    <div className={styles.formControl}>
-                      <ComboBox
-                        onChange={visitTypeChangeHandler}
-                        id="visit-type-combobox"
-                        items={visitTypeOptions}
-                        itemToString={(item) => (item ? item.text : '')}
-                        titleText="Visit Type"
+                      </>
+                    )}
+
+                    {/* ================= STEP 2 ================= */}
+                    {step === 2 && showConsent && selectedPaymentDetail === PaymentDetail.Paying && (
+                      <ClaimsConsentModal
+                        submitting={submitting}
+                        otpSent={otpSent}
+                        whitelistRequest={whitelistRequest}
+                        onWhitelistSubmit={handleWhitelistSubmit}
+                        onSendClaimsOtp={handleSendClaimsOtp}
+                        onOtpVerified={handleVerifyOtp}
+                        onOtpVerificationStatusChange={setOtpVerified}
+                        serviceType={getClaimServiceType(selectedVisitType ?? '')}
+                        interventionCode={selectedIntervention?.code ?? ''}
                       />
-                    </div>
-                    <div className={styles.formControl}>
-                      <Select id="service" labelText="Select a Queue Service" onChange={serviceChangeHandler}>
-                        <SelectItem value="" text="Select" />;
-                        {serviceQueues &&
-                          serviceQueues.map((sq) => {
-                            return <SelectItem value={sq.uuid} text={`${sq.display}`} />;
-                          })}
-                      </Select>
-                    </div>
+                    )}
                   </div>
-                  <div className={styles.formRow}>
-                    <div className={styles.formControl}>
-                      <Select
-                        id="priority"
-                        labelText="Select Priority"
-                        onChange={($event) => priorityChangeHandler($event.target.value)}
-                      >
-                        <SelectItem value="" text="Select" />;
-                        <SelectItem value={QUEUE_PRIORITIES_UUIDS.NORMAL_PRIORITY_UUID} text="PRIORITY" />;
-                        <SelectItem value={QUEUE_PRIORITIES_UUIDS.NOT_URGENT_PRIORITY_UUID} text="NON URGENT" />;
-                        <SelectItem value={QUEUE_PRIORITIES_UUIDS.EMERGENCY_PRIORITY_UUID} text="EMERGENCY" />;
-                      </Select>
-                    </div>
-                  </div>
-                </div>
+                )}
               </div>
-            ) : (
-              <></>
-            )}
-            <div className={styles.actionSection}>
-              {patients.length === 0 ? (
-                <>
-                  <div className={styles.patientAction}>
-                    <div className={styles.btnContainer}>
-                      <Button kind="primary" onClick={() => onCreateAmrsPatient(client)}>
-                        Automatically Register in AMRS
-                      </Button>
-                    </div>
-                    <div className={styles.btnContainer}>
-                      <Button kind="secondary" onClick={onManualRegistration}>
-                        Manually Register
-                      </Button>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <></>
-              )}
-            </div>
-            {showConsent && (
-              // <ClaimsConsentModal
-              //   onSendClaimsOtp={handleSendClaimsOtp}
-              //   onWhitelistSubmit={handleWhitelistSubmit}
-              //   onWhitelistStatusChange={setIsWhitelisted}
-              //   onOtpVerified={() => setOtpVerified(true)}
-              // />
-              <ClaimsConsentModal
-                submitting={submitting}
-                otpSent={otpSent}
-                whitelistRequest={whitelistRequest}
-                onWhitelistSubmit={handleWhitelistSubmit}
-                onSendClaimsOtp={handleSendClaimsOtp}
-                onOtpVerified={handleVerifyOtp}
-                onOtpVerificationStatusChange={setOtpVerified}
-              />
-            )}
-          </div>
-        </ModalBody>
-      </Modal>
+            </ModalBody>
+          </Modal>
+        </>
+      )}
+      {displayOtpModal && requestCustomOtpDto ? (
+        <OtpVerificationModal
+          requestCustomOtpDto={requestCustomOtpDto}
+          phoneNumber={formatPhoneNumberForOTP(patient!.phone)}
+          open={displayOtpModal}
+          onModalClose={handleModelClose}
+          onOtpSuccessfullVerification={handleOtpSuccessfullVerification}
+        />
+      ) : (
+        <></>
+      )}
+      {displayClientDetailsModal ? (
+        <>
+          <ClientDetailsModal
+            client={patient!}
+            open={displayClientDetailsModal}
+            onModalClose={onClientDetailsModalClose}
+            onSubmit={handleClientDetailsSubmit}
+            onSendClientToTriage={handleSendClientToTriage}
+          />{' '}
+        </>
+      ) : (
+        <></>
+      )}
     </>
   );
 };

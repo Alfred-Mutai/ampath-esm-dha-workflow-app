@@ -46,9 +46,10 @@ const QueueList: React.FC<QueueListProps> = ({
   handleClearQueue,
 }) => {
   const session = useSession();
-  const provider = session.currentProvider;
+
+  const provider = session?.currentProvider ?? null;
   const [checkIn, setCheckin] = useState<boolean>(isProviderCheckedIn());
-  const [selectedStatus,setSelectedStatus] = useState<string>('');
+  const [selectedStatus, setSelectedStatus] = useState<string>('');
 
   const [searchString, setSearchString] = useState<string>();
   const urgentEntries = useMemo(
@@ -64,32 +65,32 @@ const QueueList: React.FC<QueueListProps> = ({
     () => sortQueueByPriorityAndWaitTime(queueEntries, QueueEntryPriority.NonUrgent),
     [queueEntries],
   );
-  const sortedQueueEntries = useMemo(() => generatePatientWaitingList(), [queueEntries,selectedStatus]);
-  const filteredQueueEntries = useMemo(() => filterQueueBySearchString(), [queueEntries, searchString,selectedStatus]);
-  const canClearQueue = userHasAccess('O3 Clear Triage Queue',{
+  const sortedQueueEntries = useMemo(() => generatePatientWaitingList(), [queueEntries, selectedStatus]);
+  const filteredQueueEntries = useMemo(() => filterQueueBySearchString(), [queueEntries, searchString, selectedStatus]);
+  const canClearQueue = userHasAccess('O3 Clear Triage Queue', {
     privileges: session.user?.privileges ?? [],
-    roles: session.user?.roles ?? []
+    roles: session.user?.roles ?? [],
   });
   const statusOptions = [
-        {
-          text: 'ALL',
-          id: '',
-        },
-        {
-          text: 'IN SERVICE',
-          id: 'IN SERVICE',
-        },
-        {
-          text: 'WAITING',
-          id: 'WAITING',
-        },
+    {
+      text: 'ALL',
+      id: '',
+    },
+    {
+      text: 'IN SERVICE',
+      id: 'IN SERVICE',
+    },
+    {
+      text: 'WAITING',
+      id: 'WAITING',
+    },
   ];
   function generatePatientWaitingList() {
-    return [...urgentEntries, ...priorityEntries, ...nonUrgentEntries].filter((qe)=>{
-       if(!selectedStatus){
-          return true;
-       }
-       return qe.status === selectedStatus;
+    return [...urgentEntries, ...priorityEntries, ...nonUrgentEntries].filter((qe) => {
+      if (!selectedStatus) {
+        return true;
+      }
+      return qe.status === selectedStatus;
     });
   }
 
@@ -103,9 +104,15 @@ const QueueList: React.FC<QueueListProps> = ({
       });
   }
   function isProviderCheckedIn() {
+    if (!provider) {
+      return false;
+    }
     return isCheckedIn(provider.uuid, queueRoom);
   }
   const handleCheckin = () => {
+    if (!provider) {
+      return;
+    }
     checkInRoom(provider.uuid, queueRoom);
     setCheckin(isProviderCheckedIn());
   };
@@ -155,12 +162,12 @@ const QueueList: React.FC<QueueListProps> = ({
       return name;
     }
   }
-  function statusChangeHandler(selectedStatus: { selectedItem: { id: string; text: string } }){
+  function statusChangeHandler(selectedStatus: { selectedItem: { id: string; text: string } }) {
     let status = '';
-    if(selectedStatus && selectedStatus.selectedItem){
-        status = selectedStatus.selectedItem.id;
+    if (selectedStatus && selectedStatus.selectedItem) {
+      status = selectedStatus.selectedItem.id;
     }
-    
+
     setSelectedStatus(status);
   }
   return (
@@ -168,16 +175,16 @@ const QueueList: React.FC<QueueListProps> = ({
       <div className={styles.queueListLayout}>
         <div className={styles.actionHeader}>
           <div className={styles.filters}>
-           <div className={styles.filter}>
+            <div className={styles.filter}>
               <ComboBox
-                        onChange={statusChangeHandler}
-                        id="queue-status-combobox"
-                        items={statusOptions}
-                        itemToString={(item) => (item ? item.text : '')}
-                        titleText="Status"
-                />
+                onChange={statusChangeHandler}
+                id="queue-status-combobox"
+                items={statusOptions}
+                itemToString={(item) => (item ? item.text : '')}
+                titleText="Status"
+              />
             </div>
-           <div className={styles.filter}>
+            <div className={styles.filter}>
               <TextInput
                 id="queue-search"
                 labelText="Name"
@@ -185,24 +192,22 @@ const QueueList: React.FC<QueueListProps> = ({
                 placeholder="Enter patient name to filter"
               />
             </div>
-           
           </div>
           <div className={styles.actionBtns}>
-            
             {checkIn ? (
               <>
                 <div>
-                <Button kind="secondary" onClick={handleCheckout}>
-                  Check Out
-                </Button>
+                  <Button kind="secondary" onClick={handleCheckout}>
+                    Check Out
+                  </Button>
                 </div>
                 {sortedQueueEntries.length > 0 ? (
                   <>
-                  <div>
-                    <Button kind="danger" onClick={clearQueue} disabled={!canClearQueue}>
-                      Clear Queue
-                    </Button>
-                  </div>
+                    <div>
+                      <Button kind="danger" onClick={clearQueue} disabled={!canClearQueue}>
+                        Clear Queue
+                      </Button>
+                    </div>
                   </>
                 ) : (
                   <></>
@@ -210,11 +215,11 @@ const QueueList: React.FC<QueueListProps> = ({
               </>
             ) : (
               <>
-              <div>
-                <Button kind="primary" onClick={handleCheckin}>
-                  Check In
-                </Button>
-              </div>
+                <div>
+                  <Button kind="primary" onClick={handleCheckin}>
+                    Check In
+                  </Button>
+                </div>
               </>
             )}
           </div>
@@ -241,14 +246,14 @@ const QueueList: React.FC<QueueListProps> = ({
                 <TableRow id={val.queue_entry_uuid}>
                   <TableCell>{index + 1}</TableCell>
                   <TableCell>
-                    <div className={val.hide_in_queue === 1? styles.flaggedPatient: styles.unflaggedPatient}>
-                    {checkIn && val.status !== QueueEntryStatus.Waiting ? (
-                      <Link href={`${window.spaBase}/patient/${val.patient_uuid}/chart/`}>
-                        {formatPatientName(val)}
-                      </Link>
-                    ) : (
-                      <>{formatPatientName(val)}</>
-                    )}
+                    <div className={val.hide_in_queue === 1 ? styles.flaggedPatient : styles.unflaggedPatient}>
+                      {checkIn && val.status !== QueueEntryStatus.Waiting ? (
+                        <Link href={`${window.spaBase}/patient/${val.patient_uuid}/chart/`}>
+                          {formatPatientName(val)}
+                        </Link>
+                      ) : (
+                        <>{formatPatientName(val)}</>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell>{val.age ?? ''}</TableCell>
@@ -267,37 +272,44 @@ const QueueList: React.FC<QueueListProps> = ({
                     </Tag>
                   </TableCell>
                   <TableCell>{`${val.wait_time_in_min} minute(s)`}</TableCell>
-                  {
-                     val.hide_in_queue === 0 ? (<>
+                  {val.hide_in_queue === 0 ? (
+                    <>
                       <TableCell>
-                    {val.status === QueueEntryStatus.Waiting && val.hide_in_queue === 0 ? (
-                      <>
-                        <Button kind="ghost" disabled={!checkIn} onClick={() => handleServePatient(val)}>
-                          Serve
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        {checkIn ? (
+                        {val.status === QueueEntryStatus.Waiting && val.hide_in_queue === 0 ? (
                           <>
-                            <OverflowMenu aria-label="overflow-menu">
-                              <OverflowMenuItem itemText="Transfer" onClick={() => handleMovePatient(val)} />
-                              <OverflowMenuItem itemText="Transition" onClick={() => handleTransitionPatient(val)} />
-                              <OverflowMenuItem itemText="Sign Off" onClick={() => handleSignOff(val)} />
-                              <OverflowMenuItem itemText="Remove Patient" onClick={() => handleRemovePatient(val)} />
-                            </OverflowMenu>
+                            <Button kind="ghost" disabled={!checkIn} onClick={() => handleServePatient(val)}>
+                              Serve
+                            </Button>
                           </>
                         ) : (
-                          <></>
+                          <>
+                            {checkIn ? (
+                              <>
+                                <OverflowMenu aria-label="overflow-menu">
+                                  <OverflowMenuItem itemText="Transfer" onClick={() => handleMovePatient(val)} />
+                                  <OverflowMenuItem
+                                    itemText="Transition"
+                                    onClick={() => handleTransitionPatient(val)}
+                                  />
+                                  <OverflowMenuItem itemText="Sign Off" onClick={() => handleSignOff(val)} />
+                                  <OverflowMenuItem
+                                    itemText="Remove Patient"
+                                    onClick={() => handleRemovePatient(val)}
+                                  />
+                                </OverflowMenu>
+                              </>
+                            ) : (
+                              <></>
+                            )}
+                          </>
                         )}
-                      </>
-                    )}
-                  </TableCell>
-                     </>): (<>
+                      </TableCell>
+                    </>
+                  ) : (
+                    <>
                       <TableCell></TableCell>
-                     </>)
-                  }
-                 
+                    </>
+                  )}
                 </TableRow>
               ))}
             </TableBody>

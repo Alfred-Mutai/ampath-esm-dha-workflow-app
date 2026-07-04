@@ -12,6 +12,8 @@ interface ClaimsConsentModalProps {
   onSendClaimsOtp: () => Promise<any>;
   onOtpVerified: (otp: string) => Promise<any>;
   onOtpVerificationStatusChange: (verified: boolean) => void;
+  serviceType: string;
+  interventionCode: string;
 }
 const ClaimsConsentModal: React.FC<ClaimsConsentModalProps> = ({
   onSendClaimsOtp,
@@ -20,6 +22,8 @@ const ClaimsConsentModal: React.FC<ClaimsConsentModalProps> = ({
   submitting,
   otpSent,
   whitelistRequest,
+  serviceType,
+  interventionCode,
 }) => {
   const [selectedTab, setSelectedTab] = useState(0);
   const [whiteListed, setIsWhitelisted] = useState<boolean>();
@@ -34,7 +38,12 @@ const ClaimsConsentModal: React.FC<ClaimsConsentModalProps> = ({
         </TabList>
         <TabPanels>
           <TabPanel>
-            <BiometricsVerificationModal open={false} onClose={() => {}} />
+            <BiometricsVerificationModal
+              open={false}
+              onClose={() => {}}
+              serviceType={serviceType}
+              interventionCode={interventionCode}
+            />
           </TabPanel>
           <TabPanel>
             <OTPWhitlistingModal

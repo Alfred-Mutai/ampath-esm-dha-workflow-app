@@ -81,6 +81,8 @@ const RegistryComponent: React.FC<RegistryComponentProps> = () => {
     }
   };
 
+  const { patient } = usePatient();
+
   const getSearchClientDto = (): ClientRegistrySearchRequest => {
     return {
       identificationNumber: identifierValue,
@@ -335,7 +337,7 @@ const RegistryComponent: React.FC<RegistryComponentProps> = () => {
                     </div>
                     <div className={styles.patientConfirmSelection}>
                       <div className={styles.btnContainer}>
-                        <Button kind="primary" onClick={handleOtpVerification}>
+                        <Button kind="primary" onClick={() => handleSendClientToTriage(patient?.id)}>
                           {' '}
                           Confirm
                         </Button>
