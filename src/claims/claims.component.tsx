@@ -33,6 +33,7 @@ interface ClaimsComponentProps {
   onSelectChange: (key, value) => void;
   onClaimsVisitStart?: (payload: ClaimResult) => void;
   onAddIntervention?: (intervention: any) => void;
+  onInterventionChange?: (intervention: Intervention | undefined) => void;
 }
 
 const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
@@ -46,6 +47,7 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
   onSelectChange,
   onClaimsVisitStart,
   onAddIntervention,
+  onInterventionChange,
 }) => {
   const { activeVisit } = useVisit(patientUuid);
   const [selectedIntervention, setSelectedIntervention] = useState<Intervention>();
@@ -185,7 +187,10 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
             labelText="Interventions"
             onChange={($event) => {
               const value = $event.target.value;
-              setSelectedIntervention(interventions.find((i) => i.code === value));
+              const intervention = interventions?.find((i) => i.code === value);
+
+              setSelectedIntervention(intervention);
+              onInterventionChange?.(intervention);
               return onSelectChange('interventions', value);
             }}
           >

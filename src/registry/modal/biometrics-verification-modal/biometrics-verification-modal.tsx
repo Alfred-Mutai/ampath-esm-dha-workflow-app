@@ -33,6 +33,8 @@ const BiometricsVerificationModal: React.FC<BiometricsVerificationModalProps> = 
     async function fetchBiometricUrl() {
       try {
         const urlData = await getBiometrictsRequestUrl(patient!, locationUuid!, interventionCode, serviceType);
+        // eslint-disable-next-line no-console
+        console.log('Biometric request URL response:', urlData);
 
         const url = urlData?.shaVerificationRequest?.requestUrl;
 
