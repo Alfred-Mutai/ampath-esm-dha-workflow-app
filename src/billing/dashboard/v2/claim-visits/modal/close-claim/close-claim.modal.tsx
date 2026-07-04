@@ -21,14 +21,14 @@ const CloseClaimModal: React.FC<closeClaimModalProps> = ({ open, onClose, onSucc
     setLoading(true);
     try {
       const closeClaimPayload = getCloseClaimPayload();
-      if (isValidClaimClosePayload(closeClaimPayload)) {
+      if (!isValidClaimClosePayload(closeClaimPayload)) {
         return false;
       }
 
       const resp = await closeClaim(closeClaimPayload);
       if ('error' in resp) {
         showSnackbar({
-          title: 'Error Adding Closing claim',
+          title: 'Error Closing claim',
           kind: 'error',
           subtitle: 'An error occurred while closing the claim. Kindy retry or contact support',
         });
