@@ -1,14 +1,25 @@
-import React from "react";
-import { type ClaimVisitInvoince } from "../../types"
+import React, { useState } from "react";
+import styles from './claim-invoice-details.component.scss';
+import { type ClaimInvoiceLine, type ClaimVisitInvoince } from "../../types"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@carbon/react";
 import { formatDate, parseDate } from "@openmrs/esm-framework";
+import ClaimInvoiceLinesModal from "../modal/claim-invoice-lines/claim-invoice-lines.modal";
 
 interface claimInvoiceDetailsProps {
     claimInvoices: ClaimVisitInvoince[]
 }
 const ClaimInvoiceDetails: React.FC<claimInvoiceDetailsProps> = ({claimInvoices})=>{
+   const [showClaimInvoiceLinesModal,setShowClaimInvoiceLinesModal] = useState<boolean>();
+   const [selectedClaimInvoiceLines,setSelectedClaimInvoiceLines] = useState<ClaimInvoiceLine[]>([]);
    if(!claimInvoices || claimInvoices.length === 0){
       return <>No Invoice data</>
+   }
+   function handleClose(){
+     setShowClaimInvoiceLinesModal(false);
+   }
+   function showClaimLinesModal(claimInvoiceLines: ClaimInvoiceLine[]){
+     setSelectedClaimInvoiceLines(claimInvoiceLines);
+     setShowClaimInvoiceLinesModal(true);
    }
    return <>
    <Table>
@@ -21,6 +32,7 @@ const ClaimInvoiceDetails: React.FC<claimInvoiceDetailsProps> = ({claimInvoices}
               <TableHeader>State</TableHeader>
               <TableHeader>Patient</TableHeader>
               <TableHeader>Provider</TableHeader>
+              <TableHeader>Lines</TableHeader>
               <TableHeader>Scheme</TableHeader>
               <TableHeader>Service Type</TableHeader>
               <TableHeader>Amount</TableHeader>
@@ -42,6 +54,9 @@ const ClaimInvoiceDetails: React.FC<claimInvoiceDetailsProps> = ({claimInvoices}
                       <TableCell>{ci.workflow_state}</TableCell>
                       <TableCell>{ci.patient_name}</TableCell>
                       <TableCell>{ci.provider_name}</TableCell>
+                      <TableCell>
+                        <div className={styles.linkBtn} onClick={()=>showClaimLinesModal(ci.lines)}>{ci.lines.length}</div>
+                      </TableCell>
                       <TableCell>{ci.scheme_code}</TableCell>
                       <TableCell>{ci.service_type}</TableCell>
                       <TableCell>{ci.total_inv_amount}</TableCell>
@@ -54,6 +69,14 @@ const ClaimInvoiceDetails: React.FC<claimInvoiceDetailsProps> = ({claimInvoices}
               })}
           </TableBody>
         </Table>
+
+        {
+          showClaimInvoiceLinesModal && <ClaimInvoiceLinesModal 
+          claimInvoiceLines={selectedClaimInvoiceLines}
+          open={showClaimInvoiceLinesModal}
+          handleClose={handleClose}
+          />
+        }
    </>
 };
 

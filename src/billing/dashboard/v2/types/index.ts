@@ -77,7 +77,7 @@ export type ClaimVisitInvoince = {
   total_inv_net_amount: string;
   total_inv_copay: string;
   total_inv_discount: string;
-  lines: any[];
+  lines: ClaimInvoiceLine[];
   doctors: any[];
   invoice_flags: any[];
   visit_start: string;
@@ -249,11 +249,33 @@ export type CloseClaimDto = {
 };
 
 export enum ClaimCloseReasonType {
-  WrongPatient = "WRONG_PATIENT",
-  NoServiceGiven = "NO_SERVICE_GIVEN",
-  WringBenefit = "WRONG_BENEFIT",
-  ExpiredVisit = "EXPIRED_VISIT",
-  ExhaustedBenefit = "EXHAUSTED_BENEFIT",
-  TimeBarred = "TIME_BARRED",
-  OtherReasons = "OTHER_REASONS"
+  WrongPatient = 'WRONG_PATIENT',
+  NoServiceGiven = 'NO_SERVICE_GIVEN',
+  WringBenefit = 'WRONG_BENEFIT',
+  ExpiredVisit = 'EXPIRED_VISIT',
+  ExhaustedBenefit = 'EXHAUSTED_BENEFIT',
+  TimeBarred = 'TIME_BARRED',
+  OtherReasons = 'OTHER_REASONS',
+}
+
+export type ClaimInvoiceLine = {
+  id: string;
+  item_code: string;
+  item_name: string;
+  invoice: string;
+  intervention_code: string;
+  line_total_amount: string;
+  line_net_amount: string;
+  quantity: number;
+  unit: string;
+  unit_price: string;
+  is_active: boolean;
+  is_cancellation: boolean;
+  is_return: boolean;
+  uhc_exceeded: boolean;
+  charge_date: string;
+  line_number: string;
+  scheme_code: string;
+  scheme_name: string;
+  discount: string;
 };
