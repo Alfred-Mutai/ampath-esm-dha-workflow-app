@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+/* eslint-disable no-console */
+import React, { useEffect, useMemo, useState } from 'react';
 
 import styles from './biometrics-verification-modal.scss';
 import { Button } from '@carbon/react';
@@ -30,11 +31,23 @@ const BiometricsVerificationModal: React.FC<BiometricsVerificationModalProps> = 
   const { patient } = usePatient();
 
   useEffect(() => {
+    // eslint-disable-next-line no-console
+    console.log('Patient:', patient);
+    // eslint-disable-next-line no-console
+    console.log('Location UUID:', locationUuid);
+    // eslint-disable-next-line no-console
+    console.log('Intervention Code:', interventionCode);
+    // eslint-disable-next-line no-console
+    console.log('Service Type:', serviceType);
+    if (!patient || !locationUuid) return;
     async function fetchBiometricUrl() {
       try {
         const urlData = await getBiometrictsRequestUrl(patient!, locationUuid!, interventionCode, serviceType);
         // eslint-disable-next-line no-console
         console.log('Biometric request URL response:', urlData);
+
+        // eslint-disable-next-line no-console
+        console.log('Request URL:', urlData?.shaVerificationRequest?.requestUrl);
 
         const url = urlData?.shaVerificationRequest?.requestUrl;
 
@@ -46,50 +59,54 @@ const BiometricsVerificationModal: React.FC<BiometricsVerificationModalProps> = 
     }
 
     fetchBiometricUrl();
-  }, []);
+  }, [patient, locationUuid, interventionCode, serviceType]);
 
-  const config = {
-    type: 'INIT_DEVICE_CONFIG',
-    payload: {
-      devices: [
-        {
-          id: 'H59241200603',
-          name: 'Secugen',
-          displayName: 'SladeID',
-          type: 'Fingerprint',
-        },
-      ],
-      card_readers: [],
-      isAuthed: true,
-      workstationID: '790bf760-08e6-4fbe-b892-7b877dd52f2b-F406692C85F3',
-      version: '1.14.0519.1301',
-    },
-  };
-
-  useEffect(() => {
-    if (!open) return;
-
-    const timer = setTimeout(() => {
-      iframeRef.current?.contentWindow?.postMessage(config, `${biometricIframeUrl}`);
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, [open]);
+  const config = useMemo(
+    () => ({
+      type: 'INIT_DEVICE_CONFIG',
+      payload: {
+        devices: [
+          {
+            id: 'H59241200603',
+            name: 'Secugen',
+            displayName: 'SladeID',
+            type: 'Fingerprint',
+          },
+        ],
+        card_readers: [],
+        isAuthed: true,
+        workstationID: '790bf760-08e6-4fbe-b892-7b877dd52f2b-F406692C85F3',
+        version: '1.14.0519.1301',
+      },
+    }),
+    [],
+  );
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || !biometricIframeUrl) return;
     const handler = (event: MessageEvent) => {
-      // if (event.origin !== `${biometricIframeUrl}`) return;
+      // eslint-disable-next-line no-console
+      console.log('Received message from iframe:', event.data);
+      // eslint-disable-next-line no-console
+      console.log('Open:', event.data);
+      if (!open || !biometricIframeUrl) return;
+
+      const origin = new URL(biometricIframeUrl).origin;
+      if (event.origin !== origin) return;
 
       const data = event.data;
 
-      // if (data?.type === 'BIOMETRIC_RESULT') {
-      setCaptureResult(data.payload);
-      setScanning(false);
-      // }
+      console.log('Message:', data);
+      console.log('Origin:', event.origin);
 
-      if (data?.type === 'BIOMETRIC_ERROR') {
-        setError(data.message || 'Biometric capture failed');
+      if (!data || typeof data !== 'object') return;
+      if (data.type === 'BIOMETRIC_RESULT') {
+        setCaptureResult(data.payload);
+        setScanning(false);
+      }
+
+      if (data.type === 'BIOMETRIC_ERROR') {
+        setError(data.message);
         setScanning(false);
       }
     };
@@ -97,14 +114,28 @@ const BiometricsVerificationModal: React.FC<BiometricsVerificationModalProps> = 
     window.addEventListener('message', handler);
 
     return () => window.removeEventListener('message', handler);
-  }, [open]);
+  }, [open, biometricIframeUrl]);
 
   const startScan = () => {
+    if (!biometricIframeUrl) return;
+
+    const origin = new URL(biometricIframeUrl).origin;
+
     setScanning(true);
     setError(null);
 
-    iframeRef.current?.contentWindow?.postMessage({ type: 'START_CAPTURE' }, `${biometricIframeUrl}`);
+    iframeRef.current?.contentWindow?.postMessage({ type: 'START_CAPTURE' }, origin);
   };
+
+  // const startScan = () => {
+  //   setScanning(true);
+  //   setError(null);
+
+  //   iframeRef.current?.contentWindow?.postMessage({ type: 'START_CAPTURE' }, origin);
+  // };
+
+  // eslint-disable-next-line no-console
+  console.log('biometricIframeUrl:', biometricIframeUrl);
 
   return (
     <div>
@@ -114,7 +145,22 @@ const BiometricsVerificationModal: React.FC<BiometricsVerificationModalProps> = 
           <p className={styles.centerText}>Please verify your identity using biometrics.</p>
 
           {/* Scanner zone */}
-          {biometricIframeUrl && <iframe ref={iframeRef} src={`${biometricIframeUrl}`} className={styles.iframe} />}
+          {/* {biometricIframeUrl && <iframe ref={iframeRef} src={`${biometricIframeUrl}`} className={styles.iframe} />} */}
+          {biometricIframeUrl && (
+            <iframe
+              ref={iframeRef}
+              src={biometricIframeUrl}
+              className={styles.iframe}
+              onLoad={() => {
+                console.log('Iframe loaded');
+
+                const origin = new URL(biometricIframeUrl).origin;
+
+                iframeRef.current?.contentWindow?.postMessage(config, origin);
+              }}
+              onError={() => console.log('Iframe failed')}
+            />
+          )}
 
           <p className={`${styles.statusLabel} ${scanning ? styles.active : ''}`}>
             {scanning ? 'acquiring biometric data...' : 'awaiting input'}

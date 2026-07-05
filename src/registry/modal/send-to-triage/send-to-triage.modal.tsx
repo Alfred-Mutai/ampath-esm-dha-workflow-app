@@ -131,7 +131,7 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
   const [otpSent, setOtpSent] = useState(false);
   const [whitelistRequest, setWhitelistRequest] = useState(null);
   const [otpVerified, setOtpVerified] = useState(false);
-  const [otp, setOtp] = useState(null);
+  const [selectedIntervention, setSelectedIntervention] = useState<Intervention | undefined>();
   const [step, setStep] = useState(0);
   const [displayOtpModal, setDisplayOtpModal] = useState<boolean>(false);
   const [requestCustomOtpDto, setRequestCustomOtpDto] = useState<RequestCustomOtpDto>();
@@ -139,6 +139,7 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
   const [principal, setPrincipal] = useState<HieClient>();
   const [selecteddPatient, setSelecteddPatient] = useState<string>('principal');
   const [selectedDependant, setSelectedDependant] = useState<HieClient>();
+  const [otp, setOtp] = useState<string>('');
 
   const next = () => setStep((s) => s + 1);
   const previous = () => setStep((s) => s - 1);
@@ -278,8 +279,9 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
       handleOtpVerification();
       return;
     }
-    setLoading(true);
     if (hasSelectedPaymentMode('SHA')) {
+      // eslint-disable-next-line no-console
+      console.log('CLAIM RESULT:', claimResult);
       if (claimResult) {
         await sendToTriage();
       } else {
@@ -287,7 +289,6 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
       }
       return;
     }
-    await sendToTriage();
   };
 
   const generateCustomSmsPayload = (): RequestCustomOtpDto => {
@@ -534,8 +535,8 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
     if (isValidBillableService(selectedBillableService)) {
       setSelectedBillableService(selectedBillableService);
     } else {
-      setSelectedBillableService(null);
-      showAlert('error', 'Existing bill', 'Patient has a similar bill');
+      // setSelectedBillableService(null);
+      // showAlert('error', 'Existing bill', 'Patient has a similar bill');
     }
   };
   const isValidBillableService = (selectedService: ServicePrice) => {
@@ -769,7 +770,13 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
     if (!selectedPaymentMode) {
       return false;
     }
-    console.log(selectedPaymentMode);
+    // eslint-disable-next-line no-console
+    console.log('CHECKING selectedPaymentMode:', selectedPaymentMode);
+    // eslint-disable-next-line no-console
+    console.log(
+      'SELECTED PAYMENT MODE:',
+      selectedPaymentMode.name.trim().toLowerCase().includes(paymentMode.trim().toLowerCase()),
+    );
     return selectedPaymentMode.name.trim().toLowerCase().includes(paymentMode.trim().toLowerCase());
   }
 
@@ -881,7 +888,7 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
 
         return payload;
       }
-    } catch (error) { }
+    } catch (error) {}
   }
 
   const handleWhitelistSubmit = async (payload: OTPWhitelistRequest) => {
@@ -892,7 +899,7 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
     try {
       setSubmitting(true);
 
-      const response = await sendClaimsOTP(patient!.id, locationUuid!, intervention?.code);
+      const response = await sendClaimsOTP(patient!.id, locationUuid!, selectedIntervention?.code);
 
       if (response?.message?.includes('OTP')) {
         setOtpSent(true);
@@ -912,9 +919,6 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
       setSubmitting(true);
 
       setOtpVerified(true);
-
-      setOtp(otp);
-
       showSnackbar({
         kind: 'success',
         title: 'OTP Verified',
@@ -938,8 +942,8 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
 
   const lastStep =
     selectedPaymentDetail === PaymentDetail.Paying &&
-      !hasSelectedPaymentMode('CASH') &&
-      !hasSelectedPaymentMode('MPESA')
+    !hasSelectedPaymentMode('CASH') &&
+    !hasSelectedPaymentMode('MPESA')
       ? 2
       : 1;
 
@@ -951,13 +955,13 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
     }
   };
 
-  const handleprimaryAction = async () => {
+  const handleprimaryAction = () => {
     if (step < lastStep) {
       setStep(step + 1);
       return;
     }
 
-    await handleSendToTriage();
+    handleSendToTriage();
   };
 
   const handleOtpSuccessfullVerification = () => {
@@ -1011,16 +1015,6 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
     await sendToTriage();
   };
   const showWizard = !displayClientDetailsModal && !displayOtpModal;
-
-  const getClaimServiceType = (visitType: string) => {
-    if (visitType === VisitTypeUuids.OPD_VISIT_TYPE_UUID) {
-      return 'OUTPATIENT';
-    } else if (visitType === VisitTypeUuids.INPATIENT_VISIT_TYPE_UUID) {
-      return 'INPATIENT';
-    } else {
-      return '';
-    }
-  };
 
   return (
     <>
@@ -1085,17 +1079,19 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
                         {selectedPaymentDetail === PaymentDetail.Paying && (
                           <>
                             {hasSelectedPaymentMode('SHA') && (
-                              <ExtensionSlot name='billing-claims-slot'
+                              <ExtensionSlot
+                                name="billing-claims-slot"
                                 state={{
                                   clientRegistryId: patientIdentifiers?.crIdentifierId,
-                                  patientUuid: selectedPatient.uuid,
+                                  patientUuid: selectedPatient?.uuid,
                                   triggerCreateVisit,
                                   otp,
                                   visitType,
-                                  onSelectChange: () => { },
+                                  onSelectChange: () => {},
                                   onClaimsVisitStart,
-                                  onInterventionChange
-                                }} />
+                                  onInterventionChange: setSelectedIntervention,
+                                }}
+                              />
                             )}
 
                             {hasSelectedPaymentMode('insurance') && (
@@ -1201,8 +1197,8 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
                         onSendClaimsOtp={handleSendClaimsOtp}
                         onOtpVerified={handleVerifyOtp}
                         onOtpVerificationStatusChange={setOtpVerified}
-                        serviceType={getClaimServiceType(selectedVisitType ?? '')}
-                        interventionCode={intervention?.code ?? ''}
+                        serviceType={getServiceType(intervention, visitType)}
+                        interventionCode={selectedIntervention?.code ?? ''}
                       />
                     )}
                   </div>
