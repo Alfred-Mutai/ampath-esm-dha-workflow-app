@@ -43,3 +43,10 @@
     flex-direction: column;
     row-gap: 10px;
 }
+
+.claimSubmitBtn {
+    display: flex;
+    justify-content: flex-end;
+    margin-left: auto;
+    float: right;
+}

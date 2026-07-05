@@ -149,7 +149,7 @@ const PatientBillDetails: React.FC<patientBillDetailsProps> = ({ patientUuid, lo
               <TabPanel>
                 {locationUuid && consentToken ? (
                   <>
-                    <PatientClaimDetails locationUuid={locationUuid} consentToken={consentToken} />
+                    <PatientClaimDetails locationUuid={locationUuid} patientBillDetails={patientBillDetails} consentToken={consentToken} />
                   </>
                 ) : (
                   <></>

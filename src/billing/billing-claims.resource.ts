@@ -18,6 +18,7 @@ import {
   type BillPaymentResponse,
   type AddClaimLineDto,
   type CloseClaimDto,
+  SubmitClaimDto,
 } from './dashboard/v2/types';
 import { getHieBaseUrl } from '../claims/utils';
 
@@ -142,6 +143,20 @@ export async function closeClaim(closeClaimDto: CloseClaimDto){
         'content-type': 'application/json'
     },
     body: JSON.stringify(closeClaimDto)
+  });
+  const data = (await response.json()) as ClaimVisitReponse;
+  return data ?? null;
+}
+
+export async function submitClaim(submitClaimDto: SubmitClaimDto){
+  const { hieBaseUrl } = await getHieBaseUrl();
+  const addClaimLineUrl = `${hieBaseUrl}/claim-submission`;
+  const response = await openmrsFetch(addClaimLineUrl,{
+    method: 'POST',
+    headers: {
+        'content-type': 'application/json'
+    },
+    body: JSON.stringify(submitClaimDto)
   });
   const data = (await response.json()) as ClaimVisitReponse;
   return data ?? null;

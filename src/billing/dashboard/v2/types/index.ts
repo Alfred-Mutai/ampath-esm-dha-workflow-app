@@ -22,6 +22,7 @@ export type PatientFacilityBillsDto = {
 
 export type PatientFacilityBillDetails = {
   bill_uuid: string;
+  receipt_number: string;
   patient_name: string;
   cash_point: string;
   bill_date: string;
@@ -247,6 +248,12 @@ export type CloseClaimDto = {
   cancelReasonType: string;
   cancelReasonText: string;
 };
+
+export type SubmitClaimDto = {
+  consentToken: string,
+  invoiceNumber: string,
+  locationUuid: string
+}
 
 export enum ClaimCloseReasonType {
   WrongPatient = 'WRONG_PATIENT',
