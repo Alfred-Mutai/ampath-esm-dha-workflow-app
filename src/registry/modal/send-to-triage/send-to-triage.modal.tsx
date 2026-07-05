@@ -131,7 +131,7 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
   const [otpSent, setOtpSent] = useState(false);
   const [whitelistRequest, setWhitelistRequest] = useState(null);
   const [otpVerified, setOtpVerified] = useState(false);
-  const [selectedIntervention, setSelectedIntervention] = useState<Intervention | undefined>();
+  const [otp, setOtp] = useState(null);
   const [step, setStep] = useState(0);
   const [displayOtpModal, setDisplayOtpModal] = useState<boolean>(false);
   const [requestCustomOtpDto, setRequestCustomOtpDto] = useState<RequestCustomOtpDto>();
@@ -278,6 +278,7 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
       handleOtpVerification();
       return;
     }
+    setLoading(true);
     if (hasSelectedPaymentMode('SHA')) {
       if (claimResult) {
         await sendToTriage();
@@ -880,7 +881,7 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
 
         return payload;
       }
-    } catch (error) {}
+    } catch (error) { }
   }
 
   const handleWhitelistSubmit = async (payload: OTPWhitelistRequest) => {
@@ -891,7 +892,7 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
     try {
       setSubmitting(true);
 
-      const response = await sendClaimsOTP(patient!.id, locationUuid!, selectedIntervention?.code);
+      const response = await sendClaimsOTP(patient!.id, locationUuid!, intervention?.code);
 
       if (response?.message?.includes('OTP')) {
         setOtpSent(true);
@@ -911,6 +912,8 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
       setSubmitting(true);
 
       setOtpVerified(true);
+
+      setOtp(otp);
 
       showSnackbar({
         kind: 'success',
@@ -935,8 +938,8 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
 
   const lastStep =
     selectedPaymentDetail === PaymentDetail.Paying &&
-    !hasSelectedPaymentMode('CASH') &&
-    !hasSelectedPaymentMode('MPESA')
+      !hasSelectedPaymentMode('CASH') &&
+      !hasSelectedPaymentMode('MPESA')
       ? 2
       : 1;
 
@@ -948,13 +951,13 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
     }
   };
 
-  const handleprimaryAction = () => {
+  const handleprimaryAction = async () => {
     if (step < lastStep) {
       setStep(step + 1);
       return;
     }
 
-    handleSendToTriage();
+    await handleSendToTriage();
   };
 
   const handleOtpSuccessfullVerification = () => {
@@ -1082,14 +1085,17 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
                         {selectedPaymentDetail === PaymentDetail.Paying && (
                           <>
                             {hasSelectedPaymentMode('SHA') && (
-                              <ExtensionSlot
-                                name="billing-claims-slot"
+                              <ExtensionSlot name='billing-claims-slot'
                                 state={{
                                   clientRegistryId: patientIdentifiers?.crIdentifierId,
-                                  onSelectChange: () => {},
-                                  onInterventionChange: setSelectedIntervention,
-                                }}
-                              />
+                                  patientUuid: selectedPatient.uuid,
+                                  triggerCreateVisit,
+                                  otp,
+                                  visitType,
+                                  onSelectChange: () => { },
+                                  onClaimsVisitStart,
+                                  onInterventionChange
+                                }} />
                             )}
 
                             {hasSelectedPaymentMode('insurance') && (
@@ -1196,7 +1202,7 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
                         onOtpVerified={handleVerifyOtp}
                         onOtpVerificationStatusChange={setOtpVerified}
                         serviceType={getClaimServiceType(selectedVisitType ?? '')}
-                        interventionCode={selectedIntervention?.code ?? ''}
+                        interventionCode={intervention?.code ?? ''}
                       />
                     )}
                   </div>
