@@ -20,6 +20,7 @@ import {
   type CloseClaimDto,
   type SubmitClaimDto,
   type AddClaimDiagnosisDto,
+  type RemoveClaimLineDto,
 } from './dashboard/v2/types';
 import { getHieBaseUrl } from '../claims/utils';
 import { type AmrsVisitDiagnosis, type AmrsVisitDiagnosisDto, type AmrsVisitDiagnosisResponse } from './types';
@@ -134,6 +135,30 @@ export async function addClaimItem(addClaimLineDto: AddClaimLineDto){
   });
   const data = (await response.json());
   return data ?? null;
+}
+
+export async function removeClaimItem(removeClaimLineDto: RemoveClaimLineDto){
+  const { hieBaseUrl } = await getHieBaseUrl();
+  const url = `${hieBaseUrl}/claim-line`;
+  const result = await openmrsFetch(url,{
+    method: 'DELETE',
+    headers: {
+        'content-type': 'application/json'
+    },
+    body: JSON.stringify(removeClaimLineDto)
+  }).catch((error) => {
+      const message = error?.responseBody?.message ?? "";
+      if (typeof message === "object") {
+          throw `${message?.join(",")}`;
+      }
+      throw message;
+  });
+
+  if (result?.data && "error" in result.data && "message" in result.data) {
+      const message = result.data.message ?? "";
+      throw message;
+  }
+  return result?.data;
 }
 
 export async function closeClaim(closeClaimDto: CloseClaimDto){

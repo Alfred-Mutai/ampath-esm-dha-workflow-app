@@ -6,9 +6,10 @@ import { formatDate, parseDate } from "@openmrs/esm-framework";
 import ClaimInvoiceLinesModal from "../modal/claim-invoice-lines/claim-invoice-lines.modal";
 
 interface claimInvoiceDetailsProps {
-    claimInvoices: ClaimVisitInvoince[]
+    claimInvoices: ClaimVisitInvoince[];
+    consentToken: string;
 }
-const ClaimInvoiceDetails: React.FC<claimInvoiceDetailsProps> = ({claimInvoices})=>{
+const ClaimInvoiceDetails: React.FC<claimInvoiceDetailsProps> = ({claimInvoices, consentToken})=>{
    const [showClaimInvoiceLinesModal,setShowClaimInvoiceLinesModal] = useState<boolean>();
    const [selectedClaimInvoiceLines,setSelectedClaimInvoiceLines] = useState<ClaimInvoiceLine[]>([]);
    if(!claimInvoices || claimInvoices.length === 0){
@@ -73,6 +74,7 @@ const ClaimInvoiceDetails: React.FC<claimInvoiceDetailsProps> = ({claimInvoices}
         {
           showClaimInvoiceLinesModal && <ClaimInvoiceLinesModal 
           claimInvoiceLines={selectedClaimInvoiceLines}
+          consentToken={consentToken}
           open={showClaimInvoiceLinesModal}
           handleClose={handleClose}
           />

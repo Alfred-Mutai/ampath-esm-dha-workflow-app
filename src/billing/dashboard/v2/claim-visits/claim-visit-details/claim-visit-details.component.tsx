@@ -83,7 +83,7 @@ const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({ claimsVisit, loca
               <h6>Invoices</h6>
             </div>
             <div className={styles.cvRow}>
-              {claimsVisit.invoices && <ClaimInvoiceDetails claimInvoices={claimsVisit.invoices} />}
+              {claimsVisit.invoices && <ClaimInvoiceDetails claimInvoices={claimsVisit.invoices} consentToken={claimsVisit.authorization_code}/>}
             </div>
           </div>
           <div className={styles.cvRow}>

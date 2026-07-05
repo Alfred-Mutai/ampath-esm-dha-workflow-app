@@ -8,8 +8,9 @@ interface claimInvoiceLinesModalProps {
   open: boolean;
   handleClose: () => void;
   claimInvoiceLines: ClaimInvoiceLine[];
+  consentToken: string;
 }
-const ClaimInvoiceLinesModal: React.FC<claimInvoiceLinesModalProps> = ({ open, handleClose, claimInvoiceLines }) => {
+const ClaimInvoiceLinesModal: React.FC<claimInvoiceLinesModalProps> = ({ open, handleClose, claimInvoiceLines, consentToken }) => {
   return (
     <>
         <Modal
@@ -24,7 +25,7 @@ const ClaimInvoiceLinesModal: React.FC<claimInvoiceLinesModalProps> = ({ open, h
         >
           <ModalBody>
            <div className={styles.claimInvoiceLinesModalLayout}>
-              <ClaimInvoiceLineDetails claimInvoiceLines={claimInvoiceLines} />
+              <ClaimInvoiceLineDetails claimInvoiceLines={claimInvoiceLines} consentToken={consentToken}/>
             </div>
           </ModalBody>
         </Modal>

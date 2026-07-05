@@ -242,6 +242,13 @@ export type AddClaimLineDto = {
   quantity: string;
   locationUuid: string;
 };
+
+export type RemoveClaimLineDto = {
+  consentToken: string;
+  lineGuid: string;
+  locationUuid: string;
+};
+
 export type CloseClaimDto = {
   consentToken: string;
   locationUuid: string;
