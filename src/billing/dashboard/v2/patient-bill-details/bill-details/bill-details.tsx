@@ -1,20 +1,25 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { type PatientPayment, type PatientFacilityBillDetails } from '../../types';
 import styles from './bill-details.scss';
 import { OverflowMenu, OverflowMenuItem, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@carbon/react';
 import { formatDate, parseDate } from '@openmrs/esm-framework';
 import BillItemPaymentModal from '../modals/bill-item-payment/bill-item-payment.modal';
 import AddClaimLineModal from '../modals/add-claim-line/add-claim-line.modal';
+import { type AmrsVisitDiagnosis } from '../../../../types';
+import VisitDiagnosisDetails from '../visit-diagnosis-details/visit-diagnosis-details.component';
 
 interface billDetailsProps {
   patientBillDetails: PatientFacilityBillDetails[];
   patientPayments: PatientPayment[];
+  amrsVisitDiagnosis: AmrsVisitDiagnosis[];
+  consentToken: string;
   locationUuid: string;
 }
-const BillDetails: React.FC<billDetailsProps> = ({ patientBillDetails, patientPayments, locationUuid }) => {
+const BillDetails: React.FC<billDetailsProps> = ({ patientBillDetails, patientPayments, amrsVisitDiagnosis, consentToken, locationUuid }) => {
   const [showPaymentModal,setShowPaymentModal] = useState<boolean>(false);
   const [showAddClaimLineModal,setShowAddClaimLineModal] = useState<boolean>(false);
   const [selectedBillItem,setSelectedBillItem] = useState<PatientFacilityBillDetails | null>(null);
+  const setDiagnosisInterventionCode = useMemo(()=>getConsultationBillIntervantionCode(),[patientBillDetails]);
   if (!patientBillDetails && !patientPayments) {
     return <>No Data</>;
   }
@@ -34,6 +39,19 @@ const BillDetails: React.FC<billDetailsProps> = ({ patientBillDetails, patientPa
   }
   function handleCloseAddClaimItemModal(){
      setShowAddClaimLineModal(false);
+  }
+  function getConsultationBillIntervantionCode(){
+    if(!patientBillDetails || patientBillDetails.length === 0){
+        return '';
+    }
+     const consultationBill = patientBillDetails.find((b)=>{
+        return b.billable_service.toLocaleLowerCase().trim().includes('consultation');
+     });
+    if(consultationBill){
+       return consultationBill.intervention_code;
+    }else{
+      return patientBillDetails[0].intervention_code ?? '';
+    }
   }
   return (
     <>
@@ -74,18 +92,12 @@ const BillDetails: React.FC<billDetailsProps> = ({ patientBillDetails, patientPa
                               <TableCell>{b.item_quantity}</TableCell>
                               <TableCell>Ksh {b.item_total_price}</TableCell>
                               <TableCell>
-                                {
-                                  (b.paid_status === 'PENDING' ||  b.paid_status === 'POSTED') ? (<>
-                                   <OverflowMenu aria-label="overflow-menu">
+                                <OverflowMenu aria-label="overflow-menu">
                                       <OverflowMenuItem itemText="Pay" onClick={() => handleBillItemPayment(b)} />
                                         {
                                           b.intervention_code && <OverflowMenuItem itemText="Add Claim Line" onClick={() => handleClaimLineAddition(b)} />
                                         }
-                                      
-                                    </OverflowMenu>
-                                  </>): (<></>)
-                                }
-                                
+                              </OverflowMenu>
                               </TableCell>
                             </TableRow>
                           </>
@@ -140,6 +152,24 @@ const BillDetails: React.FC<billDetailsProps> = ({ patientBillDetails, patientPa
         ) : (
           <></>
         )}
+        {
+          amrsVisitDiagnosis.length > 0 ? (<>
+           <div className={styles.billRow}>
+              <div>
+                <h6>Patient Dignosis</h6>
+              </div>
+              <div>
+             <VisitDiagnosisDetails 
+              amrsVisitDiagnosis={amrsVisitDiagnosis}
+              consentToken={consentToken}
+              locationUuid={locationUuid}
+              interventionCode={setDiagnosisInterventionCode}
+             />
+             </div>
+          </div>
+          
+          </>):(<></>)
+        }
         {
           (showPaymentModal && selectedBillItem) && <BillItemPaymentModal 
           open={showPaymentModal} 

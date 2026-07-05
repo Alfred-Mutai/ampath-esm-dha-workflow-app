@@ -3,19 +3,19 @@ import styles from './patient-bill-details.scss';
 import {
   type PatientFacilityBillsDto,
   type PatientFacilityBillDetails,
-  type ClaimVisitsDto,
   type PatientPaymentsDto,
   type PatientPayment,
 } from '../types';
 import {
   fetchPatientBillPayments,
-  fetchPatientClaimVisit,
+  fetchPatientDiagnosis,
   fetchPatientFacilityBillDetails,
 } from '../../../billing-claims.resource';
 import { showSnackbar } from '@openmrs/esm-styleguide';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from '@carbon/react';
 import BillDetails from './bill-details/bill-details';
 import PatientClaimDetails from './claim-details/patient-claim-details.component';
+import { type AmrsVisitDiagnosisDto, type AmrsVisitDiagnosis } from '../../../types';
 interface patientBillDetailsProps {
   patientUuid: string;
   locationUuid: string;
@@ -29,11 +29,13 @@ const PatientBillDetails: React.FC<patientBillDetailsProps> = ({ patientUuid, lo
     return patientBillDetails[0] ?? null;
   }, [patientBillDetails]);
   const billStatus = useMemo(()=>getBillStatus(patientBillDetails),[patientBillDetails]);
+  const [patientAmrsVisitDiagnosis,setPatientAmrsVisitDiagnosis] = useState<AmrsVisitDiagnosis[]>([]);
 
   useEffect(() => {
     if (locationUuid && patientUuid && billingDate) {
       getPatientBillDetails();
       getPatientPayments();
+      getPatientAmrsVisitDiagnosis();
     }
   }, [locationUuid, patientUuid, billingDate]);
   async function getPatientBillDetails() {
@@ -101,6 +103,30 @@ const PatientBillDetails: React.FC<patientBillDetailsProps> = ({ patientUuid, lo
       return status;
     }
   }
+  async function getPatientAmrsVisitDiagnosis() {
+    const amrsVisitDiagnosisPayload = getPatientAmrsVisitDiagnosisPayload();
+    try {
+      const resp = await fetchPatientDiagnosis(amrsVisitDiagnosisPayload);
+      if (resp && resp.length > 0) {
+        setPatientAmrsVisitDiagnosis(resp);
+      } else {
+        setPatientAmrsVisitDiagnosis([]);
+      }
+    } catch (error) {
+      showSnackbar({
+        title: 'Error fetching patient diagnosis',
+        kind: 'error',
+        subtitle: 'An error occurred while fetching the patient diagnosis',
+      });
+    }
+  }
+  function getPatientAmrsVisitDiagnosisPayload(): AmrsVisitDiagnosisDto {
+    return {
+      patientUuid: patientUuid,
+      visitDate: billingDate,
+      locationUuid: locationUuid
+    };
+  }
   return (
     <>
       <div className={styles.bdLayout}>
@@ -142,7 +168,9 @@ const PatientBillDetails: React.FC<patientBillDetailsProps> = ({ patientUuid, lo
                   <BillDetails 
                   patientBillDetails={patientBillDetails} 
                   patientPayments={patientBillPayments} 
+                  amrsVisitDiagnosis={patientAmrsVisitDiagnosis}
                   locationUuid = {locationUuid}
+                  consentToken={consentToken}
                   />
                 )}
               </TabPanel>

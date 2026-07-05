@@ -82,3 +82,25 @@ export type EditBillLineItemDto = {
   status: BillStatus;
   uuid: string;
 };
+
+export type AmrsVisitDiagnosis = {
+  patient_id: number;
+  encounter_id: number;
+  encounter_datetime: string;
+  facility: string;
+  encounter_type: string;
+  concept_id: number;
+  value_coded: number;
+  concept_source_name: string;
+  hl7_code: string;
+  icd11_code: string;
+};
+
+export type AmrsVisitDiagnosisDto = {
+  visitDate: string;
+  patientUuid: string;
+  locationUuid: string;
+};
+export type AmrsVisitDiagnosisResponse = {
+  results: AmrsVisitDiagnosis[];
+}

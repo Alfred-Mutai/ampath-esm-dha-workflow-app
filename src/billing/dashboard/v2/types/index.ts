@@ -286,3 +286,10 @@ export type ClaimInvoiceLine = {
   scheme_name: string;
   discount: string;
 };
+
+export type AddClaimDiagnosisDto = {
+  consentToken: string;
+  interventionCode: string;
+  icdCode: string;
+  locationUuid: string;
+};

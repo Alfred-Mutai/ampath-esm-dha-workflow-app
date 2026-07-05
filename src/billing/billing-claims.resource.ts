@@ -18,9 +18,11 @@ import {
   type BillPaymentResponse,
   type AddClaimLineDto,
   type CloseClaimDto,
-  SubmitClaimDto,
+  type SubmitClaimDto,
+  type AddClaimDiagnosisDto,
 } from './dashboard/v2/types';
 import { getHieBaseUrl } from '../claims/utils';
+import { type AmrsVisitDiagnosis, type AmrsVisitDiagnosisDto, type AmrsVisitDiagnosisResponse } from './types';
 
 export async function fetchFacilityBills(facilityBillsDto: FacilityBillsDto): Promise<FacilityBill[]> {
   const etlBaseUrl = await getEtlBaseUrl();
@@ -159,5 +161,29 @@ export async function submitClaim(submitClaimDto: SubmitClaimDto){
     body: JSON.stringify(submitClaimDto)
   });
   const data = (await response.json()) as ClaimVisitReponse;
+  return data ?? null;
+}
+
+export async function fetchPatientDiagnosis(
+  amrsVisitDiagnosisDto: AmrsVisitDiagnosisDto,
+): Promise<AmrsVisitDiagnosis[]>{
+  const etlBaseUrl = await getEtlBaseUrl();
+  const patientDiagnosisUrl = `${etlBaseUrl}/patient/diagnosis?visitDate=${amrsVisitDiagnosisDto.visitDate}&patientUuid=${amrsVisitDiagnosisDto.patientUuid}&locationUuid=${amrsVisitDiagnosisDto.locationUuid}`;
+  const response = await openmrsFetch(patientDiagnosisUrl);
+  const data = (await response.json()) as AmrsVisitDiagnosisResponse;
+  return data.results ?? [];
+}
+
+export async function addClaimDiagnosis(addClaimDiagnosisDto: AddClaimDiagnosisDto){
+  const { hieBaseUrl } = await getHieBaseUrl();
+  const addClaimDiagnosisUrl = `${hieBaseUrl}/claim-diagnosis`;
+  const response = await openmrsFetch(addClaimDiagnosisUrl,{
+    method: 'POST',
+    headers: {
+        'content-type': 'application/json'
+    },
+    body: JSON.stringify(addClaimDiagnosisDto)
+  });
+  const data = (await response.json());
   return data ?? null;
 }
