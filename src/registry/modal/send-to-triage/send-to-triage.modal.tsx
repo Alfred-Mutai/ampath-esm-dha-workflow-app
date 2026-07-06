@@ -899,7 +899,7 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
     try {
       setSubmitting(true);
 
-      const response = await sendClaimsOTP(patient!.id, locationUuid!, selectedIntervention?.code);
+      const response = await sendClaimsOTP(patient!.id, locationUuid!, intervention?.code);
 
       if (response?.message?.includes('OTP')) {
         setOtpSent(true);
@@ -919,6 +919,7 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
       setSubmitting(true);
 
       setOtpVerified(true);
+      setOtp(otp);
       showSnackbar({
         kind: 'success',
         title: 'OTP Verified',
@@ -955,20 +956,18 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
     }
   };
 
-  const handleprimaryAction = () => {
+  const handleprimaryAction = async () => {
     if (step < lastStep) {
       setStep(step + 1);
       return;
     }
 
-    handleSendToTriage();
+    await handleSendToTriage();
   };
 
   const handleOtpSuccessfullVerification = () => {
     setDisplayOtpModal(false);
     setDisplayClientDetailsModal(true);
-    // eslint-disable-next-line no-console
-    console.log('OTP verified successfully, proceeding to client details modal', displayClientDetailsModal);
   };
 
   const handleModelClose = () => {
@@ -1035,7 +1034,7 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
             primaryButtonText={step === lastStep ? (loading ? 'Sending...please wait' : 'Send to Triage') : 'Next'}
             secondaryButtonText={step === 0 ? 'Cancel' : 'Back'}
             primaryButtonDisabled={
-              step === lastStep && selectedPaymentMode?.name === 'SHIF' && (loading || !otpVerified)
+              step === lastStep && selectedPaymentMode?.name === 'SHA' && (loading || !otpVerified)
             }
           >
             <ModalBody>
@@ -1089,7 +1088,7 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
                                   visitType,
                                   onSelectChange: () => {},
                                   onClaimsVisitStart,
-                                  onInterventionChange: setSelectedIntervention,
+                                  onInterventionChange,
                                 }}
                               />
                             )}
@@ -1198,7 +1197,7 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
                         onOtpVerified={handleVerifyOtp}
                         onOtpVerificationStatusChange={setOtpVerified}
                         serviceType={getServiceType(intervention, visitType)}
-                        interventionCode={selectedIntervention?.code ?? ''}
+                        interventionCode={intervention?.code ?? ''}
                       />
                     )}
                   </div>

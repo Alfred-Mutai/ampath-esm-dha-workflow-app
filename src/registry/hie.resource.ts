@@ -125,10 +125,10 @@ export async function getBiometrictsRequestUrl(
   const hieBaseUrl = await getHieBaseUrl();
 
   const payload = {
-    interventions: [`${interventionCode}`],
+    interventions: [interventionCode],
     patientId: patient.id,
     locationUuid: locationUuid,
-    serviceType: 'CAPITATION',
+    serviceType: serviceType,
     agentId: patient.identification_number,
     authorizingDeviceOs: 'windows',
     factors: ['SHA'],
