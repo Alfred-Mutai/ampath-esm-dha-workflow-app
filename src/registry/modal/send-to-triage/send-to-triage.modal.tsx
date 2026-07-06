@@ -888,7 +888,7 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
 
         return payload;
       }
-    } catch (error) { }
+    } catch (error) {}
   }
 
   const handleWhitelistSubmit = async (payload: OTPWhitelistRequest) => {
@@ -943,8 +943,8 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
 
   const lastStep =
     selectedPaymentDetail === PaymentDetail.Paying &&
-      !hasSelectedPaymentMode('CASH') &&
-      !hasSelectedPaymentMode('MPESA')
+    !hasSelectedPaymentMode('CASH') &&
+    !hasSelectedPaymentMode('MPESA')
       ? 2
       : 1;
 
@@ -1086,7 +1086,7 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
                                   triggerCreateVisit,
                                   otp,
                                   visitType,
-                                  onSelectChange: () => { },
+                                  onSelectChange: () => {},
                                   onClaimsVisitStart,
                                   onInterventionChange,
                                 }}

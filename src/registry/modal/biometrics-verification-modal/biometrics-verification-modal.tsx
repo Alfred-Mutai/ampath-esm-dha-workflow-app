@@ -105,6 +105,17 @@ const BiometricsVerificationModal: React.FC<BiometricsVerificationModalProps> = 
         setScanning(false);
       }
 
+      const handler = (event: MessageEvent) => {
+        console.log('================================');
+        console.log('Origin:', event.origin);
+        console.log('Event:', event);
+        console.log('Data:', event.data);
+        console.log('================================');
+      };
+
+      // eslint-disable-next-line no-console
+      console.log('HANDLER :', handler);
+
       if (data.type === 'BIOMETRIC_ERROR') {
         setError(data.message);
         setScanning(false);
@@ -116,23 +127,32 @@ const BiometricsVerificationModal: React.FC<BiometricsVerificationModalProps> = 
     return () => window.removeEventListener('message', handler);
   }, [open, biometricIframeUrl]);
 
+  // const startScan = () => {
+  //   if (!biometricIframeUrl) return;
+
+  //   const origin = new URL(biometricIframeUrl).origin;
+
+  //   setScanning(true);
+  //   setError(null);
+
+  //   iframeRef.current?.contentWindow?.postMessage({ type: 'START_CAPTURE' }, origin);
+  // };
+
   const startScan = () => {
-    if (!biometricIframeUrl) return;
+    if (!biometricIframeUrl || !iframeRef.current?.contentWindow) {
+      console.error('Iframe is not ready');
+      return;
+    }
 
     const origin = new URL(biometricIframeUrl).origin;
 
     setScanning(true);
     setError(null);
 
-    iframeRef.current?.contentWindow?.postMessage({ type: 'START_CAPTURE' }, origin);
+    console.log('Sending START_CAPTURE to', origin);
+
+    iframeRef.current.contentWindow.postMessage({ type: 'START_CAPTURE' }, origin);
   };
-
-  // const startScan = () => {
-  //   setScanning(true);
-  //   setError(null);
-
-  //   iframeRef.current?.contentWindow?.postMessage({ type: 'START_CAPTURE' }, origin);
-  // };
 
   // eslint-disable-next-line no-console
   console.log('biometricIframeUrl:', biometricIframeUrl);
