@@ -273,6 +273,13 @@ export enum ClaimCloseReasonType {
   OtherReasons = 'OTHER_REASONS',
 }
 
+export enum DischargeReasonType {
+  RECOVERED = "RECOVERED",
+  REFERRED = "REFERRED",
+  ABSCONDED = "ABSCONDED",
+  OTHER = "OTHER"
+}
+
 export type ClaimInvoiceLine = {
   id: string;
   item_code: string;

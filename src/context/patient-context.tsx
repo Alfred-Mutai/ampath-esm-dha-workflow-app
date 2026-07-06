@@ -7,8 +7,11 @@ interface PatientContextType {
 }
 const PatientContext = createContext<PatientContextType | undefined>(undefined);
 
-export const PatientProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [patient, setPatient] = useState<HieClient | null>(null);
+export const PatientProvider: React.FC<{ children: React.ReactNode; initialPatient?: HieClient | null }> = ({
+  children,
+  initialPatient = null,
+}) => {
+  const [patient, setPatient] = useState<HieClient | null>(initialPatient);
 
   return <PatientContext.Provider value={{ patient, setPatient }}>{children}</PatientContext.Provider>;
 };
