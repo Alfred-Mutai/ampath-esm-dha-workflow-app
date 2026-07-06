@@ -72,6 +72,7 @@ const BillDetails: React.FC<billDetailsProps> = ({ patientBillDetails, patientPa
                       <TableHeader>Order No</TableHeader>
                       <TableHeader>Service Type</TableHeader>
                       <TableHeader>Payer</TableHeader>
+                      <TableHeader>Payment Status</TableHeader>
                       <TableHeader>Quantity</TableHeader>
                       <TableHeader>Total</TableHeader>
                       <TableHeader>Actions</TableHeader>
@@ -89,14 +90,17 @@ const BillDetails: React.FC<billDetailsProps> = ({ patientBillDetails, patientPa
                               <TableCell>{b.order_no ?? ''}</TableCell>
                               <TableCell>{b.service_type ?? ''}</TableCell>
                               <TableCell>{b.payment_scheme}</TableCell>
+                              <TableCell>{b.payment_status}</TableCell>
                               <TableCell>{b.item_quantity}</TableCell>
                               <TableCell>Ksh {b.item_total_price}</TableCell>
                               <TableCell>
                                 <OverflowMenu aria-label="overflow-menu">
-                                      <OverflowMenuItem itemText="Pay" onClick={() => handleBillItemPayment(b)} />
-                                        {
-                                          b.intervention_code && <OverflowMenuItem itemText="Add Claim Line" onClick={() => handleClaimLineAddition(b)} />
-                                        }
+                                  {
+                                    (b.payment_status !== 'PAID') && <OverflowMenuItem itemText="Pay" onClick={() => handleBillItemPayment(b)} />
+                                  }
+                                  {
+                                    (b.intervention_code && b.has_claim_line === 0) && <OverflowMenuItem itemText="Add Claim Line" onClick={() => handleClaimLineAddition(b)} />
+                                  }
                               </OverflowMenu>
                               </TableCell>
                             </TableRow>

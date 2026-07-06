@@ -43,6 +43,7 @@ export type PatientFacilityBillDetails = {
   consent_token: string;
   order_no: string;
   service_type: string;
+  has_claim_line: number;
 };
 
 export type PatientFacilityBillDetailsResponse = {
