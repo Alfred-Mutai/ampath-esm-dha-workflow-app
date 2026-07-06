@@ -2,25 +2,26 @@ import React, { useMemo, useState } from 'react';
 import { Modal, ModalBody } from '@carbon/react';
 import { submitClaim } from '../../../../../billing-claims.resource';
 import { showSnackbar } from '@openmrs/esm-framework';
-import { SubmitClaimDto } from '../../../types';
+import { type ClaimsVisit, type SubmitClaimDto } from '../../../types';
+import ClaimsConsentModal from '../../../../../../registry/modal/otp-verification-modal/claims-consent';
 
 interface submitClaimModalProps {
     open: boolean;
     onClose: () => void;
     onSuccess: () => void;
-    consentToken: string;
+    claimsVisit: ClaimsVisit;
     invoiceNumber: string;
     locationUuid: string;
 }
-const SubmitClaimModal: React.FC<submitClaimModalProps> = ({ open, onClose, onSuccess, locationUuid, consentToken, invoiceNumber }) => {
+const SubmitClaimModal: React.FC<submitClaimModalProps> = ({ open, onClose, onSuccess, locationUuid, claimsVisit, invoiceNumber }) => {
     const [loading, setLoading] = useState<boolean>(false);
 
     const invalidValues = useMemo(() => {
-        if (invoiceNumber && consentToken) {
+        if (invoiceNumber && claimsVisit) {
             return false;
         }
         return true;
-    }, [invoiceNumber, consentToken]);
+    }, [invoiceNumber, claimsVisit]);
 
     async function handleSubmitClaim() {
         setLoading(true);
@@ -53,7 +54,7 @@ const SubmitClaimModal: React.FC<submitClaimModalProps> = ({ open, onClose, onSu
     }
     function getSubmitClaimPayload(): SubmitClaimDto {
         return {
-            consentToken,
+            consentToken: claimsVisit.authorization_code,
             invoiceNumber,
             locationUuid
         };
@@ -77,6 +78,17 @@ const SubmitClaimModal: React.FC<submitClaimModalProps> = ({ open, onClose, onSu
                     <p>
                         Are you sure you want to submit the claim?
                     </p>
+                    {/* <ClaimsConsentModal
+                        submitting={submitting}
+                        otpSent={otpSent}
+                        whitelistRequest={whitelistRequest}
+                        onWhitelistSubmit={handleWhitelistSubmit}
+                        onSendClaimsOtp={handleSendClaimsOtp}
+                        onOtpVerified={handleVerifyOtp}
+                        onOtpVerificationStatusChange={setOtpVerified}
+                        serviceType={getClaimServiceType(selectedVisitType ?? '')}
+                        interventionCode={intervention?.code ?? ''}
+                    /> */}
                 </ModalBody>
             </Modal>
         </>

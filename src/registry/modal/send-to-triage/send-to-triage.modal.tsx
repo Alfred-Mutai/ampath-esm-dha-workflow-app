@@ -131,7 +131,7 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
   const [otpSent, setOtpSent] = useState(false);
   const [whitelistRequest, setWhitelistRequest] = useState(null);
   const [otpVerified, setOtpVerified] = useState(false);
-  const [selectedIntervention, setSelectedIntervention] = useState<Intervention | undefined>();
+  const [otp, setOtp] = useState(null);
   const [step, setStep] = useState(0);
   const [displayOtpModal, setDisplayOtpModal] = useState<boolean>(false);
   const [requestCustomOtpDto, setRequestCustomOtpDto] = useState<RequestCustomOtpDto>();
@@ -139,7 +139,6 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
   const [principal, setPrincipal] = useState<HieClient>();
   const [selecteddPatient, setSelecteddPatient] = useState<string>('principal');
   const [selectedDependant, setSelectedDependant] = useState<HieClient>();
-  const [otp, setOtp] = useState<string>('');
 
   const next = () => setStep((s) => s + 1);
   const previous = () => setStep((s) => s - 1);
@@ -279,6 +278,7 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
       handleOtpVerification();
       return;
     }
+    setLoading(true);
     if (hasSelectedPaymentMode('SHA')) {
       // eslint-disable-next-line no-console
       console.log('CLAIM RESULT:', claimResult);
@@ -888,7 +888,7 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
 
         return payload;
       }
-    } catch (error) {}
+    } catch (error) { }
   }
 
   const handleWhitelistSubmit = async (payload: OTPWhitelistRequest) => {
@@ -943,8 +943,8 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
 
   const lastStep =
     selectedPaymentDetail === PaymentDetail.Paying &&
-    !hasSelectedPaymentMode('CASH') &&
-    !hasSelectedPaymentMode('MPESA')
+      !hasSelectedPaymentMode('CASH') &&
+      !hasSelectedPaymentMode('MPESA')
       ? 2
       : 1;
 
@@ -1086,7 +1086,7 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
                                   triggerCreateVisit,
                                   otp,
                                   visitType,
-                                  onSelectChange: () => {},
+                                  onSelectChange: () => { },
                                   onClaimsVisitStart,
                                   onInterventionChange,
                                 }}

@@ -124,7 +124,7 @@ const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({ claimsVisit, loca
           open={showSubmitClaimModal}
           onClose={handleCloseSubmitClaimModal}
           onSuccess={handleCloseSubmitClaimModal}
-          consentToken={claimsVisit.authorization_code}
+          claimsVisit={claimsVisit}
           invoiceNumber={invoiceNumber}
         />
       }
