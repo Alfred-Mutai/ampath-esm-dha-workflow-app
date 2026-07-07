@@ -39,6 +39,7 @@ const CloseClaimModal: React.FC<closeClaimModalProps> = ({ open, onClose, onSucc
           kind: 'success',
           subtitle: 'Claim closed successfully',
         });
+        onSuccess();
       }
     } catch (error) {
       showSnackbar({

@@ -1,4 +1,4 @@
-import { openmrsFetch, restBaseUrl } from '@openmrs/esm-framework';
+import { openmrsFetch, restBaseUrl, useConfig } from '@openmrs/esm-framework';
 import { getEtlBaseUrl } from '../shared/utils/get-base-url';
 import {
   type FacilityBillsResponse,
@@ -24,6 +24,8 @@ import {
 } from './dashboard/v2/types';
 import { getHieBaseUrl } from '../claims/utils';
 import { type AmrsVisitDiagnosis, type AmrsVisitDiagnosisDto, type AmrsVisitDiagnosisResponse } from './types';
+import { useCallback } from 'react';
+import useSWR, { mutate } from 'swr';
 
 export async function fetchFacilityBills(facilityBillsDto: FacilityBillsDto): Promise<FacilityBill[]> {
   const etlBaseUrl = await getEtlBaseUrl();
@@ -44,16 +46,16 @@ export async function fetchPatientFacilityBillDetails(
 }
 
 export async function fetchFacilityClaimVisits(claimVisitsDto: ClaimVisitsDto): Promise<ClaimVisitReponse[]> {
- const claimVisitsFilter:ClaimVisitsDto = {};
- if(claimVisitsDto.consentToken){
+  const claimVisitsFilter: ClaimVisitsDto = {};
+  if (claimVisitsDto.consentToken) {
     claimVisitsFilter['consentToken'] = claimVisitsDto.consentToken;
- }
- if(claimVisitsDto.locationUuid){
+  }
+  if (claimVisitsDto.locationUuid) {
     claimVisitsFilter['locationUuid'] = claimVisitsDto.locationUuid;
- }
- if(claimVisitsDto.visitDate){
-   claimVisitsFilter['visitDate'] = claimVisitsDto.visitDate;
- }
+  }
+  if (claimVisitsDto.visitDate) {
+    claimVisitsFilter['visitDate'] = claimVisitsDto.visitDate;
+  }
   const { hieBaseUrl } = await getHieBaseUrl();
   const queryString = new URLSearchParams(claimVisitsFilter).toString();
   const response = await openmrsFetch(`${hieBaseUrl}/claims-visit?${queryString}`);
@@ -66,10 +68,10 @@ export async function fetchProviderClaimPreview(
 ): Promise<ClaimsVisit> {
   const { hieBaseUrl } = await getHieBaseUrl();
   const providerClaimPreviewUrl = `${hieBaseUrl}/claim-preview/provider`;
-  const response = await openmrsFetch(providerClaimPreviewUrl,{
+  const response = await openmrsFetch(providerClaimPreviewUrl, {
     method: 'POST',
     headers: {
-        'content-type': 'application/json'
+      'content-type': 'application/json'
     },
     body: JSON.stringify(providerClaimPreviewDto)
   });
@@ -77,22 +79,57 @@ export async function fetchProviderClaimPreview(
   return data ?? null;
 }
 
+export function useProviderClaimPreview(consentToken: string, locationUuid: string) {
+  const { hieBaseUrl } = useConfig({
+    externalModuleName: '@ampath/esm-dha-workflow-app',
+  });
+  const url = consentToken ? `${hieBaseUrl}/claim-preview/provider?consentToken=${consentToken}&locationUuid=${locationUuid}` : null;
+
+  const {
+    data,
+    error,
+    isLoading,
+    isValidating
+  } = useSWR<{ data: ClaimsVisit }>(url, openmrsFetch, {
+    keepPreviousData: true
+  });
+
+  const results = data?.data;
+
+  return {
+    claimVisit: results,
+    error,
+    isLoading,
+    isValidating
+  };
+}
+
+export function useInvalidateProviderClaimPreview() {
+  const { hieBaseUrl } = useConfig({
+    externalModuleName: '@ampath/esm-dha-workflow-app',
+  });
+  return useCallback(() => {
+    const url = `${hieBaseUrl}/claim-preview/provider`;
+    mutate((key) => typeof key === 'string' && key.startsWith(`${url}`), undefined, { revalidate: true });
+  }, [hieBaseUrl]);
+}
+
 export async function fetchPatientClaimVisit(
   claimVisitsDto: ClaimVisitsDto,
 ): Promise<ClaimVisitReponse[]> {
-  const claimVisitsFilter:ClaimVisitsDto = {};
- if(claimVisitsDto.consentToken){
+  const claimVisitsFilter: ClaimVisitsDto = {};
+  if (claimVisitsDto.consentToken) {
     claimVisitsFilter['consentToken'] = claimVisitsDto.consentToken;
- }
- if(claimVisitsDto.patientId){
+  }
+  if (claimVisitsDto.patientId) {
     claimVisitsFilter['patientId'] = claimVisitsDto.patientId;
- }
- if(claimVisitsDto.locationUuid){
+  }
+  if (claimVisitsDto.locationUuid) {
     claimVisitsFilter['locationUuid'] = claimVisitsDto.locationUuid;
- }
- if(claimVisitsDto.visitDate){
-   claimVisitsFilter['visitDate'] = claimVisitsDto.visitDate;
- }
+  }
+  if (claimVisitsDto.visitDate) {
+    claimVisitsFilter['visitDate'] = claimVisitsDto.visitDate;
+  }
   const { hieBaseUrl } = await getHieBaseUrl();
   const queryString = new URLSearchParams(claimVisitsFilter).toString();
   const response = await openmrsFetch(`${hieBaseUrl}/claims-visit?${queryString}`);
@@ -102,7 +139,7 @@ export async function fetchPatientClaimVisit(
 
 export async function fetchPatientBillPayments(
   patientPaymentsDto: PatientPaymentsDto,
-): Promise<PatientPayment[]>{
+): Promise<PatientPayment[]> {
   const etlBaseUrl = await getEtlBaseUrl();
   const patientPaymentsUrl = `${etlBaseUrl}/bill/patient/payment?billingDate=${patientPaymentsDto.billingDate}&patientUuid=${patientPaymentsDto.patientUuid}`;
   const response = await openmrsFetch(patientPaymentsUrl);
@@ -110,12 +147,12 @@ export async function fetchPatientBillPayments(
   return data.results ?? [];
 }
 
-export async function payBillItem(billUuid: string,billPaymentDto: BillPaymentDto){
+export async function payBillItem(billUuid: string, billPaymentDto: BillPaymentDto) {
   const billPaymentUrl = `${restBaseUrl}/billing/bill/${billUuid}/payment`;
-  const response = await openmrsFetch(billPaymentUrl,{
+  const response = await openmrsFetch(billPaymentUrl, {
     method: 'POST',
     headers: {
-        'content-type': 'application/json'
+      'content-type': 'application/json'
     },
     body: JSON.stringify(billPaymentDto)
   });
@@ -123,13 +160,13 @@ export async function payBillItem(billUuid: string,billPaymentDto: BillPaymentDt
   return data ?? null;
 }
 
-export async function addClaimItem(addClaimLineDto: AddClaimLineDto){
+export async function addClaimItem(addClaimLineDto: AddClaimLineDto) {
   const { hieBaseUrl } = await getHieBaseUrl();
   const addClaimLineUrl = `${hieBaseUrl}/claim-line`;
-  const response = await openmrsFetch(addClaimLineUrl,{
+  const response = await openmrsFetch(addClaimLineUrl, {
     method: 'POST',
     headers: {
-        'content-type': 'application/json'
+      'content-type': 'application/json'
     },
     body: JSON.stringify(addClaimLineDto)
   });
@@ -137,37 +174,37 @@ export async function addClaimItem(addClaimLineDto: AddClaimLineDto){
   return data ?? null;
 }
 
-export async function removeClaimItem(removeClaimLineDto: RemoveClaimLineDto){
+export async function removeClaimItem(removeClaimLineDto: RemoveClaimLineDto) {
   const { hieBaseUrl } = await getHieBaseUrl();
   const url = `${hieBaseUrl}/claim-line`;
-  const result = await openmrsFetch(url,{
+  const result = await openmrsFetch(url, {
     method: 'DELETE',
     headers: {
-        'content-type': 'application/json'
+      'content-type': 'application/json'
     },
     body: JSON.stringify(removeClaimLineDto)
   }).catch((error) => {
-      const message = error?.responseBody?.message ?? "";
-      if (typeof message === "object") {
-          throw `${message?.join(",")}`;
-      }
-      throw message;
+    const message = error?.responseBody?.message ?? "";
+    if (typeof message === "object") {
+      throw `${message?.join(",")}`;
+    }
+    throw message;
   });
 
   if (result?.data && "error" in result.data && "message" in result.data) {
-      const message = result.data.message ?? "";
-      throw message;
+    const message = result.data.message ?? "";
+    throw message;
   }
   return result?.data;
 }
 
-export async function closeClaim(closeClaimDto: CloseClaimDto){
+export async function closeClaim(closeClaimDto: CloseClaimDto) {
   const { hieBaseUrl } = await getHieBaseUrl();
   const addClaimLineUrl = `${hieBaseUrl}/claim-closure`;
-  const response = await openmrsFetch(addClaimLineUrl,{
+  const response = await openmrsFetch(addClaimLineUrl, {
     method: 'POST',
     headers: {
-        'content-type': 'application/json'
+      'content-type': 'application/json'
     },
     body: JSON.stringify(closeClaimDto)
   });
@@ -175,13 +212,13 @@ export async function closeClaim(closeClaimDto: CloseClaimDto){
   return data ?? null;
 }
 
-export async function submitClaim(submitClaimDto: SubmitClaimDto){
+export async function submitClaim(submitClaimDto: SubmitClaimDto) {
   const { hieBaseUrl } = await getHieBaseUrl();
   const addClaimLineUrl = `${hieBaseUrl}/claim-submission`;
-  const response = await openmrsFetch(addClaimLineUrl,{
+  const response = await openmrsFetch(addClaimLineUrl, {
     method: 'POST',
     headers: {
-        'content-type': 'application/json'
+      'content-type': 'application/json'
     },
     body: JSON.stringify(submitClaimDto)
   });
@@ -191,7 +228,7 @@ export async function submitClaim(submitClaimDto: SubmitClaimDto){
 
 export async function fetchPatientDiagnosis(
   amrsVisitDiagnosisDto: AmrsVisitDiagnosisDto,
-): Promise<AmrsVisitDiagnosis[]>{
+): Promise<AmrsVisitDiagnosis[]> {
   const etlBaseUrl = await getEtlBaseUrl();
   const patientDiagnosisUrl = `${etlBaseUrl}/patient/diagnosis?visitDate=${amrsVisitDiagnosisDto.visitDate}&patientUuid=${amrsVisitDiagnosisDto.patientUuid}&locationUuid=${amrsVisitDiagnosisDto.locationUuid}`;
   const response = await openmrsFetch(patientDiagnosisUrl);
@@ -199,13 +236,13 @@ export async function fetchPatientDiagnosis(
   return data.results ?? [];
 }
 
-export async function addClaimDiagnosis(addClaimDiagnosisDto: AddClaimDiagnosisDto){
+export async function addClaimDiagnosis(addClaimDiagnosisDto: AddClaimDiagnosisDto) {
   const { hieBaseUrl } = await getHieBaseUrl();
   const addClaimDiagnosisUrl = `${hieBaseUrl}/claim-diagnosis`;
-  const response = await openmrsFetch(addClaimDiagnosisUrl,{
+  const response = await openmrsFetch(addClaimDiagnosisUrl, {
     method: 'POST',
     headers: {
-        'content-type': 'application/json'
+      'content-type': 'application/json'
     },
     body: JSON.stringify(addClaimDiagnosisDto)
   });

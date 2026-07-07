@@ -7,6 +7,7 @@ import BillItemPaymentModal from '../modals/bill-item-payment/bill-item-payment.
 import AddClaimLineModal from '../modals/add-claim-line/add-claim-line.modal';
 import { type AmrsVisitDiagnosis } from '../../../../types';
 import VisitDiagnosisDetails from '../visit-diagnosis-details/visit-diagnosis-details.component';
+import { useInvalidateProviderClaimPreview } from '../../../../billing-claims.resource';
 
 interface billDetailsProps {
   patientBillDetails: PatientFacilityBillDetails[];
@@ -20,6 +21,8 @@ const BillDetails: React.FC<billDetailsProps> = ({ patientBillDetails, patientPa
   const [showAddClaimLineModal,setShowAddClaimLineModal] = useState<boolean>(false);
   const [selectedBillItem,setSelectedBillItem] = useState<PatientFacilityBillDetails | null>(null);
   const setDiagnosisInterventionCode = useMemo(()=>getConsultationBillIntervantionCode(),[patientBillDetails]);
+  const invalidateProviderClaimPreview = useInvalidateProviderClaimPreview();
+  
   if (!patientBillDetails && !patientPayments) {
     return <>No Data</>;
   }
@@ -52,6 +55,10 @@ const BillDetails: React.FC<billDetailsProps> = ({ patientBillDetails, patientPa
     }else{
       return patientBillDetails[0].intervention_code ?? '';
     }
+  }
+  function onSuccess () {
+    handleCloseAddClaimItemModal();
+    invalidateProviderClaimPreview();
   }
   return (
     <>
@@ -186,7 +193,7 @@ const BillDetails: React.FC<billDetailsProps> = ({ patientBillDetails, patientPa
            open={showAddClaimLineModal}
            billItem={selectedBillItem}
            onClose={handleCloseAddClaimItemModal}
-           onSuccess={handleCloseAddClaimItemModal}
+           onSuccess={onSuccess}
            locationUuid={locationUuid}
           />
         }

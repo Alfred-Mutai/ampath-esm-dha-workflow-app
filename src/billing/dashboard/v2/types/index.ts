@@ -307,4 +307,7 @@ export type AddClaimDiagnosisDto = {
   interventionCode: string;
   icdCode: string;
   locationUuid: string;
+  practitionerIdentificationNumber: string,
+  practitionerIdentificationType: string,
+  practitionerRegulationBody: string
 };

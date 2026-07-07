@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { useState } from "react";
 import { type ProviderClaimPreviewDto, type ClaimsVisit, type PatientFacilityBillDetails } from "../../types";
 import { showSnackbar } from "@openmrs/esm-framework";
-import { fetchProviderClaimPreview } from "../../../../billing-claims.resource";
+import { fetchProviderClaimPreview, useProviderClaimPreview } from "../../../../billing-claims.resource";
 import styles from './patient-claim-details.component.scss';
 import ClaimVisitDetails from "../../claim-visits/claim-visit-details/claim-visit-details.component";
 import { InlineLoading } from "@carbon/react";
@@ -13,18 +13,16 @@ interface patientClaimDetailsProps {
   patientBillDetails: PatientFacilityBillDetails[];
 }
 const PatientClaimDetails: React.FC<patientClaimDetailsProps> = ({ consentToken, locationUuid, patientBillDetails }) => {
-  const [claimVisit, setClaimVisit] = useState<ClaimsVisit | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
   const [patientBill, setPatientBill] = useState<PatientFacilityBillDetails>();
+  const { claimVisit, isLoading, isValidating } = useProviderClaimPreview(consentToken, locationUuid);
 
   useEffect(() => {
     if (consentToken && locationUuid) {
       getPatientBill();
-      getPatientClaimsVisit();
     }
   }, [consentToken, locationUuid]);
 
-  if (loading) {
+  if (isLoading && !claimVisit) {
     return <InlineLoading description='Loading data...please wait' />
   }
 
@@ -33,33 +31,11 @@ const PatientClaimDetails: React.FC<patientClaimDetailsProps> = ({ consentToken,
     setPatientBill(bill);
   }
 
-  async function getPatientClaimsVisit() {
-    setLoading(true);
-    const previewPayload = getProviderPreviewPayload();
-    try {
-      const resp = await fetchProviderClaimPreview(previewPayload);
-      if (resp) {
-        setClaimVisit(resp);
-      } else {
-        setClaimVisit(null);
-      }
-    } catch (error) {
-      showSnackbar({
-        kind: 'error',
-        title: 'Error fetching provider preview',
-        subtitle: 'An error was encountered while fetching the claim preview, retry or contact support',
-      });
-    } finally {
-      setLoading(false);
-    }
-  }
-  function getProviderPreviewPayload(): ProviderClaimPreviewDto {
-    return {
-      locationUuid: locationUuid,
-      consentToken: consentToken,
-    };
-  }
   return <>
+    {
+      isValidating &&
+      <InlineLoading description='Refreshing data...' />
+    }
     <div className={styles.pcLayout}>
       {
         claimVisit && <ClaimVisitDetails patientBillDetails={patientBill} claimsVisit={claimVisit} locationUuid={locationUuid} />

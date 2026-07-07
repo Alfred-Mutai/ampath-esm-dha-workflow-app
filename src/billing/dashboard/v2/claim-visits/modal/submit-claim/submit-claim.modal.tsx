@@ -108,6 +108,7 @@ const SubmitClaimModal: React.FC<submitClaimModalProps> = ({ open, onClose, onSu
                     kind: 'success',
                     subtitle: 'Claim submitted successfully',
                 });
+                onSuccess();
             }
         } catch (error) {
             showSnackbar({

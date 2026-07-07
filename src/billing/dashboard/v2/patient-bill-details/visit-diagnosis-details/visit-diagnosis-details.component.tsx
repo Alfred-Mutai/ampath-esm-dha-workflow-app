@@ -4,6 +4,7 @@ import { type AmrsVisitDiagnosis } from "../../../../types";
 import { OverflowMenu, OverflowMenuItem, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@carbon/react";
 import { formatDate, parseDate } from "@openmrs/esm-framework";
 import AddClaimDiagnosisModal from "../modals/add-claim-diagnosis/add-claim-diagnosis.modal";
+import { useInvalidateProviderClaimPreview } from "../../../../billing-claims.resource";
 
 interface visitDiagnosisDetailsProps {
     amrsVisitDiagnosis: AmrsVisitDiagnosis[];
@@ -14,6 +15,7 @@ interface visitDiagnosisDetailsProps {
 const VisitDiagnosisDetails: React.FC<visitDiagnosisDetailsProps> = ({amrsVisitDiagnosis,consentToken,interventionCode,locationUuid})=>{
   const [selectedAmrsDiagnosis,setSelectedAmrsDiagnosis] = useState<AmrsVisitDiagnosis | null>(null);
   const [showAddClaimDiagnosisModal,setShowAddClaimDiagnosisModal] = useState<boolean>(false);
+  const invalidateProviderClaimPreview = useInvalidateProviderClaimPreview();
 
   function handleCloseModal(){
       setShowAddClaimDiagnosisModal(false);
@@ -21,6 +23,10 @@ const VisitDiagnosisDetails: React.FC<visitDiagnosisDetailsProps> = ({amrsVisitD
   function handleDiagnosisSelection(amrsVisitDiagnosis: AmrsVisitDiagnosis){
     setSelectedAmrsDiagnosis(amrsVisitDiagnosis);
     setShowAddClaimDiagnosisModal(true);
+  }
+  function onSuccess() {
+    handleCloseModal();
+    invalidateProviderClaimPreview();
   }
   return <>
   <div>
@@ -65,7 +71,7 @@ const VisitDiagnosisDetails: React.FC<visitDiagnosisDetailsProps> = ({amrsVisitD
             interventionCode={interventionCode}
             open={showAddClaimDiagnosisModal}
             onClose={handleCloseModal}
-            onSuccess={handleCloseModal}
+            onSuccess={onSuccess}
             />
         }
   </div>

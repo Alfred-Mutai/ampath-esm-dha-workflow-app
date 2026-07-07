@@ -3,7 +3,7 @@ import { type ClaimInvoiceLine } from "../../types"
 import { Button, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@carbon/react";
 import { formatDate, parseDate, showSnackbar, useSession } from "@openmrs/esm-framework";
 import { CloseLarge } from "@carbon/react/icons";
-import { removeClaimItem } from "../../../../billing-claims.resource";
+import { removeClaimItem, useInvalidateProviderClaimPreview } from "../../../../billing-claims.resource";
 
 interface claimLineDetailsProps {
   claimInvoiceLines: ClaimInvoiceLine[];
@@ -11,6 +11,7 @@ interface claimLineDetailsProps {
 }
 const ClaimInvoiceLineDetails: React.FC<claimLineDetailsProps> = ({ claimInvoiceLines, consentToken }) => {
   const sessionLocation = useSession();
+  const invalidateProviderClaimPreview = useInvalidateProviderClaimPreview();
 
   const handleRemoveClaimLine = async (claimInvoiceLine: ClaimInvoiceLine) => {
     try {
@@ -20,6 +21,7 @@ const ClaimInvoiceLineDetails: React.FC<claimLineDetailsProps> = ({ claimInvoice
         locationUuid: sessionLocation?.sessionLocation?.uuid
       }
       await removeClaimItem(payload);
+      invalidateProviderClaimPreview();
       showSnackbar({
         title: 'Success removing claim line',
         subtitle: 'Claim line removed successfully',

@@ -31,7 +31,8 @@ const AddClaimLineModal: React.FC<addClaimLineModalProps> = ({ open, onClose, on
              title: 'Sucess Adding Claim Line',
              kind: 'success',
              subtitle: 'Claim Item added successfully'
-           })
+           });
+           onSuccess();
         }
     }catch(error){
        showSnackbar({

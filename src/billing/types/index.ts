@@ -94,6 +94,14 @@ export type AmrsVisitDiagnosis = {
   concept_source_name: string;
   hl7_code: string;
   icd11_code: string;
+  provider_id: string;
+  national_id: string;
+  speciality: string;
+  uuid: string;
+  practioner_nat_id: string;
+  practitioner_speciality: string;
+  practitioner_identifier_type: string;
+  practitioner_body: string;
 };
 
 export type AmrsVisitDiagnosisDto = {

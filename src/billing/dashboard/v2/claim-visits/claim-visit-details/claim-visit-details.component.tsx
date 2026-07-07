@@ -8,6 +8,7 @@ import { formatDate, parseDate } from '@openmrs/esm-framework';
 import { Button } from '@carbon/react';
 import CloseClaimModal from '../modal/close-claim/close-claim.modal';
 import SubmitClaimModal from '../modal/submit-claim/submit-claim.modal';
+import { useInvalidateProviderClaimPreview } from '../../../../billing-claims.resource';
 interface claimVisitDetailsProps {
   claimsVisit: ClaimsVisit;
   locationUuid: string;
@@ -25,6 +26,9 @@ const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({ claimsVisit, loca
   if (!claimsVisit) {
     return <>No Data</>;
   }
+
+  const invalidateProviderClaimPreview = useInvalidateProviderClaimPreview();
+
   function displayCloseClaimModal() {
     setShowCloseClaimModal(true);
   }
@@ -36,6 +40,14 @@ const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({ claimsVisit, loca
   }
   function handleCloseSubmitClaimModal() {
     setSubmitCloseClaimModal(false);
+  }
+  function onSubmitSuccess() {
+    handleCloseSubmitClaimModal();
+    invalidateProviderClaimPreview();
+  }
+  function onCloseSuccess() {
+    handleCloseClaimModal();
+    invalidateProviderClaimPreview();
   }
   return (
     <>
@@ -83,7 +95,7 @@ const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({ claimsVisit, loca
               <h6>Invoices</h6>
             </div>
             <div className={styles.cvRow}>
-              {claimsVisit.invoices && <ClaimInvoiceDetails claimInvoices={claimsVisit.invoices} consentToken={claimsVisit.authorization_code}/>}
+              {claimsVisit.invoices && <ClaimInvoiceDetails claimInvoices={claimsVisit.invoices} consentToken={claimsVisit.authorization_code} />}
             </div>
           </div>
           <div className={styles.cvRow}>
@@ -114,7 +126,7 @@ const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({ claimsVisit, loca
           locationUuid={locationUuid}
           open={showCloseClaimModal}
           onClose={handleCloseClaimModal}
-          onSuccess={handleCloseClaimModal}
+          onSuccess={onCloseSuccess}
           consentToken={claimsVisit.authorization_code}
         />
       }
@@ -123,7 +135,7 @@ const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({ claimsVisit, loca
           locationUuid={locationUuid}
           open={showSubmitClaimModal}
           onClose={handleCloseSubmitClaimModal}
-          onSuccess={handleCloseSubmitClaimModal}
+          onSuccess={onSubmitSuccess}
           claimsVisit={claimsVisit}
           invoiceNumber={invoiceNumber}
         />
