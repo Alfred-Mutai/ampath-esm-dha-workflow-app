@@ -3,9 +3,10 @@ import React, { useEffect, useMemo, useState } from 'react';
 
 import styles from './biometrics-verification-modal.scss';
 import { Button } from '@carbon/react';
-import { getBiometrictsRequestUrl } from '../../hie.resource';
+import { getWorkstationId, getBiometrictsRequestUrl } from '../../hie.resource';
 import { usePatient } from '../../../context/patient-context';
 import { useSession } from '@openmrs/esm-framework';
+import { type BiometricsStatus } from '../../hie.types';
 
 type BiometricsVerificationModalProps = {
   open: boolean;
@@ -25,6 +26,7 @@ const BiometricsVerificationModal: React.FC<BiometricsVerificationModalProps> = 
   const [captureResult, setCaptureResult] = useState<CaptureResult | null>(null);
   const iframeRef = React.useRef<HTMLIFrameElement | null>(null);
   const [biometricIframeUrl, setBiometricIframeUrl] = useState<string>('');
+  const [workstationId, setWorkstationId] = useState<string | null>(null);
   const session = useSession();
   const locationUuid = session.sessionLocation?.uuid;
 
@@ -42,7 +44,17 @@ const BiometricsVerificationModal: React.FC<BiometricsVerificationModalProps> = 
     if (!patient || !locationUuid) return;
     async function fetchBiometricUrl() {
       try {
-        const urlData = await getBiometrictsRequestUrl(patient!, locationUuid!, interventionCode, serviceType);
+        const biometricsStatus = await getWorkstationId();
+
+        const workstationId = biometricsStatus.workstationID;
+        setWorkstationId(workstationId);
+        const urlData = await getBiometrictsRequestUrl(
+          patient!,
+          locationUuid!,
+          interventionCode,
+          serviceType,
+          workstationId,
+        );
         // eslint-disable-next-line no-console
         console.log('Biometric request URL response:', urlData);
 
@@ -75,11 +87,11 @@ const BiometricsVerificationModal: React.FC<BiometricsVerificationModalProps> = 
         ],
         card_readers: [],
         isAuthed: true,
-        workstationID: '790bf760-08e6-4fbe-b892-7b877dd52f2b-F406692C85F3',
+        workstationID: workstationId || '54cf356c-c4f9-4fd2-a9df-9ca1723b98a6-B0A460977E12',
         version: '1.14.0519.1301',
       },
     }),
-    [],
+    [workstationId],
   );
 
   useEffect(() => {

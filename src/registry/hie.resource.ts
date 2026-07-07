@@ -1,4 +1,4 @@
-import { type PatientContactResponse, type OTPWhitelistRequest } from './hie.types';
+import { type PatientContactResponse, type OTPWhitelistRequest, type BiometricsStatus } from './hie.types';
 import { type HieClient } from './types';
 import { getHieBaseUrl } from '../shared/utils/get-base-url';
 import { openmrsFetch } from '@openmrs/esm-framework';
@@ -121,8 +121,12 @@ export async function getBiometrictsRequestUrl(
   locationUuid: string,
   interventionCode: string,
   serviceType?: string,
+  workstationId?: string,
 ): Promise<any> {
   const hieBaseUrl = await getHieBaseUrl();
+
+  // eslint-disable-next-line no-console
+  console.log('WORKSTATION ID:', workstationId);
 
   const payload = {
     interventions: [interventionCode],
@@ -135,7 +139,7 @@ export async function getBiometrictsRequestUrl(
     isBiometricsDischargeAuthorization: false,
     isEmergency: false,
     isIntegration: true,
-    workStationId: '54cf356c-c4f9-4fd2-a9df-9ca1723b98a6-B0A460977E12',
+    workStationId: workstationId,
   };
   const url = `${hieBaseUrl}/client/biometrics-authorize`;
   const response = await openmrsFetch(url, {
@@ -155,4 +159,14 @@ export async function getBiometrictsRequestUrl(
   }
 
   return data;
+}
+
+export async function getWorkstationId(): Promise<BiometricsStatus> {
+  const response = await fetch('http://localhost:18065/status/');
+
+  if (!response.ok) {
+    throw new Error('Unable to connect to biometric service');
+  }
+
+  return response.json();
 }

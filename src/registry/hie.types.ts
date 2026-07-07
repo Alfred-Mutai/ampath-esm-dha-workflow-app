@@ -32,3 +32,15 @@ export interface OtpFormData {
   otp: string;
   whitelisted: boolean;
 }
+
+export interface BiometricsStatus {
+  devices: Array<{
+    id: string;
+    name: string;
+    displayName: string;
+    type: string;
+  }>;
+  workstationID: string;
+  version: string;
+  isAuthed: boolean;
+}
