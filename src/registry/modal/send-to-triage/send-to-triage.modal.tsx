@@ -1087,22 +1087,6 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
                       <>
                         {selectedPaymentDetail === PaymentDetail.Paying && (
                           <>
-                            {hasSelectedPaymentMode('SHA') && (
-                              <ExtensionSlot
-                                name="billing-claims-slot"
-                                state={{
-                                  clientRegistryId: patientIdentifiers?.crIdentifierId,
-                                  patientUuid: selectedPatient?.uuid,
-                                  triggerCreateVisit,
-                                  otp,
-                                  visitType,
-                                  onSelectChange: () => {},
-                                  onClaimsVisitStart,
-                                  onInterventionChange,
-                                }}
-                              />
-                            )}
-
                             {hasSelectedPaymentMode('insurance') && (
                               <div className={styles.formRow}>
                                 <div className={styles.formControl}>
@@ -1198,17 +1182,34 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
 
                     {/* ================= STEP 2 ================= */}
                     {step === 2 && showConsent && selectedPaymentDetail === PaymentDetail.Paying && (
-                      <ClaimsConsentModal
-                        submitting={submitting}
-                        otpSent={otpSent}
-                        whitelistRequest={whitelistRequest}
-                        onWhitelistSubmit={handleWhitelistSubmit}
-                        onSendClaimsOtp={handleSendClaimsOtp}
-                        onOtpVerified={handleVerifyOtp}
-                        onOtpVerificationStatusChange={setOtpVerified}
-                        serviceType={getServiceType(intervention, visitType)}
-                        interventionCode={intervention?.code ?? ''}
-                      />
+                      <>
+                        {hasSelectedPaymentMode('SHA') && (
+                          <ExtensionSlot
+                            name="billing-claims-slot"
+                            state={{
+                              clientRegistryId: patientIdentifiers?.crIdentifierId,
+                              patientUuid: selectedPatient?.uuid,
+                              triggerCreateVisit,
+                              otp,
+                              visitType,
+                              onSelectChange: () => {},
+                              onClaimsVisitStart,
+                              onInterventionChange,
+                            }}
+                          />
+                        )}
+                        <ClaimsConsentModal
+                          submitting={submitting}
+                          otpSent={otpSent}
+                          whitelistRequest={whitelistRequest}
+                          onWhitelistSubmit={handleWhitelistSubmit}
+                          onSendClaimsOtp={handleSendClaimsOtp}
+                          onOtpVerified={handleVerifyOtp}
+                          onOtpVerificationStatusChange={setOtpVerified}
+                          serviceType={getServiceType(intervention, visitType)}
+                          interventionCode={intervention?.code ?? ''}
+                        />
+                      </>
                     )}
                   </div>
                 )}
