@@ -131,7 +131,7 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
   const [otpSent, setOtpSent] = useState(false);
   const [whitelistRequest, setWhitelistRequest] = useState(null);
   const [otpVerified, setOtpVerified] = useState(false);
-  const [otp, setOtp] = useState(null);
+  const [otp, setOtp] = useState<string | null>(null);
   const [step, setStep] = useState(0);
   const [displayOtpModal, setDisplayOtpModal] = useState<boolean>(false);
   const [requestCustomOtpDto, setRequestCustomOtpDto] = useState<RequestCustomOtpDto>();
@@ -139,6 +139,7 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
   const [principal, setPrincipal] = useState<HieClient>();
   const [selecteddPatient, setSelecteddPatient] = useState<string>('principal');
   const [selectedDependant, setSelectedDependant] = useState<HieClient>();
+  const [generatedOtp, setGeneratedOtp] = useState<string | null>(null);
 
   const next = () => setStep((s) => s + 1);
   const previous = () => setStep((s) => s - 1);
@@ -280,8 +281,6 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
     }
     setLoading(true);
     if (hasSelectedPaymentMode('SHA')) {
-      // eslint-disable-next-line no-console
-      console.log('CLAIM RESULT:', claimResult);
       if (claimResult) {
         await sendToTriage();
       } else {
@@ -902,6 +901,8 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
       const response = await sendClaimsOTP(patient!.id, locationUuid!, intervention?.code);
 
       if (response?.message?.includes('OTP')) {
+        const otp = response.message.match(/\d{6}/)?.[0];
+        setGeneratedOtp(otp);
         setOtpSent(true);
 
         showSnackbar({
@@ -917,6 +918,16 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
   const handleVerifyOtp = async (otp: string) => {
     try {
       setSubmitting(true);
+      if (otp !== generatedOtp) {
+        showSnackbar({
+          kind: 'error',
+          title: 'Invalid OTP',
+          subtitle: 'The OTP you entered is incorrect.',
+        });
+
+        setOtpVerified(false);
+        return;
+      }
 
       setOtpVerified(true);
       setOtp(otp);
@@ -979,7 +990,6 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
   };
 
   const handleSendClientToTriage = async () => {
-    // onClientDetailsModalClose();
     if (hasSelectedPaymentMode('SHA')) {
       if (claimResult) {
         await sendToTriage();
