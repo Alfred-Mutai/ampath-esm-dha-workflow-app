@@ -35,6 +35,7 @@ import EligibilityTags from './eligibility/eliigibility-tags/eligibility-tags';
 import { IdentifierTypesUuids } from '../resources/identifier-types';
 import { formatPhoneNumberForOTP } from './utils/phone-number-formatter';
 import { usePatient } from '../context/patient-context';
+import StartPatientVisitModal from './modal/start-patient-visit/start-patient-visit.modal';
 
 interface RegistryComponentProps {}
 const RegistryComponent: React.FC<RegistryComponentProps> = () => {
@@ -47,7 +48,7 @@ const RegistryComponent: React.FC<RegistryComponentProps> = () => {
   const [selectedPatient, setSelectedPatient] = useState<string>('principal');
   const [displayOtpModal, setDisplayOtpModal] = useState<boolean>(false);
   const [displayClientDetailsModal, setDisplayClientDetailsModal] = useState<boolean>(false);
-  const [displaytriageModal, setDisplaytriageModal] = useState<boolean>(false);
+  const [displaytStartVisitModal, setdisplaytStartVisitModal] = useState<boolean>(false);
   const [requestCustomOtpDto, setRequestCustomOtpDto] = useState<RequestCustomOtpDto>();
   const session = useSession();
   const locationUuid = session!.sessionLocation!.uuid;
@@ -156,34 +157,34 @@ const RegistryComponent: React.FC<RegistryComponentProps> = () => {
     setDisplayOtpModal(false);
   };
   const onClientDetailsModalClose = () => {
+    onClientDetailsModalClose();
     setDisplayClientDetailsModal(false);
   };
-  const handleClientDetailsSubmit = () => {
-    return;
+  const handleClientDetailsSubmit = async (crId: string) => {
+    setDisplayClientDetailsModal(false);
+    await searchAmrsPatient(crId);
+    setdisplaytStartVisitModal(true);
   };
   const handleEmergencyRegistration = () => {
     window.location.href = `${window.spaBase}/patient-registration`;
   };
   const handleManualRegistration = () => {
-    setDisplaytriageModal(false);
+    setdisplaytStartVisitModal(false);
     handleEmergencyRegistration();
   };
-  const handleSendClientToTriage = async (crId: string) => {
-    onClientDetailsModalClose();
+  const searchAmrsPatient = async (crId: string) => {
     const resp = await searchPatientByCrNumber(crId);
     if (resp.totalCount > 0) {
       showAlert(
         'success',
-        `${resp.totalCount} ${resp.totalCount > 0 ? 'Patients' : 'Patient'} found in the system with ${crId}`,
+        `Patient with ${crId} found`,
         '',
       );
       const validPatients = validateAmrsPatient(crId, resp.results ?? []);
       setAmrsPatients(validPatients);
-      setDisplaytriageModal(true);
     } else {
       showAlert('error', 'Patient not found in the system', '');
       setAmrsPatients([]);
-      setDisplaytriageModal(true);
     }
   };
   const validateAmrsPatient = (crNo: string, patients: Patient[]) => {
@@ -194,7 +195,7 @@ const RegistryComponent: React.FC<RegistryComponentProps> = () => {
     });
   };
   const onSendToTriageModalClose = (modalCloseResp?: { success: boolean }) => {
-    setDisplaytriageModal(false);
+    setdisplaytStartVisitModal(false);
     if (modalCloseResp && modalCloseResp.success) {
       window.location.href = `${window.spaBase}/home/triage`;
     }
@@ -252,7 +253,7 @@ const RegistryComponent: React.FC<RegistryComponentProps> = () => {
     setIdentifierType('National ID');
     setDisplayClientDetailsModal(false);
     setDisplayOtpModal(false);
-    setDisplaytriageModal(false);
+    setdisplaytStartVisitModal(false);
     setSelectedPatient('principal');
   };
   const handleOtpSuccessfullVerification = () => {
@@ -267,7 +268,7 @@ const RegistryComponent: React.FC<RegistryComponentProps> = () => {
       <div className={styles.registryLayout}>
         <div className={styles.mainContent}>
           <div className={styles.registryHeader}>
-            <h4>Client Registry</h4>
+            <h4>Registration</h4>
             <p>Please enter identification number to begin</p>
           </div>
           <div className={styles.registryContent}>
@@ -337,7 +338,7 @@ const RegistryComponent: React.FC<RegistryComponentProps> = () => {
                     </div>
                     <div className={styles.patientConfirmSelection}>
                       <div className={styles.btnContainer}>
-                        <Button kind="primary" onClick={() => handleSendClientToTriage(patient?.id)}>
+                        <Button kind="primary" onClick={handleOtpVerification}>
                           {' '}
                           Confirm
                         </Button>
@@ -461,19 +462,18 @@ const RegistryComponent: React.FC<RegistryComponentProps> = () => {
                           open={displayClientDetailsModal}
                           onModalClose={onClientDetailsModalClose}
                           onSubmit={handleClientDetailsSubmit}
-                          onSendClientToTriage={handleSendClientToTriage}
                         />{' '}
                       </>
                     ) : (
                       <></>
                     )}
 
-                    {principal && displaytriageModal ? (
+                    {principal && displaytStartVisitModal ? (
                       <>
-                        <SendToTriageModal
+                        <StartPatientVisitModal
                           client={getPatient()}
-                          patients={amrsPatients}
-                          open={displaytriageModal}
+                          amrsPatient={amrsPatients[0]}
+                          open={displaytStartVisitModal}
                           onModalClose={onSendToTriageModalClose}
                           onSubmit={handleSendToTriageModalSubmit}
                           onCreateAmrsPatient={createAmrsPatient}

@@ -1238,7 +1238,6 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
             open={displayClientDetailsModal}
             onModalClose={onClientDetailsModalClose}
             onSubmit={handleClientDetailsSubmit}
-            onSendClientToTriage={handleSendClientToTriage}
           />{' '}
         </>
       ) : (

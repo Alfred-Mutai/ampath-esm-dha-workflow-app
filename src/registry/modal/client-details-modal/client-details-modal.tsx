@@ -11,8 +11,7 @@ interface ClientDetailsModalProps {
   client: HieClient;
   open: boolean;
   onModalClose: () => void;
-  onSubmit: () => void;
-  onSendClientToTriage: (crId: string) => void;
+  onSubmit: (crId: string) => void;
 }
 
 const ClientDetailsModal: React.FC<ClientDetailsModalProps> = ({
@@ -20,7 +19,6 @@ const ClientDetailsModal: React.FC<ClientDetailsModalProps> = ({
   open,
   onModalClose,
   onSubmit,
-  onSendClientToTriage,
 }) => {
   const session = useSession();
   const locationUuid = session.sessionLocation?.uuid;
@@ -84,8 +82,8 @@ const ClientDetailsModal: React.FC<ClientDetailsModalProps> = ({
         size="lg"
         onSecondarySubmit={onModalClose}
         onRequestClose={onModalClose}
-        onRequestSubmit={() => onSendClientToTriage(client.id)}
-        primaryButtonText="Send To Triage"
+        onRequestSubmit={() => onSubmit(client.id)}
+        primaryButtonText="Next"
         secondaryButtonText="Cancel"
       >
         <ModalBody>

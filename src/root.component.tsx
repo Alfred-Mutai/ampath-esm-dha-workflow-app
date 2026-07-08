@@ -28,7 +28,7 @@ const Root: React.FC = () => {
       <main className={styles.container}>
         <Routes>
           <Route path="dashboard" element={<Dashboard />} />
-          <Route path="registry" element={<RegistryComponent />} />
+          <Route path="registration" element={<RegistryComponent />} />
           <Route path="consultation" element={<Consultation />} />
           <Route path="triage" element={<Triage />} />
           <Route path="laboratory" element={<LaboratoryComponent />} />

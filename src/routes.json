@@ -43,9 +43,9 @@
         "O3 View Client Registry Dashboard"
       ],
       "meta": {
-        "name": "registry",
+        "name": "registration",
         "slot": "client-registry-dashboard-slot",
-        "title": "Registry"
+        "title": "Registration"
       },
       "online": true,
       "offline": true,

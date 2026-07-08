@@ -1,6 +1,6 @@
 export const registryDashboardMeta = {
-  path: 'registry',
+  path: 'registration',
   slot: 'client-registry-dashboard-slot',
-  title: 'Registry',
+  title: 'Registration',
   basePath: `${window.spaBase}/home`,
 } as const;
