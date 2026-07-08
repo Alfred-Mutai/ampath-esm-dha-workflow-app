@@ -534,8 +534,8 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
     if (isValidBillableService(selectedBillableService)) {
       setSelectedBillableService(selectedBillableService);
     } else {
-      // setSelectedBillableService(null);
-      // showAlert('error', 'Existing bill', 'Patient has a similar bill');
+      setSelectedBillableService(null);
+      showAlert('error', 'Existing bill', 'Patient has a similar bill');
     }
   };
   const isValidBillableService = (selectedService: ServicePrice) => {
@@ -1198,17 +1198,19 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
                             }}
                           />
                         )}
-                        <ClaimsConsentModal
-                          submitting={submitting}
-                          otpSent={otpSent}
-                          whitelistRequest={whitelistRequest}
-                          onWhitelistSubmit={handleWhitelistSubmit}
-                          onSendClaimsOtp={handleSendClaimsOtp}
-                          onOtpVerified={handleVerifyOtp}
-                          onOtpVerificationStatusChange={setOtpVerified}
-                          serviceType={getServiceType(intervention, visitType)}
-                          interventionCode={intervention?.code ?? ''}
-                        />
+                        {intervention && (
+                          <ClaimsConsentModal
+                            submitting={submitting}
+                            otpSent={otpSent}
+                            whitelistRequest={whitelistRequest}
+                            onWhitelistSubmit={handleWhitelistSubmit}
+                            onSendClaimsOtp={handleSendClaimsOtp}
+                            onOtpVerified={handleVerifyOtp}
+                            onOtpVerificationStatusChange={setOtpVerified}
+                            serviceType={getServiceType(intervention, visitType)}
+                            interventionCode={intervention?.code ?? ''}
+                          />
+                        )}
                       </>
                     )}
                   </div>
