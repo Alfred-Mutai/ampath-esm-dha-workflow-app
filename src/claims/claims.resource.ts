@@ -201,16 +201,24 @@ const generatePreauthFormData = (payload: any, intervention: Intervention, conse
 
 export const getServiceType = (selectedIntervention: Intervention, visitType?: VisitType): ServiceType => {
     const paymentMechanism = selectedIntervention.paymentMechanism;
-    if (paymentMechanism.toUpperCase() === "CAPITATION") {
+    const accessPoint = selectedIntervention.accessPoint;
+
+    if (paymentMechanism.trim().toUpperCase() === "CAPITATION") {
         return "CAPITATION";
     }
-    if (visitType === "OUTPATIENT") {
-        return "OUTPATIENT";
+    if (paymentMechanism.trim().toUpperCase() === "PER_DIEM") {
+        return "PER_DIEM";
     }
-    if (visitType === "INPATIENT") {
+    if (accessPoint.trim().toUpperCase() === "IP") {
         return "INPATIENT";
     }
-    return "EMERGENCY";
+    if (accessPoint.trim().toUpperCase() === "OP") {
+        return "OUTPATIENT";
+    }
+    if (accessPoint.trim().toUpperCase() === "OP AND IP") {
+        return visitType;
+    }
+    throw Error(`Undefined payment mechanism`);
 }
 
 export const fetchConsentToken = async () => {

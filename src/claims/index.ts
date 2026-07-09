@@ -83,7 +83,7 @@ export interface BenefitUtilization {
   computationalDetail: ComputationalDetail;
 }
 
-export type ServiceType = "CAPITATION" | "OUTPATIENT" | "INPATIENT" | "EMERGENCY";
+export type ServiceType = "CAPITATION" | "OUTPATIENT" | "INPATIENT" | "EMERGENCY" | "PER_DIEM";
 
 export type PreauthType = "NORMAL" | "SURGICAL" | "ONCOLOGY" | "RENAL" | "IMAGING" | "OPTICAL";
 

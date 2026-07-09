@@ -61,12 +61,14 @@ import ClaimsConsentExtension from '../otp-verification-modal/extension/claims-c
 interface SendToQueueModalProps {
   patientUuid: string;
   visitUuid: string;
+  visitTypeUuid: string;
   onModalClose?: (modalCloseResp?: { success: boolean }) => void;
 }
 
 const SendToQueueModal: React.FC<SendToQueueModalProps> = ({
   patientUuid,
   visitUuid,
+  visitTypeUuid,
   onModalClose
 }) => {
   const { patient } = usePatient(patientUuid);
@@ -119,15 +121,15 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({
   });
 
   const visitType: VisitType = useMemo(() => {
-    if (selectedVisitType) {
-      if (selectedVisitType === VisitTypeUuids.OPD_VISIT_TYPE_UUID) {
+    if (visitTypeUuid) {
+      if (visitTypeUuid === VisitTypeUuids.OPD_VISIT_TYPE_UUID) {
         return 'OUTPATIENT';
       }
-      if (selectedVisitType === VisitTypeUuids.INPATIENT_VISIT_TYPE_UUID) {
+      if (visitTypeUuid === VisitTypeUuids.INPATIENT_VISIT_TYPE_UUID) {
         return 'INPATIENT';
       }
     }
-  }, [selectedVisitType, VisitTypeUuids]);
+  }, [visitTypeUuid, VisitTypeUuids]);
 
 
   const patientIdentifiers = useMemo(() => {
@@ -870,7 +872,7 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({
                         <ClaimsConsentExtension patient={consentPatient}
                           intervention={intervention}
                           crIdentifierId={patientIdentifiers.crIdentifierId}
-                          visitType='OUTPATIENT'
+                          visitType={visitType}
                           onClientConsent={onClientConsent} />
                       }
                     </>
