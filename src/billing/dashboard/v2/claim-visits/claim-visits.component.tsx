@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import styles from './claim-visits.component.scss';
-import { fetchFacilityClaimVisits, fetchProviderClaimPreview } from '../../../billing-claims.resource';
+import { fetchFacilityClaimVisits, fetchProviderClaimPreview, useProviderClaimPreview } from '../../../billing-claims.resource';
 import { type ProviderClaimPreviewDto, type ClaimsVisit, type ClaimVisitReponse, type ClaimVisitsDto } from '../types';
 import { formatDate, parseDate, showSnackbar } from '@openmrs/esm-framework';
 import {
@@ -20,9 +20,10 @@ interface claimVisitsProps {
 }
 const ClaimVisits: React.FC<claimVisitsProps> = ({ locationUuid, billingDate }) => {
   const [claimVisits, setClaimVisits] = useState<ClaimVisitReponse[]>();
-  const [selectedClaimVisit, setSelectedClaimVisit] = useState<ClaimsVisit | null>(null);
   const [showClaimsVisitModal, setShowClaimsVisitModal] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
+  const [consentToken, setConsentToken] = useState<string>();
+  const { claimVisit, isLoading } = useProviderClaimPreview(consentToken, locationUuid);
   useEffect(() => {
     if (locationUuid && billingDate) {
       getFacilityClaimVisits();
@@ -56,36 +57,11 @@ const ClaimVisits: React.FC<claimVisitsProps> = ({ locationUuid, billingDate }) 
     }
   }
   async function handleSelectedClaimsVisit(selectedVisit: ClaimVisitReponse) {
-    setLoading(true);
-    const previewPayload = getProviderPreviewPayload(selectedVisit.authorizationCode);
-    try {
-      const resp = await fetchProviderClaimPreview(previewPayload);
-      if (resp) {
-        setSelectedClaimVisit(resp);
-        setShowClaimsVisitModal(true);
-      } else {
-        setSelectedClaimVisit(null);
-        setShowClaimsVisitModal(false);
-      }
-    } catch (error) {
-      showSnackbar({
-        kind: 'error',
-        title: 'Error fetching provider preview',
-        subtitle: 'An error was encountered while fetching the claim preview, retry or contact support',
-      });
-    } finally {
-      setLoading(false);
-    }
-  }
-  function getProviderPreviewPayload(consentToken: string): ProviderClaimPreviewDto {
-    return {
-      locationUuid: locationUuid,
-      consentToken: consentToken,
-    };
+    setConsentToken(selectedVisit.authorizationCode);
+    setShowClaimsVisitModal(true);
   }
   function handleCloseClaimsModal() {
     setShowClaimsVisitModal(false);
-    setSelectedClaimVisit(null);
   }
   return (
     <>
@@ -121,11 +97,16 @@ const ClaimVisits: React.FC<claimVisitsProps> = ({ locationUuid, billingDate }) 
               })}
           </TableBody>
         </Table>
-        {showClaimsVisitModal && selectedClaimVisit ? (
+        {
+          showClaimsVisitModal && !claimVisit && isLoading && (
+            <InlineLoading description="Loading claim visit" />
+          )
+        }
+        {showClaimsVisitModal && claimVisit ? (
           <>
             <ClaimVisitDetailsModal
               open={showClaimsVisitModal}
-              claimsVisit={selectedClaimVisit}
+              claimsVisit={claimVisit}
               handleClose={handleCloseClaimsModal}
               locationUuid={locationUuid}
             />
