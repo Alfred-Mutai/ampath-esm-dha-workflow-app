@@ -13,6 +13,7 @@ const ActiveVisits: React.FC = () => {
     const { isLoading, activeVisits } = useActiveVisits();
     const [patientUuid, setPatientUuid] = useState("");
     const [visitUuid, setVisitUuid] = useState("");
+    const [visitTypeUuid, setVisitTypeUuid] = useState("");
     const { t } = useTranslation();
 
     const columns = [
@@ -35,6 +36,11 @@ const ActiveVisits: React.FC = () => {
             id: "action",
             header: "Action",
             key: "action"
+        },
+        {
+            id: "visitTypeUuid",
+            header: "",
+            key: "visitTypeUuid"
         }
     ];
 
@@ -46,7 +52,8 @@ const ActiveVisits: React.FC = () => {
                 patientName: visit.patient.display,
                 patientIdentifiers: "",//visit.patient.identifiers.map((i) => i.identifier).join(",")
                 visitType: visit.visitType.display,
-                startTime: dayjs(visit.startDatetime).format("HH:mm A")
+                startTime: dayjs(visit.startDatetime).format("HH:mm A"),
+                visitTypeUuid: visit.visitType.uuid
             }));
         }
     }, [activeVisits]);
@@ -76,6 +83,9 @@ const ActiveVisits: React.FC = () => {
         row.cells.map(cell => {
             if (cell.info.header === "action") {
                 setPatientUuid(cell.value)
+            }
+            if (cell.info.header === "visitTypeUuid") {
+                setVisitTypeUuid(cell.value)
             }
         });
         setVisitUuid(row.id);
@@ -123,6 +133,9 @@ const ActiveVisits: React.FC = () => {
                             {rows.map((row) => (
                                 <TableRow {...getRowProps({ row })}>
                                     {row.cells.map((cell) => {
+                                        if (cell.info.header === "visitTypeUuid") {
+                                            return;
+                                        }
                                         if (cell.info.header === "action") {
                                             return <TableCell>
                                                 <Button hasIconOnly iconDescription="Add patient to queue" renderIcon={() => <Add />} onClick={() => handleRowClick(row)}></Button>
@@ -157,7 +170,7 @@ const ActiveVisits: React.FC = () => {
 
         {
             patientUuid && visitUuid &&
-            <SendToQueueModal patientUuid={patientUuid} visitUuid={visitUuid} onModalClose={onModalClose} />
+            <SendToQueueModal patientUuid={patientUuid} visitUuid={visitUuid} visitTypeUuid={visitTypeUuid} onModalClose={onModalClose} />
         }
     </>
 }

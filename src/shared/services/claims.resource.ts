@@ -8,19 +8,25 @@ export const getConsentToken = (activeVisit: Visit) => {
 
 export const getServiceType = (selectedIntervention: Intervention | ClaimIntervention, visitType?: VisitType): ServiceType => {
     const rawPm = (selectedIntervention as any)?.paymentMechanism ?? (selectedIntervention as any)?.intervention_payment_mechanism ?? "";
-    const paymentMechanism = typeof rawPm === "string" ? rawPm.toUpperCase() : "";
+    const rawAp = (selectedIntervention as any)?.accessPoint ?? "";
 
-    if (paymentMechanism === "CAPITATION") {
+    const paymentMechanism = typeof rawPm === "string" ? rawPm.toUpperCase() : "";
+    const accessPoint = typeof rawAp === "string" ? rawAp.toUpperCase() : "";
+
+    if (paymentMechanism.trim().toUpperCase() === "CAPITATION") {
         return "CAPITATION";
     }
-
-    if (visitType === "OUTPATIENT") {
-        return "OUTPATIENT";
+    if (paymentMechanism.trim().toUpperCase() === "PER_DIEM") {
+        return "PER_DIEM";
     }
-
-    if (visitType === "INPATIENT") {
+    if (accessPoint.trim().toUpperCase() === "IP") {
         return "INPATIENT";
     }
-
-    return "EMERGENCY";
+    if (accessPoint.trim().toUpperCase() === "OP") {
+        return "OUTPATIENT";
+    }
+    if (accessPoint.trim().toUpperCase() === "OP AND IP") {
+        return visitType;
+    }
+    throw Error(`Undefined payment mechanism`);
 }
