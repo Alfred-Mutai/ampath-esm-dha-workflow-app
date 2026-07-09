@@ -4,7 +4,8 @@ import { DatePicker, DatePickerInput, Tab, TabList, TabPanel, TabPanels, Tabs } 
 import FacilityBills from './facility-bills/facility-bills.component';
 import ClaimVisits from './claim-visits/claim-visits.component';
 import { useSession } from '@openmrs/esm-framework';
-interface billingClaimsDashboardProps {}
+import ActiveVisits from './active-visits/active-visits.component';
+interface billingClaimsDashboardProps { }
 const BillingClaimsDashboard: React.FC<billingClaimsDashboardProps> = () => {
   const session = useSession();
   const locationUuid = session.sessionLocation?.uuid ?? '';
@@ -15,43 +16,56 @@ const BillingClaimsDashboard: React.FC<billingClaimsDashboardProps> = () => {
   };
   return (
     <>
-      <div className={styles.bcLayout}>
-        <div className={styles.bcHeader}>
-          <div className={styles.bcHeaderTitle}>
-            <h4>Billing and Claims Dashboard</h4>
-          </div>
-          <div className={styles.bcHeaderStats}></div>
-        </div>
-        <div className={styles.bcContent}>
-          <div className={styles.bcContentFilters}>
-            <DatePicker
-              datePickerType="single"
-              locale="en"
-              onChange={handleDateChange}
-              onClose={() => {}}
-              onOpen={() => {}}
-            >
-              <DatePickerInput id="date-picker-single" labelText="Date" placeholder="mm/dd/yyyy" />
-            </DatePicker>
-          </div>
-          <div className={styles.bcContentTabs}>
-            <Tabs>
-              <TabList scrollDebounceWait={200}>
-                <Tab>Bills</Tab>
-                <Tab>Claims</Tab>
-              </TabList>
-              <TabPanels>
-                <TabPanel>
-                  <FacilityBills locationUuid={locationUuid} billingDate={billingDate} />
-                </TabPanel>
-                <TabPanel>
-                  <ClaimVisits locationUuid={locationUuid} billingDate={billingDate} />
-                </TabPanel>
-              </TabPanels>
-            </Tabs>
-          </div>
-        </div>
-      </div>
+      <Tabs>
+        <TabList>
+          <Tab className={styles.tab}>Active visits</Tab>
+          <Tab className={styles.tab}>Bills</Tab>
+        </TabList>
+        <TabPanels>
+          <TabPanel>
+            <ActiveVisits />
+          </TabPanel>
+          <TabPanel>
+            <div className={styles.bcLayout}>
+              <div className={styles.bcHeader}>
+                <div className={styles.bcHeaderTitle}>
+                  <h4>Billing and Claims Dashboard</h4>
+                </div>
+                <div className={styles.bcHeaderStats}></div>
+              </div>
+              <div className={styles.bcContent}>
+                <div className={styles.bcContentFilters}>
+                  <DatePicker
+                    datePickerType="single"
+                    locale="en"
+                    onChange={handleDateChange}
+                    onClose={() => { }}
+                    onOpen={() => { }}
+                  >
+                    <DatePickerInput id="date-picker-single" labelText="Date" placeholder="mm/dd/yyyy" />
+                  </DatePicker>
+                </div>
+                <div className={styles.bcContentTabs}>
+                  <Tabs>
+                    <TabList scrollDebounceWait={200}>
+                      <Tab>Bills</Tab>
+                      <Tab>Claims</Tab>
+                    </TabList>
+                    <TabPanels>
+                      <TabPanel>
+                        <FacilityBills locationUuid={locationUuid} billingDate={billingDate} />
+                      </TabPanel>
+                      <TabPanel>
+                        <ClaimVisits locationUuid={locationUuid} billingDate={billingDate} />
+                      </TabPanel>
+                    </TabPanels>
+                  </Tabs>
+                </div>
+              </div>
+            </div>
+          </TabPanel>
+        </TabPanels>
+      </Tabs>
     </>
   );
 };

@@ -399,3 +399,7 @@ export enum RequestIdTypes {
   BirthCertificate2 = 10,
   HouseholdNumber = 11,
 }
+
+export type UpdateVisitDto = {
+  attributes?: VisitAttribute[];
+};
