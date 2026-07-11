@@ -287,6 +287,29 @@
       "type": "other-form"
     }
   ],
+  "workspaces2": [
+    {
+      "name": "admissions-form-entry",
+      "component": "formEntryWorkspace",
+      "window": "admissions-form-window"
+    }
+  ],
+  "workspaceWindows2": [
+    {
+      "name": "admissions-form-window",
+      "group": "admissions-form-group",
+      "canMaximize": true,
+      "width": "extra-wide"
+    }
+  ],
+  "workspaceGroups2": [
+    {
+      "name": "admissions-form-group",
+      "scopePattern": "/admissions-clinical-forms",
+      "persistence": "closable",
+      "overlay": false
+    }
+  ],
   "modals": [
     {
       "name": "sign-off-queue-entry-modal",

@@ -4,6 +4,23 @@ import { AdmitPatientDto, AssignBedToPatientDto, BedLayout, BedSwapDto, CancelAd
 const customRep =
   'custom:(ward,totalBeds,occupiedBeds,bedLayouts:(rowNumber,columnNumber,bedNumber,bedId,bedUuid,status,location,patients:(person:full,identifiers,uuid)))';
 
+export async function getPatientByUuid(patientUuid: string) {
+  if (!patientUuid) {
+    throw new Error('PatientUuid is required');
+  }
+  const params = {
+    v: "full"
+  };
+  const queryString = new URLSearchParams(params).toString();
+  const patientUrl = `${restBaseUrl}/patient/${patientUuid}?${queryString}`;
+  const response = await openmrsFetch(patientUrl);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch patient with ${patientUuid}`);
+  }
+  const result = await response.json();
+  return result ?? null;
+}
+
 export async function getAdmissionLoactionData(locationUuid: string): Promise<AdmissionLocationData> {
   const admissionLocationUrl = `${restBaseUrl}/admissionLocation/${locationUuid}?v=${customRep}`;
   const response = await openmrsFetch(admissionLocationUrl);
@@ -85,7 +102,7 @@ export async function admitPatientElseWhere(transferPatientDto: TransferPatientD
   const transferUrl = `${restBaseUrl}/encounter`;
   return postRequest(transferUrl, transferPatientDto);
 }
-export async function getDichargedEncounters(encounterTypeUuid: string,locationUuid: string): Promise<FhirEncounterBundle>{
+export async function getDichargedEncounters(encounterTypeUuid: string, locationUuid: string): Promise<FhirEncounterBundle> {
   const params = {
     _summary: 'data',
     type: encounterTypeUuid,

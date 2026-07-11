@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   OverflowMenu,
   OverflowMenuItem,
@@ -12,6 +12,9 @@ import {
 import { type BedLayout } from '../types';
 import BedSwapModal from '../modal/bed-swap/bed-swap.modal';
 import DischargeModal from '../modal/discharge/discharge-patient.modal';
+import { launchWorkspace2, useConfig } from '@openmrs/esm-framework';
+import { ConfigObject } from '../../config-schema';
+import { getPatientByUuid } from '../admissions.resource';
 
 interface AdmittedPatientsListProps {
   admittedPatientsData: BedLayout[];
@@ -22,6 +25,8 @@ const AdmittedPatientsList: React.FC<AdmittedPatientsListProps> = ({ admittedPat
   const [showBedSwapModal, setShowBedSwapModal] = useState<boolean>(false);
   const [showDischargeModal, setShowDischargeModal] = useState<boolean>(false);
   const [selectedLayout, setSelectedLayout] = useState<any>();
+  const { maternityDischargeFormUuid } = useConfig<ConfigObject>();
+
   if (!admittedPatientsData) {
     return <>No data to display</>;
   }
@@ -32,9 +37,35 @@ const AdmittedPatientsList: React.FC<AdmittedPatientsListProps> = ({ admittedPat
     setSelectedLayout(layout);
     setShowBedSwapModal(true);
   };
-  const handleDischargeRequest = (layout: BedLayout) => {
+  const handleDischargeRequest = async (layout: any) => {
+    console.log('Discharge request row:', layout);
     setSelectedLayout(layout);
-    setShowDischargeModal(true);
+
+    if (!layout) {
+      console.error('Layout is null');
+      return;
+    }
+
+    const patientUuid = layout.patientUuid || layout.uuid;
+    if (!patientUuid) {
+      console.error('No patientUuid', layout);
+      return;
+    }
+
+    try {
+      const patientData = await getPatientByUuid(patientUuid);
+
+      await launchWorkspace2('admissions-form-entry', {
+        workspaceTitle: 'Maternity Discharge Form',
+        formUuid: maternityDischargeFormUuid,
+        patientUuid
+      }, {
+        patient: patientData,
+        patientUuid,
+      });
+    } catch (error) {
+      console.error('Failed to fetch patient data:', error);
+    }
   };
   const handleBedSwapModalClose = () => {
     setShowBedSwapModal(false);
@@ -47,6 +78,7 @@ const AdmittedPatientsList: React.FC<AdmittedPatientsListProps> = ({ admittedPat
     handleBedSwapModalClose();
     refresh();
   };
+
   const rows =
     admittedPatientsData?.flatMap((layout) =>
       (layout.patients ?? []).map((patient) => ({
@@ -60,6 +92,8 @@ const AdmittedPatientsList: React.FC<AdmittedPatientsListProps> = ({ admittedPat
         age: patient.person.age,
         identifier: patient.identifiers?.[0]?.identifier ?? 'N/A',
         person: patient.person,
+        patientUuid: patient.uuid,
+        patient: patient,
       })),
     ) ?? [];
 

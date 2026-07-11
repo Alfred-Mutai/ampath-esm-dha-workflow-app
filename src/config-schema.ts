@@ -75,7 +75,7 @@ export const configSchema = {
     weightUuid: {
       _type: Type.ConceptUuid,
       _default: '5089AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
-    },
+    }
   },
   subDomainUrl: {
     _type: Type.String,
@@ -151,6 +151,10 @@ export const configSchema = {
     _type: Type.Array,
     _description: 'Consultation billable service names',
     _default: ["CONSULTATION", "KESSES CONSULTATION"]
+  },
+  maternityDischargeFormUuid: {
+    _type: Type.ConceptUuid,
+    _default: 'a6f7d96d-7d6e-3c51-9786-7b817515ff5b'
   }
 };
 
@@ -209,6 +213,7 @@ export interface ConfigObject {
   nonSHAPaymentModes: Array<string>;
   registrationServicequeues: Array<string>;
   consultationBillableServiceNames: Array<string>;
+  maternityDischargeFormUuid: string;
 }
 
 const queueEntryActions = ['move', 'call', 'edit', 'transition', 'signOff', 'remove', 'delete', 'undo'] as const;
