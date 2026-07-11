@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import styles from './claim-visit-details.component.scss';
-import { type PatientFacilityBillDetails, type ClaimsVisit } from '../../types';
+import { type PatientFacilityBillDetails, type ClaimsVisit, ApplicableDocumentType } from '../../types';
 import ClaimInvoiceDetails from '../claim-invoice-details/claim-invoice-details.component';
 import ClaimInterventionDetails from '../claim-intervention-details/claim-intervention-details.component';
 import ClaimDiagnosisDetails from '../claim-diagnosis-details/claim-diagnosis-details.component';
@@ -9,6 +9,7 @@ import { Button } from '@carbon/react';
 import CloseClaimModal from '../modal/close-claim/close-claim.modal';
 import SubmitClaimModal from '../modal/submit-claim/submit-claim.modal';
 import { useInvalidateProviderClaimPreview } from '../../../../billing-claims.resource';
+import ClaimDocuments from '../claim-documents/claim-documents';
 interface claimVisitDetailsProps {
   claimsVisit: ClaimsVisit;
   locationUuid: string;
@@ -17,12 +18,14 @@ interface claimVisitDetailsProps {
 const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({ claimsVisit, locationUuid, patientBillDetails }) => {
   const [showCloseClaimModal, setShowCloseClaimModal] = useState<boolean>();
   const [showSubmitClaimModal, setSubmitCloseClaimModal] = useState<boolean>(false);
+
   const invoiceNumber = useMemo(() => {
     if (patientBillDetails) {
       return patientBillDetails.receipt_number;
     }
     return "";
   }, [patientBillDetails]);
+
   if (!claimsVisit) {
     return <>No Data</>;
   }
@@ -58,6 +61,7 @@ const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({ claimsVisit, loca
           </div>
           <div className={styles.headerAction}>
             <Button kind='primary' onClick={displayCloseClaimModal}>Close Claim</Button>
+            <Button kind='tertiary' onClick={displayCloseSubmitClaimModal}>Submit claim</Button>
           </div>
         </div>
         <div className={styles.cvContentSection}>
@@ -80,13 +84,6 @@ const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({ claimsVisit, loca
               <ul className={styles.claimList}>
                 <li><strong>Total Amount :</strong> {claimsVisit.total_claim_amount}</li>
                 <li><strong>Total Net Amount :</strong> {claimsVisit.total_claim_net_amount}</li>
-                <li><strong>Total Co-Pay :</strong> {claimsVisit.total_claim_copay}</li>
-                <li><strong>Total Claim Discount:</strong> {claimsVisit.total_claim_discount}</li>
-                <li><strong>Total Claim Splits:</strong> {claimsVisit.total_claim_splits}</li>
-                <li><strong>No of Invoices : </strong>{claimsVisit.number_of_invoices}</li>
-                <li><strong>Diagnosis Count :</strong> {claimsVisit.diagnoses_count}</li>
-                <li><strong>Attachments Count :</strong> {claimsVisit.claim_attachments_count}</li>
-                <li><strong>Invoice Attachment Count :</strong> {claimsVisit.invoice_attachments_count}</li>
               </ul>
             </div>
           </div>
@@ -114,11 +111,16 @@ const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({ claimsVisit, loca
               {claimsVisit.claim_diagnoses && <ClaimDiagnosisDetails claimDiagnosiss={claimsVisit.claim_diagnoses} />}
             </div>
           </div>
-          <div className={styles.cvRow}>
-            <div className={styles.claimSubmitBtn}>
-              <Button kind='tertiary' onClick={displayCloseSubmitClaimModal}>Submit claim</Button>
+           <div className={styles.cvRow}>
+              <div className={styles.cvRow}>
+              <h6>Attachments</h6>
             </div>
-          </div>
+            <div className={styles.cvRow}>
+             {
+               <ClaimDocuments claimAttachments={claimsVisit.claim_attachments ?? []} />
+             }
+            </div>
+           </div>
         </div>
       </div>
       {

@@ -16,16 +16,6 @@ const BillingClaimsDashboard: React.FC<billingClaimsDashboardProps> = () => {
   };
   return (
     <>
-      <Tabs>
-        <TabList>
-          <Tab className={styles.tab}>Active visits</Tab>
-          <Tab className={styles.tab}>Bills</Tab>
-        </TabList>
-        <TabPanels>
-          <TabPanel>
-            <ActiveVisits />
-          </TabPanel>
-          <TabPanel>
             <div className={styles.bcLayout}>
               <div className={styles.bcHeader}>
                 <div className={styles.bcHeaderTitle}>
@@ -48,10 +38,14 @@ const BillingClaimsDashboard: React.FC<billingClaimsDashboardProps> = () => {
                 <div className={styles.bcContentTabs}>
                   <Tabs>
                     <TabList scrollDebounceWait={200}>
+                      <Tab>Active Visits</Tab>
                       <Tab>Bills</Tab>
                       <Tab>Claims</Tab>
                     </TabList>
                     <TabPanels>
+                      <TabPanel>
+                        <ActiveVisits />
+                      </TabPanel>
                       <TabPanel>
                         <FacilityBills locationUuid={locationUuid} billingDate={billingDate} />
                       </TabPanel>
@@ -63,9 +57,6 @@ const BillingClaimsDashboard: React.FC<billingClaimsDashboardProps> = () => {
                 </div>
               </div>
             </div>
-          </TabPanel>
-        </TabPanels>
-      </Tabs>
     </>
   );
 };

@@ -1,6 +1,6 @@
 import React from "react";
 import { type VisitIntervention } from "../../types"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@carbon/react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tag } from "@carbon/react";
 
 interface claimInterventionDetailsProps {
     claimInterventions: VisitIntervention[]
@@ -23,6 +23,7 @@ const ClaimInterventionDetails: React.FC<claimInterventionDetailsProps> = ({clai
               <TableHeader>Code</TableHeader>
               <TableHeader>Payment Mechanism</TableHeader>
               <TableHeader>Name</TableHeader>
+              <TableHeader>Documents required</TableHeader>
               <TableHeader>Keph Level Tarrif</TableHeader>
               <TableHeader>Accrued Per Diem</TableHeader>
               <TableHeader>Accrued Per Diem Days</TableHeader>
@@ -49,6 +50,19 @@ const ClaimInterventionDetails: React.FC<claimInterventionDetailsProps> = ({clai
                       <TableCell>{ci.intervention_code}</TableCell>
                       <TableCell>{ci.intervention_payment_mechanism}</TableCell>
                       <TableCell>{ci.intervention_name}</TableCell>
+                      <TableCell>{
+                        ci.applicable_document_types.map((dt)=>{
+                          return<>
+                          <Tag
+                              size="md"
+                              title="Clear filter"
+                              type="green"
+                            >
+                              {dt}
+                            </Tag>
+                            </>
+                        })
+                        }</TableCell>
                       <TableCell>{ci.keph_level_tarrif}</TableCell>
                       <TableCell>{ci.accrued_per_diem_amount}</TableCell>
                       <TableCell>{ci.accrued_per_diem_days}</TableCell>

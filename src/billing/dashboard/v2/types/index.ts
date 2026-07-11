@@ -85,6 +85,14 @@ export type ClaimVisitInvoince = {
   visit_start: string;
 };
 
+export enum ApplicableDocumentType {
+  BIRTH_NOTIFICATION = 'BIRTH_NOTIFICATION',
+  CLAIM_FORM = 'CLAIM_FORM',
+  DISCHARGE_SUMMARY = 'DISCHARGE_SUMMARY',
+  INVOICE = 'INVOICE',
+  FINAL_BILL = 'FINAL_BILL',
+}
+
 export type VisitIntervention = {
   id: string;
   intervention_code: string;
@@ -109,7 +117,7 @@ export type VisitIntervention = {
   optional_document_type: unknown;
   required_preauth_document_types: unknown;
   optional_preauth_document_types: unknown;
-  applicable_document_types: any[];
+  applicable_document_types: ApplicableDocumentType[];
   needs_preauth: boolean;
 };
 
@@ -122,6 +130,23 @@ export type VisitDiagnosis = {
   diagnosis_code: string;
   is_flagged_diagnosis: boolean;
   intervention_code: string;
+};
+
+export type ClaimAttachment = {
+  id: string;
+  title: string;
+  data: string;
+  attachment_type: string;
+  retry_count: number;
+  intervention_code: string;
+  claim: string;
+  attachment: string;
+};
+
+export type ClaimDoctor = {
+  id: string;
+  claim: string;
+  doctor_name: string;
 };
 
 export type ClaimsVisit = {
@@ -158,6 +183,8 @@ export type ClaimsVisit = {
   claim_auth_status: string;
   claim_diagnoses: VisitDiagnosis[];
   diagnoses_count: number;
+  claim_attachments: ClaimAttachment[];
+  claim_doctors: ClaimDoctor[];
   invoice_attachments_count: number;
   invoice_id: string;
   invoice_number: string;
@@ -258,10 +285,10 @@ export type CloseClaimDto = {
 };
 
 export type SubmitClaimDto = {
-  consentToken: string,
-  invoiceNumber: string,
-  locationUuid: string
-}
+  consentToken: string;
+  invoiceNumber: string;
+  locationUuid: string;
+};
 
 export enum ClaimCloseReasonType {
   WrongPatient = 'WRONG_PATIENT',
@@ -274,10 +301,10 @@ export enum ClaimCloseReasonType {
 }
 
 export enum DischargeReasonType {
-  RECOVERED = "RECOVERED",
-  REFERRED = "REFERRED",
-  ABSCONDED = "ABSCONDED",
-  OTHER = "OTHER"
+  RECOVERED = 'RECOVERED',
+  REFERRED = 'REFERRED',
+  ABSCONDED = 'ABSCONDED',
+  OTHER = 'OTHER',
 }
 
 export type ClaimInvoiceLine = {
@@ -307,7 +334,7 @@ export type AddClaimDiagnosisDto = {
   interventionCode: string;
   icdCode: string;
   locationUuid: string;
-  practitionerIdentificationNumber: string,
-  practitionerIdentificationType: string,
-  practitionerRegulationBody: string
+  practitionerIdentificationNumber: string;
+  practitionerIdentificationType: string;
+  practitionerRegulationBody: string;
 };
