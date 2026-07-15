@@ -22,15 +22,7 @@ export default function FormEntryWorkspace({
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const { patient, isLoading } = usePatient(patientUuid);
 
-  if (!formUuid || !patientUuid || !closeWorkspace) {
-    return <div>Loading workspace...</div>;
-  }
-
-  if (isLoading) {
-    return <div>Loading patient...</div>;
-  }
-
-  const formState = useMemo(
+    const formState = useMemo(
     () => ({
       view: 'form',
       formUuid,
@@ -53,6 +45,14 @@ export default function FormEntryWorkspace({
     }),
     [formUuid, patientUuid, patient, visitUuid, visitTypeUuid, encounterUuid, closeWorkspace, globalMutate, handlePostResponse],
   );
+  
+  if (!formUuid || !patientUuid || !closeWorkspace) {
+    return <div>Loading workspace...</div>;
+  }
+
+  if (isLoading) {
+    return <div>Loading patient...</div>;
+  }
 
   return (
     <Workspace2 title={workspaceTitle} hasUnsavedChanges={hasUnsavedChanges}>
