@@ -5,9 +5,10 @@ import styles from './otp-input.component.scss';
 interface OTPInputProps {
   onChange: (otp: string) => void;
   otpLength: number;
+  disabled?: boolean;
 }
 
-const OTPInput: React.FC<OTPInputProps> = ({ onChange, otpLength }) => {
+const OTPInput: React.FC<OTPInputProps> = ({ onChange, otpLength, disabled = false }) => {
   const [otp, setOtp] = useState(Array(otpLength).fill(''));
   const inputsRef = useRef([]);
 
@@ -58,7 +59,7 @@ const OTPInput: React.FC<OTPInputProps> = ({ onChange, otpLength }) => {
   };
 
   return (
-    <div className={styles.otpInputContainer} onPaste={handlePaste}>
+    <div className={styles.otpInputContainer} onPaste={disabled ? undefined : handlePaste}>
       {otp.map((digit, index) => (
         <div className={styles.otpDataInputContainer}>
           <TextInput
@@ -71,14 +72,20 @@ const OTPInput: React.FC<OTPInputProps> = ({ onChange, otpLength }) => {
             maxLength={1}
             inputMode="numeric"
             pattern="[0-9]*"
+            disabled={disabled}
             ref={(el) => (inputsRef.current[index] = el)}
             onChange={(e) => handleChange(e.target.value, index)}
             onKeyDown={(e) => handleKeyDown(e, index)}
             style={{
-              height: '4rem',
-              width: '4rem',
-              borderStyle: 'solid grey',
-              backgroundColor: '#e5ebf7',
+              height: '3.5rem',
+              width: '3rem',
+              textAlign: 'center',
+              fontSize: '1.5rem',
+              fontWeight: 600,
+              color: disabled ? '#a8a8a8' : '#161616',
+              backgroundColor: disabled ? '#f4f4f4' : '#ffffff',
+              border: '1px solid #8d8d8d',
+              borderRadius: '6px',
             }}
           />
         </div>

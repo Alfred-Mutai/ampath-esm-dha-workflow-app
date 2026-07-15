@@ -1,6 +1,16 @@
-.eligibilityTagsLayout{
-    display: flex;
-    flex-direction: row;
-    width: 100%;
-    column-gap: 5px;
+.eligibilityTagsLayout {
+  display: flex;
+  flex-flow: row wrap;
+  align-items: center;
+  gap: 0.25rem;
+  width: 100%;
+}
+
+/* Remove Carbon Tag's default outer margin so tags sit tightly in table cells */
+.eligibilityTagsLayout > div {
+  display: inline-flex;
+}
+
+.eligibilityTagsLayout :global(.cds--tag) {
+  margin: 0;
 }

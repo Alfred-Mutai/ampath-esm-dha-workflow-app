@@ -23,7 +23,7 @@ const ClaimInvoiceDetails: React.FC<claimInvoiceDetailsProps> = ({claimInvoices,
      setShowClaimInvoiceLinesModal(true);
    }
    return <>
-   <Table>
+   <Table size="sm">
           <TableHead>
             <TableRow>
               <TableHeader>No</TableHeader>

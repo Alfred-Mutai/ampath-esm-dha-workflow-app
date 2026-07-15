@@ -1,0 +1,376 @@
+@use '@carbon/layout';
+@use '@carbon/type';
+@use '@carbon/colors';
+@use '@openmrs/esm-styleguide/src/vars' as *;
+
+.claimsArea {
+  padding: layout.$spacing-03 0;
+}
+
+.claimsIntro {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: layout.$spacing-05;
+  margin-bottom: layout.$spacing-05;
+}
+
+.claimsTitle {
+  @include type.type-style('heading-compact-02');
+  color: $ui-05;
+  margin: 0 0 layout.$spacing-02;
+}
+
+.claimsSubtitle {
+  @include type.type-style('body-01');
+  color: $text-02;
+  margin: 0;
+  max-width: 60ch;
+}
+
+.countPill {
+  display: inline-block;
+  margin-left: layout.$spacing-03;
+  min-width: 1.15rem;
+  padding: 0 layout.$spacing-02;
+  border-radius: 999px;
+  background-color: var(--brand-01);
+  color: colors.$white;
+  font-size: 0.68rem;
+  line-height: 1.15rem;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.claimLink {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--brand-01);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+
+  &:hover {
+    color: var(--brand-02);
+    text-decoration: underline;
+  }
+}
+
+/* Table wrapper — visual styling comes from the page-level table rules so every
+   section looks the same. This only handles horizontal scroll for wide tables. */
+.tableCard {
+  overflow-x: auto;
+}
+
+.numCol {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.tableLoading,
+.empty {
+  padding: layout.$spacing-06 layout.$spacing-05;
+  color: $text-02;
+}
+
+/* remittance drill-down header */
+.remitHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: layout.$spacing-05;
+  padding: layout.$spacing-04 0 layout.$spacing-05;
+  border-bottom: 1px solid $ui-03;
+  margin-bottom: layout.$spacing-04;
+}
+
+.remitRef {
+  @include type.type-style('heading-compact-01');
+  font-family: 'IBM Plex Mono', monospace;
+  color: $ui-05;
+}
+
+.remitPayer {
+  @include type.type-style('label-01');
+  color: $text-02;
+  margin-left: layout.$spacing-04;
+}
+
+.remitAmt {
+  @include type.type-style('heading-compact-02');
+  color: $ui-05;
+  font-variant-numeric: tabular-nums;
+}
+
+.empty {
+  @include type.type-style('body-01');
+  text-align: center;
+}
+
+/* ---- Claim detail ---- */
+.detail {
+  padding: layout.$spacing-03 0 layout.$spacing-06;
+}
+
+.backBtn {
+  margin-bottom: layout.$spacing-04;
+}
+
+.detailHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: layout.$spacing-05;
+  padding-bottom: layout.$spacing-05;
+  border-bottom: 1px solid $ui-03;
+  margin-bottom: layout.$spacing-05;
+}
+
+.detailCode {
+  @include type.type-style('label-01');
+  font-family: 'IBM Plex Mono', monospace;
+  color: var(--brand-01);
+  margin-bottom: 2px;
+}
+
+.detailName {
+  @include type.type-style('heading-03');
+  color: $ui-05;
+  margin: 0 0 layout.$spacing-02;
+}
+
+.detailMeta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: layout.$spacing-03;
+  @include type.type-style('body-compact-01');
+  color: $text-02;
+}
+
+.dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background-color: $text-03;
+}
+
+.reasonNote {
+  display: flex;
+  align-items: flex-start;
+  gap: layout.$spacing-03;
+  padding: layout.$spacing-04 layout.$spacing-05;
+  background-color: colors.$red-10;
+  border-left: 3px solid colors.$red-60;
+  border-radius: 4px;
+  margin-bottom: layout.$spacing-05;
+}
+
+.reasonIcon {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: colors.$red-60;
+}
+
+.reasonTitle {
+  @include type.type-style('heading-compact-01');
+  color: $ui-05;
+}
+
+.reasonText {
+  @include type.type-style('body-compact-01');
+  color: $text-02;
+  margin: 2px 0 0;
+}
+
+.detailSection {
+  margin-bottom: layout.$spacing-06;
+}
+
+.detailSectionTitle {
+  @include type.type-style('heading-compact-01');
+  color: $ui-05;
+  margin: 0 0 layout.$spacing-03;
+}
+
+.interventionList,
+.diagnosisList {
+  margin: 0;
+  padding-left: layout.$spacing-05;
+  @include type.type-style('body-01');
+  color: $ui-05;
+}
+
+.diagnosisList li {
+  margin: layout.$spacing-02 0;
+}
+
+.attachmentList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-02;
+}
+
+.attachmentList li {
+  display: flex;
+  align-items: center;
+  gap: layout.$spacing-03;
+  @include type.type-style('body-compact-01');
+  color: $ui-05;
+}
+
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid $ui-03;
+  border-radius: 8px;
+}
+
+.lineTable {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 40rem;
+  @include type.type-style('body-compact-01');
+
+  th,
+  td {
+    padding: layout.$spacing-03 layout.$spacing-04;
+    border-bottom: 1px solid $ui-03;
+    text-align: left;
+  }
+
+  thead th {
+    @include type.type-style('label-01');
+    color: $text-02;
+    background-color: $ui-01;
+  }
+
+  tfoot td {
+    font-weight: 600;
+    border-bottom: none;
+  }
+}
+
+.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.mono {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.82rem;
+}
+
+.over {
+  color: colors.$red-60;
+  font-weight: 600;
+}
+
+.paidBanner {
+  display: flex;
+  align-items: center;
+  gap: layout.$spacing-03;
+  padding: layout.$spacing-04 layout.$spacing-05;
+  background-color: colors.$green-10;
+  border-left: 3px solid colors.$green-50;
+  border-radius: 4px;
+  margin-bottom: layout.$spacing-06;
+  color: $ui-05;
+  @include type.type-style('body-compact-01');
+}
+
+/* Companion bill panel (married to the claim) */
+.billPanel {
+  border: 1px solid $ui-03;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.billLine {
+  display: flex;
+  justify-content: space-between;
+  gap: layout.$spacing-05;
+  padding: layout.$spacing-03 layout.$spacing-05;
+  border-bottom: 1px solid $ui-03;
+  @include type.type-style('body-compact-01');
+  color: $text-02;
+}
+
+.billLine strong,
+.billLine .shaAmt,
+.billLine .copayAmt {
+  font-variant-numeric: tabular-nums;
+}
+
+.billLine strong {
+  color: $ui-05;
+}
+
+.shaAmt {
+  color: colors.$green-60;
+  font-weight: 600;
+}
+
+.copayAmt {
+  color: colors.$red-60;
+  font-weight: 600;
+}
+
+.fullyCovered {
+  color: $text-03;
+}
+
+.billDoc {
+  display: flex;
+  align-items: center;
+  gap: layout.$spacing-03;
+  padding: layout.$spacing-03 layout.$spacing-05;
+  background-color: $ui-01;
+  @include type.type-style('label-01');
+  color: $ui-05;
+}
+
+.timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-03;
+}
+
+.timeline li {
+  display: flex;
+  flex-direction: column;
+  padding-left: layout.$spacing-05;
+  border-left: 2px solid $ui-03;
+}
+
+.timelineLabel {
+  @include type.type-style('body-compact-01');
+  color: $ui-05;
+  font-weight: 600;
+}
+
+.timelineMeta {
+  @include type.type-style('label-01');
+  color: $text-03;
+}
+
+.actionPanel {
+  border-top: 1px solid $ui-03;
+  padding-top: layout.$spacing-05;
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-04;
+}
+
+.actionRow {
+  display: flex;
+  gap: layout.$spacing-04;
+  flex-wrap: wrap;
+}

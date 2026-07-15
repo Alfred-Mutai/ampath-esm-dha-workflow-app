@@ -1,14 +1,14 @@
-.otpDataInput{
-  width: 3rem;
-  height: 3rem;
+.otpInputContainer {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  column-gap: 0.5rem;
+}
+
+.otpDataInputContainer {
+  display: flex;
+}
+
+.otpDataInput {
   text-align: center;
-}
-.otpInputContainer{
-   display: flex;
-   flex-direction: row;
-   column-gap: 5px;
-}
-.otpDataInputContainer{
-    width: 4rem;
-    height: 4rem;
 }

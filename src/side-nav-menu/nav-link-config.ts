@@ -5,7 +5,7 @@ export const navLinksConfig = [
   },
   {
     to: 'registry',
-    title: 'Registry',
+    title: 'Registration',
   },
   {
     to: 'appointments',

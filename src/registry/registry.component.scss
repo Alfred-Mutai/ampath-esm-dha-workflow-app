@@ -1,89 +1,399 @@
-.registryLayout{
-    display: flex;
-    flex-direction: row;
-    width: 100%;
-    row-gap: 10px;
-    padding: 2% 2%;
+@use '@carbon/layout';
+@use '@carbon/type';
+@use '@carbon/colors';
+@use '@openmrs/esm-styleguide/src/vars' as *;
+
+.registryLayout {
+  display: flex;
+  width: 100%;
+  padding: layout.$spacing-05;
+  background-color: $ui-01;
+  min-height: calc(100vh - 3rem);
 }
-.mainContent{
+
+.mainContent {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  row-gap: layout.$spacing-05;
+}
+
+/* ---------- Header ---------- */
+.registryHeader {
   display: flex;
   flex-direction: column;
   width: 100%;
 }
-.registryHeader{
-    display: flex;
-    flex-direction: column;
-    row-gap: 10px;
-    width: 100%;
+
+.breadcrumb {
+  margin: 0;
 }
-.registryContent{
-    display: flex;
-    flex-direction: column;
-    width: 100%;
+
+/* ---------- Cards ---------- */
+.card {
+  background-color: $ui-02;
+  border: 1px solid $ui-03;
+  border-radius: 6px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  padding: layout.$spacing-06;
+  display: flex;
+  flex-direction: column;
+  row-gap: layout.$spacing-05;
 }
-.formRow{
-    display: flex;
-    flex-direction: row;
-    width: 100%;
-    column-gap: 5px;
-    margin-top: 10px;
+
+.sectionHeader {
+  display: flex;
+  align-items: flex-start;
+  column-gap: layout.$spacing-04;
+  padding-bottom: layout.$spacing-04;
+  border-bottom: 1px solid $ui-03;
 }
-.formControl{
-    width: 30%;
+
+.sectionIcon {
+  flex-shrink: 0;
+  margin-top: layout.$spacing-01;
+  color: colors.$blue-60;
 }
-.hieData{
-    margin-top: 15px;
-    display: flex;
-    flex-direction: column;
-    width: 80%;
-    row-gap: 10px;
+
+.sectionTitle {
+  @include type.type-style('heading-compact-02');
+  color: $ui-05;
+  margin: 0 0 layout.$spacing-02;
 }
-.btnContainer{
-    padding: 5px 5px;
+
+.sectionSubtitle {
+  @include type.type-style('body-01');
+  color: $text-02;
+  margin: 0;
 }
-.selectionHeader{
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    row-gap: 5px;
+
+.formIntro {
+  @include type.type-style('body-01');
+  color: $text-02;
+  margin: 0;
 }
-.patientSelect{
-    display: flex;
-    flex-direction: row;
-    width: 100%;
-    column-gap: 5px;
-}
-.patientSelectRadio{
-    width: 70%;
-}
-.patientConfirmSelection{
-    display: flex;
-    flex-direction: row;
-    width: 30%;
-    column-gap: 5px;
-}
-.formBtn{
-    display: flex;
-    flex-direction: row;
-    column-gap: 5px;
-}
-.registrySearchBtn{
-    height: 30px;
-}
-.principalDependantSection{
-    display: flex;
-    flex-direction: row;
-    width: 100%;
-    margin-top: 15px;
-}
-.dependantCard{
-    display: flex;
-    flex-direction: row;
-    width: 30%;
-}
-.dependantDetails{
+
+.registryContent {
   display: flex;
   flex-direction: column;
   width: 100%;
-  row-gap: 10px;
+  row-gap: layout.$spacing-06;
+}
+
+/* ---------- Search form ---------- */
+.formGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 18rem) minmax(0, 1fr);
+  gap: layout.$spacing-05;
+  align-items: flex-start;
+  padding: layout.$spacing-05;
+  border: 1px solid $ui-03;
+  border-radius: 6px;
+  background-color: $ui-01;
+}
+
+/* "No match found" callout — visible and neatly framed */
+.emptyState {
+  display: flex;
+  align-items: flex-start;
+  column-gap: layout.$spacing-05;
+  padding: layout.$spacing-06;
+  background-color: colors.$blue-10;
+  border: 1px solid colors.$blue-20;
+  border-left: 4px solid colors.$blue-60;
+  border-radius: 6px;
+}
+
+.emptyIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background-color: $ui-02;
+  color: colors.$blue-60;
+}
+
+.emptyTitle {
+  @include type.type-style('heading-compact-02');
+  color: $ui-05;
+  margin: 0 0 layout.$spacing-02;
+}
+
+.emptyText {
+  @include type.type-style('body-01');
+  color: $text-02;
+  margin: 0;
+  max-width: 42rem;
+
+  a {
+    color: colors.$blue-60;
+    text-decoration: underline;
+
+    &:hover {
+      color: colors.$blue-70;
+    }
+  }
+}
+
+/* Inline error when the registry search fails */
+.errorState {
+  display: flex;
+  align-items: flex-start;
+  column-gap: layout.$spacing-05;
+  padding: layout.$spacing-06;
+  background-color: colors.$red-10;
+  border: 1px solid colors.$red-20;
+  border-left: 4px solid colors.$red-60;
+  border-radius: 6px;
+}
+
+.errorStateIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background-color: $ui-02;
+  color: colors.$red-60;
+}
+
+.errorStateTitle {
+  @include type.type-style('heading-compact-02');
+  color: $ui-05;
+  margin: 0 0 layout.$spacing-02;
+}
+
+.errorStateText {
+  @include type.type-style('body-01');
+  color: $text-02;
+  margin: 0;
+  max-width: 42rem;
+}
+
+/* Text input with a clear (×) button */
+.clearableInput {
+  position: relative;
+}
+
+.clearableInput :global(.cds--text-input) {
+  padding-right: 2.5rem;
+}
+
+.clearBtn {
+  position: absolute;
+  top: 2.75rem;
+  right: 0.5rem;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+  color: $text-02;
+}
+
+.clearBtn:hover {
+  background-color: $ui-03;
+  color: $ui-05;
+}
+
+/* Field label with a neatly attached red required asterisk */
+.fieldLabel {
+  display: inline-flex;
+  align-items: center;
+  column-gap: 2px;
+}
+
+.required {
+  color: colors.$red-60;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.formBtn {
+  display: flex;
+  flex-flow: row wrap;
+  column-gap: layout.$spacing-04;
+  row-gap: layout.$spacing-03;
+  padding-top: layout.$spacing-03;
+  border-top: 1px solid $ui-03;
+}
+
+/* Keep the search button a fixed width so it doesn't grow/shrink while loading */
+.searchButton {
+  min-width: 9rem;
+}
+
+.btnLoading {
+  display: inline-flex;
+  align-items: center;
+  column-gap: layout.$spacing-03;
+}
+
+.btnSpinner {
+  width: 1rem;
+  height: 1rem;
+
+  /* Force the small Carbon spinner to render white on the primary button */
+  :global(.cds--loading__stroke) {
+    stroke: $ui-02;
+  }
+}
+
+/* ---------- Results / HIE data ---------- */
+.hieData {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  row-gap: layout.$spacing-05;
+}
+
+.selectionHeader {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.summaryLine {
+  @include type.type-style('label-01');
+  display: inline-flex;
+  align-items: center;
+  column-gap: layout.$spacing-03;
+  color: $text-02;
+  margin: 0;
+  padding: layout.$spacing-02 layout.$spacing-04;
+  background-color: $ui-01;
+  border: 1px solid $ui-03;
+  border-radius: 100px;
+  align-self: flex-start;
+}
+
+.summaryPrincipal,
+.summaryDependant {
+  display: inline-block;
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 50%;
+}
+
+.summaryPrincipal {
+  background-color: colors.$blue-60;
+}
+
+.summaryDependant {
+  background-color: colors.$teal-50;
+}
+
+.summaryDot {
+  width: 0.25rem;
+  height: 0.25rem;
+  border-radius: 50%;
+  background-color: $ui-04;
+}
+
+.patientConfirmSelection {
+  display: flex;
+  flex-flow: row wrap;
+  justify-content: flex-end;
+  column-gap: layout.$spacing-04;
+  row-gap: layout.$spacing-03;
+  padding-top: layout.$spacing-04;
+  border-top: 1px solid $ui-03;
+}
+
+.principalDependantSection {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  row-gap: layout.$spacing-05;
+}
+
+/* ---------- Selectable option cards (principal + dependants) ---------- */
+.optionList {
+  display: flex;
+  flex-direction: column;
+  row-gap: layout.$spacing-03;
+}
+
+.optionCard {
+  display: flex;
+  align-items: center;
+  column-gap: layout.$spacing-03;
+  padding: layout.$spacing-04 layout.$spacing-05;
+  border: 1px solid $ui-03;
+  border-left: 3px solid $ui-04;
+  border-radius: 6px;
+  background-color: $ui-02;
+  cursor: pointer;
+  transition:
+    border-color 120ms,
+    background-color 120ms;
+}
+
+.optionCard:hover {
+  background-color: $ui-01;
+}
+
+.principalOption {
+  border-left-color: colors.$blue-60;
+}
+
+.dependantOption {
+  border-left-color: colors.$teal-50;
+}
+
+.optionSelected {
+  background-color: colors.$blue-10;
+  border-color: colors.$blue-60;
+}
+
+.optionSelected:hover {
+  background-color: colors.$blue-10;
+}
+
+.optionBody {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: layout.$spacing-04;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.optionTopline {
+  display: flex;
+  align-items: center;
+  gap: layout.$spacing-03;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.optionName {
+  @include type.type-style('heading-compact-01');
+  color: $ui-05;
+}
+
+.optionCr {
+  @include type.type-style('label-01');
+  color: $text-02;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 42rem) {
+  .formGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

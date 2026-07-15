@@ -1,6 +1,9 @@
-.clickableData{
-    color: blue;
+.clickableData {
+  color: var(--brand-01);
+  font-weight: 600;
+  cursor: pointer;
 }
-.clickableData:hover{
-    cursor: pointer;
+.clickableData:hover {
+  color: var(--brand-02);
+  text-decoration: underline;
 }

@@ -16,7 +16,7 @@ const ClaimInterventionDetails: React.FC<claimInterventionDetailsProps> = ({clai
      return 'NO';
    }
    return <>
-   <Table>
+   <Table size="sm">
           <TableHead>
             <TableRow>
               <TableHeader>No</TableHeader>

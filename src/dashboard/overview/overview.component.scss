@@ -1,150 +1,116 @@
+@use '@carbon/layout';
+@use '@carbon/type';
+@use '@openmrs/esm-styleguide/src/vars' as *;
+
+/* Fluid, auto-collapsing grid — many columns on desktop down to one on mobile */
 .container {
-    display: flex;
-    width: 100%;
-    justify-content: flex-start;
-    flex-wrap: wrap;
-    gap: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(13.5rem, 1fr));
+  gap: layout.$spacing-05;
+  width: 100%;
+}
 
 .card {
-    border: 1px solid grey;
-    border-radius: 5px;
-    background-color: white;
-    font-weight: bold;
-    flex: 0 0 250px;
-    height: 5rem;
-    min-width: 0;
-  }
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: layout.$spacing-04;
+  min-height: 0;
+  padding: layout.$spacing-04 layout.$spacing-05;
+  background-color: $ui-02;
+  border: 1px solid $ui-03;
+  border-left: 3px solid $ui-04;
+  border-radius: 6px;
+}
 
-  .title {
+.cardIcon {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background-color: $ui-01;
+}
+
+.cardBody {
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-01;
+  min-width: 0;
+}
+
+.cardLabel {
+  @include type.type-style('label-01');
+  color: $text-02;
+  margin: 0;
   white-space: nowrap;
-}
-}
-
-@media (max-width: 1584px) {
-  .container .card {
-    flex: 0 0 calc(20% - 1rem);
-  }
-
-  .text {
-    font-size: 1rem;
-  }
-}
-@media (max-width: 1456px) {
-  .container .card {
-    flex: 0 0 calc(25% - 1rem);
-  }
-
-  .text {
-    font-size: 1rem;
-  }
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-@media (max-width: 1356px) {
-  .container .card {
-    flex: 0 0 calc(25% - 1rem);
-  }
-
-  .text {
-    font-size: 1rem;
-  }
+.cardValue {
+  @include type.type-style('heading-03');
+  color: $ui-05;
+  margin: 0;
+  line-height: 1.1;
 }
 
-@media (max-width: 1264px) {
-  .container .card {
-    flex: 0 0 calc(30% - 1rem);
-  }
-
-  .text {
-    font-size: 1rem;
-  }
-}
-
-@media (max-width: 1095px) {
-  .container .card {
-    flex: 0 0 calc(30% - 1rem);
-  }
-
-  .text {
-    font-size: 1rem;
-  }
-}
-
-@media (max-width: 1024px) {
-  .container .card {
-    flex: 0 0 calc(50% - 1rem);
-  }
-  .text {
-    font-size: 1rem;
-  }
-}
-
-@media (max-width: 600px) {
-  .container .card {
-    flex: 0 0 100%;
-  }
-}
-
-
-h4 {
-    font-weight: bold;
-}
-
-.dropdownItem {
-    display: flex;
-    justify-self: flex-end;
-    width: 25%; 
-    min-width: 180px; 
-    max-width: 280px;
-    margin-top: 5rem;
-    margin-bottom: 5rem;
-}
-
-.dropdownContainer {
-  .cds--list-box__menu-item__option {
-    font-weight: 600; 
-  }
-
-  .cds--list-box__field {
-    font-weight: 600; 
-  }
-}
-
+/* Metric accent colours on the left border + icon */
 .opd {
-    background-color: #2B579A !important;
+  border-left-color: #2b579a;
+  svg {
+    fill: #2b579a;
+  }
 }
 .completed {
-    background-color: #4CAF50 !important;
+  border-left-color: #24a148;
+  svg {
+    fill: #24a148;
+  }
 }
-
 .uncompleted {
-    background-color: #FFC107 !important;
-}
-.emergencies {
-    background-color: lightcoral !important;
-}
-
-.waitingTime {
-    background-color: lightblue !important;
+  border-left-color: #f1c21b;
+  svg {
+    fill: #b28600;
+  }
 }
 .labs {
-  background-color: lightgrey !important;
+  border-left-color: #8a3ffc;
+  svg {
+    fill: #8a3ffc;
+  }
 }
-
 .pharmacy {
-  background-color: lightgreen !important;
+  border-left-color: #007d79;
+  svg {
+    fill: #007d79;
+  }
+}
+.emergencies {
+  border-left-color: #da1e28;
+  svg {
+    fill: #da1e28;
+  }
+}
+.waitingTime {
+  border-left-color: #0f62fe;
+  svg {
+    fill: #0f62fe;
+  }
 }
 
-.text {
-  color: white;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  white-space: nowrap;
-  font-size: 1rem;
-}
 .tabsContainer {
-  margin-top: 2rem;
+  margin-top: layout.$spacing-06;
+  background-color: $ui-02;
+  border: 1px solid $ui-03;
+  border-radius: 6px;
+  padding: layout.$spacing-05;
+}
+
+@media (max-width: 42rem) {
+  .container {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

@@ -1,7 +1,52 @@
+@use '@carbon/layout';
+@use '@carbon/type';
+@use '@carbon/colors';
+@use '@openmrs/esm-styleguide/src/vars' as *;
+
 .container {
-    margin: 3rem;
-}
-.tabText {
-    font-size: 20px;
+  display: flex;
+  flex-direction: column;
+  row-gap: layout.$spacing-05;
+  width: 100%;
+  padding: layout.$spacing-05;
+  background-color: $ui-01;
+  min-height: calc(100vh - 3rem);
 }
 
+.header {
+  display: flex;
+  align-items: flex-start;
+  column-gap: layout.$spacing-04;
+  padding-bottom: layout.$spacing-05;
+  border-bottom: 1px solid $ui-03;
+}
+
+.headerIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  background-color: colors.$blue-10;
+  color: colors.$blue-60;
+}
+
+.title {
+  @include type.type-style('heading-03');
+  color: $ui-05;
+  margin: 0 0 layout.$spacing-02;
+}
+
+.subtitle {
+  @include type.type-style('body-01');
+  color: $text-02;
+  margin: 0;
+}
+
+/* Carbon TabPanel adds its own padding on top of the card padding.
+   Zero it so the charts sit flush inside their card. */
+.container :global(.cds--tab-content) {
+  padding: 0;
+}

@@ -14,13 +14,17 @@ import {
   TextInput,
 } from '@carbon/react';
 import { type QueueEntryResult } from '../../registry/types';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import styles from './queue-list.component.scss';
 import { QueueEntryPriority, QueueEntryStatus, type TagColor } from '../../types/types';
 import { getTagClassByPriority } from '../../shared/utils/get-tag-type';
 import { useSession } from '@openmrs/esm-framework';
 import { checkInRoom, checkOutRoom, isCheckedIn } from './check-in.service';
 import { userHasAccess } from '@openmrs/esm-framework';
+import {
+  getConsultationClearances,
+  type ConsultationClearance,
+} from '../../shared/services/consultation-clearance.resource';
 
 interface QueueListProps {
   queueRoom: string;
@@ -46,6 +50,28 @@ const QueueList: React.FC<QueueListProps> = ({
   handleClearQueue,
 }) => {
   const session = useSession();
+  const locationUuid = session?.sessionLocation?.uuid ?? '';
+
+  const [clearances, setClearances] = useState<ConsultationClearance[]>([]);
+  useEffect(() => {
+    getConsultationClearances(undefined, locationUuid).then(setClearances);
+  }, [locationUuid, queueEntries]);
+
+  // Match a queue entry to its consultation-clearance record (by CR number in the
+  // identifiers, else by name overlap).
+  const clearanceFor = (qe: QueueEntryResult): ConsultationClearance | undefined => {
+    const nameTokens = `${qe.family_name} ${qe.middle_name} ${qe.given_name}`
+      .toLowerCase()
+      .split(/\s+/)
+      .filter((t) => t && t !== 'null');
+    return clearances.find((c) => {
+      if (qe.identifiers && c.crNumber && qe.identifiers.includes(c.crNumber)) {
+        return true;
+      }
+      const cTokens = c.patientName.toLowerCase().split(/\s+/).filter(Boolean);
+      return cTokens.filter((t) => nameTokens.includes(t)).length >= 2;
+    });
+  };
 
   const provider = session?.currentProvider ?? null;
   const [checkIn, setCheckin] = useState<boolean>(isProviderCheckedIn());
@@ -236,6 +262,7 @@ const QueueList: React.FC<QueueListProps> = ({
                 <TableHeader>Coming From</TableHeader>
                 <TableHeader>Ticket</TableHeader>
                 <TableHeader>Status</TableHeader>
+                <TableHeader>Clearance</TableHeader>
                 <TableHeader>Priority</TableHeader>
                 <TableHeader>Wait Time</TableHeader>
                 <TableHeader>Action</TableHeader>
@@ -267,6 +294,23 @@ const QueueList: React.FC<QueueListProps> = ({
                     </Tag>
                   </TableCell>
                   <TableCell>
+                    {(() => {
+                      const clearance = clearanceFor(val);
+                      if (!clearance) {
+                        return '';
+                      }
+                      return clearance.status === 'CLEARED' ? (
+                        <Tag size="md" type="green">
+                          Ready
+                        </Tag>
+                      ) : (
+                        <Tag size="md" type="red">
+                          Awaiting clearance
+                        </Tag>
+                      );
+                    })()}
+                  </TableCell>
+                  <TableCell>
                     <Tag size="md" className={styles[getTagClassByPriority(val.priority)]}>
                       {val.priority}
                     </Tag>
@@ -277,7 +321,16 @@ const QueueList: React.FC<QueueListProps> = ({
                       <TableCell>
                         {val.status === QueueEntryStatus.Waiting && val.hide_in_queue === 0 ? (
                           <>
-                            <Button kind="ghost" disabled={!checkIn} onClick={() => handleServePatient(val)}>
+                            <Button
+                              kind="ghost"
+                              disabled={!checkIn || clearanceFor(val)?.status === 'AWAITING_PAYMENT'}
+                              title={
+                                clearanceFor(val)?.status === 'AWAITING_PAYMENT'
+                                  ? 'Consultation fee not yet cleared'
+                                  : undefined
+                              }
+                              onClick={() => handleServePatient(val)}
+                            >
                               Serve
                             </Button>
                           </>

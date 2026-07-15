@@ -64,47 +64,67 @@ const Overview: React.FC<OverviewProps> = ({ triageCount, consultationCount, das
     <>
       <div className={styles.container}>
         <Tile className={`${styles.card} ${styles.opd}`}>
-          <h4 className={styles.text}>
-            <UserMultiple size={24} />
-            Total OPD Visits
-          </h4>
-          <h4 className={styles.text}>{dashboardSummary?.total_opd_visits ?? 0}</h4>
+          <span className={styles.cardIcon}>
+            <UserMultiple size={20} />
+          </span>
+          <div className={styles.cardBody}>
+            <p className={styles.cardLabel}>Total OPD Visits</p>
+            <p className={styles.cardValue}>{dashboardSummary?.total_opd_visits ?? 0}</p>
+          </div>
         </Tile>
         <Tile className={`${styles.card} ${styles.completed}`}>
-          <h4 className={styles.text}>
-            <CheckmarkFilled size={20} /> Completed Visits
-          </h4>
-          <h4 className={styles.text}>{dashboardSummary?.completed_visits ?? 0}</h4>
+          <span className={styles.cardIcon}>
+            <CheckmarkFilled size={20} />
+          </span>
+          <div className={styles.cardBody}>
+            <p className={styles.cardLabel}>Completed Visits</p>
+            <p className={styles.cardValue}>{dashboardSummary?.completed_visits ?? 0}</p>
+          </div>
         </Tile>
         <Tile className={`${styles.card} ${styles.uncompleted}`}>
-          <h4 className={styles.text}>
-            <Time size={20} /> Uncompleted visits
-          </h4>
-          <h4 className={styles.text}>{dashboardSummary?.uncompleted_visits ?? 0}</h4>
+          <span className={styles.cardIcon}>
+            <Time size={20} />
+          </span>
+          <div className={styles.cardBody}>
+            <p className={styles.cardLabel}>Uncompleted Visits</p>
+            <p className={styles.cardValue}>{dashboardSummary?.uncompleted_visits ?? 0}</p>
+          </div>
         </Tile>
         <Tile className={`${styles.card} ${styles.labs}`}>
-          <h4 className={styles.text}>
-            <Chemistry size={20} /> Labs
-          </h4>
-          <h4 className={styles.text}>{dashboardSummary?.labs ?? 0}</h4>
+          <span className={styles.cardIcon}>
+            <Chemistry size={20} />
+          </span>
+          <div className={styles.cardBody}>
+            <p className={styles.cardLabel}>Labs</p>
+            <p className={styles.cardValue}>{dashboardSummary?.labs ?? 0}</p>
+          </div>
         </Tile>
         <Tile className={`${styles.card} ${styles.pharmacy}`}>
-          <h4 className={styles.text}>
-            <Medication size={20} /> Pharmacy
-          </h4>
-          <h4 className={styles.text}>{dashboardSummary?.pharmacy ?? 0}</h4>
+          <span className={styles.cardIcon}>
+            <Medication size={20} />
+          </span>
+          <div className={styles.cardBody}>
+            <p className={styles.cardLabel}>Pharmacy</p>
+            <p className={styles.cardValue}>{dashboardSummary?.pharmacy ?? 0}</p>
+          </div>
         </Tile>
         <Tile className={`${styles.card} ${styles.emergencies}`}>
-          <h4 className={styles.text}>
-            <Hospital size={20} /> Emergencies
-          </h4>
-          <h4 className={styles.text}>{dashboardSummary?.emergencies ?? 0}</h4>
+          <span className={styles.cardIcon}>
+            <Hospital size={20} />
+          </span>
+          <div className={styles.cardBody}>
+            <p className={styles.cardLabel}>Emergencies</p>
+            <p className={styles.cardValue}>{dashboardSummary?.emergencies ?? 0}</p>
+          </div>
         </Tile>
         <Tile className={`${styles.card} ${styles.waitingTime}`}>
-          <h4 className={styles.text}>
-            <Time size={20} /> Avg. Waiting Time
-          </h4>
-          <h4 className={styles.text}>{dashboardSummary?.average_waiting_minutes ?? 0} mins</h4>
+          <span className={styles.cardIcon}>
+            <Time size={20} />
+          </span>
+          <div className={styles.cardBody}>
+            <p className={styles.cardLabel}>Avg. Waiting Time</p>
+            <p className={styles.cardValue}>{dashboardSummary?.average_waiting_minutes ?? 0} mins</p>
+          </div>
         </Tile>
       </div>
       <div className={styles.tabsContainer}>

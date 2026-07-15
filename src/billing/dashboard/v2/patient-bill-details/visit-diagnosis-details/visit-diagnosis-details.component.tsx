@@ -30,7 +30,7 @@ const VisitDiagnosisDetails: React.FC<visitDiagnosisDetailsProps> = ({amrsVisitD
   }
   return <>
   <div>
-     <Table aria-label="sample table" size="lg">
+     <Table aria-label="diagnoses" size="sm">
                   <TableHead>
                     <TableRow>
                       <TableHeader>No</TableHeader>

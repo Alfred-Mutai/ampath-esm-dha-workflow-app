@@ -1,0 +1,1058 @@
+@use '@carbon/layout';
+@use '@carbon/type';
+@use '@carbon/colors';
+@use '@openmrs/esm-styleguide/src/vars' as *;
+
+/* Start below the OpenMRS top navigation so the drawer doesn't cover the header */
+$header-height: 3rem;
+
+.overlay {
+  position: fixed;
+  top: $header-height;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 7999;
+  animation: fadeIn 160ms ease-out;
+}
+
+.drawer {
+  position: fixed;
+  top: $header-height;
+  right: 0;
+  bottom: 0;
+  width: 40rem;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: $ui-02;
+  box-shadow: -2px 0 12px rgba(0, 0, 0, 0.18);
+  z-index: 8000;
+  animation: slideIn 200ms ease-out;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: layout.$spacing-04;
+  padding: layout.$spacing-05;
+  border-bottom: 1px solid $ui-03;
+}
+
+.title {
+  @include type.type-style('heading-03');
+  color: $ui-05;
+  margin: 0;
+}
+
+.subtitle {
+  @include type.type-style('body-01');
+  color: $text-02;
+  margin: 0 0 layout.$spacing-05;
+}
+
+.stepper {
+  padding: layout.$spacing-05;
+  border-bottom: 1px solid $ui-03;
+  background-color: $ui-01;
+}
+
+/* The steps sit in their own contained card on the stepper band */
+.stepperCard {
+  padding: layout.$spacing-05;
+  background-color: $ui-02;
+  border: 1px solid $ui-03;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+/* Carbon's state text ("Complete"/"Current") is screen-reader only — keep it
+   visually hidden so the stepper shows just the clean step labels + icons. */
+.stepper :global(.cds--assistive-text) {
+  position: absolute;
+  overflow: hidden;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  border: 0;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Clear "Step X of Y: <current>" caption under the progress indicator */
+.stepCaption {
+  @include type.type-style('label-01');
+  color: $text-02;
+  margin: layout.$spacing-04 0 0;
+
+  strong {
+    color: $ui-05;
+  }
+}
+
+.body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+}
+
+.bodyInner {
+  padding: layout.$spacing-06 layout.$spacing-05;
+}
+
+
+/* ---- Step 1: review ---- */
+.reviewCard {
+  border: 1px solid $ui-03;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: $ui-02;
+}
+
+.reviewHeader {
+  display: flex;
+  align-items: center;
+  gap: layout.$spacing-04;
+  padding: layout.$spacing-05;
+  background-color: $ui-01;
+  border-bottom: 1px solid $ui-03;
+}
+
+.avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  background-color: colors.$blue-10;
+  color: colors.$blue-60;
+}
+
+.reviewIdentity {
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-01;
+  min-width: 0;
+}
+
+.reviewName {
+  @include type.type-style('heading-compact-02');
+  color: $ui-05;
+  margin: 0;
+}
+
+.reviewCr {
+  @include type.type-style('label-01');
+  color: $text-02;
+  margin: 0;
+}
+
+/* Clean key-value list: label on the left, value on the right, divided rows */
+.detailGrid {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+}
+
+.detailRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: layout.$spacing-05;
+  padding: layout.$spacing-04 0;
+  border-bottom: 1px solid $ui-03;
+  min-width: 0;
+}
+
+.detailRow:first-child {
+  padding-top: 0;
+}
+
+.detailRow:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.detailFull {
+  width: 100%;
+}
+
+.detailRow dt {
+  @include type.type-style('label-01');
+  color: $text-02;
+  flex-shrink: 0;
+}
+
+.detailRow dd {
+  @include type.type-style('heading-compact-01');
+  color: $ui-05;
+  margin: 0;
+  text-align: right;
+  word-break: break-word;
+  min-width: 0;
+}
+
+/* ---- Step 2: OTP ---- */
+.stepContent {
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-05;
+}
+
+.stepIntro {
+  @include type.type-style('body-01');
+  color: $text-02;
+  margin: 0;
+}
+
+/* "Where should the OTP be sent" — each choice is a neat selectable row */
+.otpChoiceCard :global(.cds--radio-button-group) {
+  flex-direction: column;
+  align-items: stretch;
+  gap: layout.$spacing-03;
+  width: 100%;
+  margin-top: layout.$spacing-03;
+}
+
+.otpChoiceCard :global(.cds--radio-button-wrapper) {
+  width: 100%;
+  margin: 0;
+  padding: layout.$spacing-04 layout.$spacing-05;
+  border: 1px solid $ui-03;
+  border-radius: 8px;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease;
+}
+
+.otpChoiceCard :global(.cds--radio-button-wrapper:hover) {
+  border-color: colors.$blue-60;
+  background-color: $ui-01;
+}
+
+.otpChoiceCard :global(.cds--radio-button-wrapper:has(input:checked)) {
+  border-color: colors.$blue-60;
+  background-color: colors.$blue-10;
+}
+
+/* Registered phone number rendered as a subtle monospace chip */
+.phoneChip {
+  @include type.type-style('code-01');
+  padding: 1px 6px;
+  border-radius: 4px;
+  background-color: $ui-01;
+  color: $ui-05;
+}
+
+.overrideFields {
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-05;
+  padding: layout.$spacing-05;
+  border: 1px solid $ui-03;
+  border-radius: 8px;
+  background-color: $ui-01;
+}
+
+/* Red required-field asterisk */
+.required {
+  color: colors.$red-60;
+  font-weight: 600;
+}
+
+.otpForm {
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-05;
+}
+
+/* Visible "code sent to …" confirmation */
+.otpSentBanner {
+  display: flex;
+  align-items: flex-start;
+  gap: layout.$spacing-03;
+  padding: layout.$spacing-04 layout.$spacing-05;
+  border: 1px solid colors.$green-30;
+  border-left: 4px solid colors.$green-50;
+  border-radius: 8px;
+  background-color: colors.$green-10;
+  @include type.type-style('body-01');
+  color: $ui-05;
+}
+
+.otpSentIcon {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: colors.$green-50;
+}
+
+/* "Didn't receive the code? Change how it's sent" */
+.otpHelp {
+  @include type.type-style('label-01');
+  color: $text-02;
+  text-align: center;
+  margin: 0;
+}
+
+.linkBtn {
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  color: colors.$blue-60;
+  text-decoration: underline;
+  @include type.type-style('label-01');
+
+  &:hover {
+    color: colors.$blue-70;
+  }
+}
+
+/* Centered card grouping the code input and its countdown */
+.otpEntry {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: layout.$spacing-05;
+  padding: layout.$spacing-06 layout.$spacing-05;
+  border: 1px solid $ui-03;
+  border-radius: 8px;
+  background-color: $ui-01;
+}
+
+.otpEntryLabel {
+  @include type.type-style('heading-compact-01');
+  color: $ui-05;
+}
+
+.otpExpiry {
+  @include type.type-style('label-01');
+  color: $text-02;
+  padding: layout.$spacing-02 layout.$spacing-05;
+  background-color: $ui-02;
+  border: 1px solid $ui-03;
+  border-radius: 100px;
+}
+
+/* Left-aligned, auto-width CTA for the OTP draft screen (Send OTP / Confirm skip) */
+.otpPrimaryBtn {
+  align-self: flex-start;
+  width: auto;
+}
+
+/* Resend countdown (left) and Verify (right) — wraps on narrow widths */
+.otpActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: layout.$spacing-03 layout.$spacing-04;
+}
+
+.resendCountdown {
+  @include type.type-style('label-01');
+  color: $text-02;
+  white-space: nowrap;
+}
+
+/* ---- Titled card panel (consent, visit) ---- */
+.panel {
+  border: 1px solid $ui-03;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: $ui-02;
+}
+
+.panelHead {
+  @include type.type-style('heading-compact-01');
+  color: $ui-05;
+  padding: layout.$spacing-04 layout.$spacing-05;
+  background-color: $ui-01;
+  border-bottom: 1px solid $ui-03;
+}
+
+.panelBody {
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-05;
+  padding: layout.$spacing-05;
+}
+
+/* Start-visit form body. The whole step (stepper + fields) scrolls together via
+   the drawer `.body`, so this doesn't scroll on its own. */
+.scrollBody {
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-05;
+}
+
+/* Uniform field labels across dropdowns, combobox and radio-group legends so
+   every field (and its required asterisk) lines up neatly. */
+.scrollBody :global(.cds--form-item) {
+  margin: 0;
+}
+
+.scrollBody :global(.cds--label),
+.scrollBody :global(legend.cds--label) {
+  @include type.type-style('label-01');
+  display: block;
+  min-height: auto;
+  margin-bottom: layout.$spacing-03;
+  color: $text-02;
+}
+
+/* Keep the asterisk snug against its label text on every field. */
+.scrollBody .required {
+  margin-left: 2px;
+}
+
+/* Grouped, orderly sections within the Start-visit form, separated by a rule. */
+.formSection {
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-05;
+  padding-top: layout.$spacing-05;
+  border-top: 1px solid colors.$gray-10;
+}
+
+.sectionLabel {
+  @include type.type-style('heading-compact-01');
+  color: $ui-05;
+  margin: 0;
+}
+
+.schemePill {
+  display: inline-block;
+  padding: 2px layout.$spacing-03;
+  border-radius: 4px;
+  @include type.type-style('label-01');
+}
+
+.schemePillEligible {
+  background-color: colors.$green-20;
+  color: colors.$green-70;
+}
+
+.schemePillIneligible {
+  background-color: colors.$red-20;
+  color: colors.$red-70;
+}
+
+.eligibilityRow {
+  display: flex;
+  align-items: center;
+  gap: layout.$spacing-03;
+}
+
+.eligibilityRowLabel {
+  @include type.type-style('label-01');
+  color: $text-02;
+}
+
+.eligibilityLoading :global(.cds--inline-loading__text) {
+  @include type.type-style('label-01');
+}
+
+
+/* Confirmed consent shown as a clear, visible checked info row (not a greyed checkbox) */
+.consentConfirmed {
+  display: flex;
+  align-items: center;
+  gap: layout.$spacing-03;
+  padding: layout.$spacing-04 layout.$spacing-05;
+  border: 1px solid colors.$green-30;
+  border-radius: 8px;
+  background-color: colors.$green-10;
+}
+
+.consentConfirmedIcon {
+  flex-shrink: 0;
+  color: colors.$green-50;
+}
+
+.consentConfirmedText {
+  @include type.type-style('body-01');
+  color: $ui-05;
+  font-weight: 600;
+}
+
+/* ---- Verify: layout ---- */
+.verifyContent {
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-05;
+}
+
+.biometricArea {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: layout.$spacing-05;
+  padding-top: layout.$spacing-04;
+}
+
+/* Sub-hint inside the scanner card, under the "Tap to scan fingerprint" line */
+.biometricLaunchHint {
+  @include type.type-style('label-01');
+  color: $text-02;
+}
+
+/* Visible, numbered "How verification works" guide */
+.guidePanel {
+  border: 1px solid colors.$blue-20;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: colors.$blue-10;
+}
+
+.guideHead {
+  display: flex;
+  align-items: center;
+  gap: layout.$spacing-03;
+  padding: layout.$spacing-04 layout.$spacing-05;
+  @include type.type-style('heading-compact-01');
+  color: $ui-05;
+  border-bottom: 1px solid colors.$blue-20;
+}
+
+.guideHeadIcon {
+  flex-shrink: 0;
+  color: colors.$blue-60;
+}
+
+.guideSteps {
+  list-style: none;
+  counter-reset: step;
+  margin: 0;
+  padding: layout.$spacing-05;
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-04;
+}
+
+.guideSteps li {
+  counter-increment: step;
+  display: flex;
+  align-items: flex-start;
+  gap: layout.$spacing-04;
+  @include type.type-style('body-01');
+  color: $ui-05;
+}
+
+.guideSteps li::before {
+  content: counter(step);
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background-color: colors.$blue-60;
+  color: colors.$white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  @include type.type-style('label-01');
+  font-weight: 600;
+}
+
+/* ---- Verify: selected patient header ---- */
+.patientStrip {
+  display: flex;
+  align-items: center;
+  gap: layout.$spacing-04;
+  padding: layout.$spacing-03 layout.$spacing-04;
+  border: 1px solid $ui-03;
+  border-radius: 8px;
+  background-color: $ui-01;
+}
+
+.patientAvatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  color: colors.$white;
+  @include type.type-style('heading-compact-01');
+}
+
+.avatarPrincipal {
+  background-color: colors.$blue-60;
+}
+
+.avatarDependant {
+  background-color: colors.$teal-50;
+}
+
+.patientInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.patientLine1 {
+  display: flex;
+  align-items: center;
+  gap: layout.$spacing-03;
+  min-width: 0;
+}
+
+.patientName {
+  @include type.type-style('heading-compact-01');
+  color: $ui-05;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.patientCr {
+  @include type.type-style('label-01');
+  color: $text-02;
+  white-space: nowrap;
+}
+
+/* ---- Verify: biometric ---- */
+.biometricIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 5rem;
+  height: 5rem;
+  border-radius: 50%;
+  background-color: colors.$blue-10;
+  color: colors.$blue-60;
+}
+
+/* Default biometric image — tap to launch capture */
+.biometricLaunch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: layout.$spacing-04;
+  width: 100%;
+  padding: layout.$spacing-07 layout.$spacing-05;
+  border: 1px dashed $ui-04;
+  border-radius: 8px;
+  background-color: $ui-01;
+  cursor: pointer;
+  transition:
+    border-color 120ms,
+    background-color 120ms;
+}
+
+.biometricLaunch:hover:not(:disabled) {
+  border-color: colors.$blue-60;
+  background-color: colors.$blue-10;
+}
+
+.biometricLaunch:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.biometricLaunchText {
+  @include type.type-style('heading-compact-01');
+  color: $ui-05;
+}
+
+.biometricFrameWrap {
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-04;
+}
+
+.biometricFrame {
+  width: 100%;
+  height: 20rem;
+  border: 1px solid $ui-03;
+  border-radius: 8px;
+}
+
+/* Friendly prompt shown under the capture frame — makes retry seamless */
+.capturePrompt {
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-03;
+  padding: layout.$spacing-05;
+  border: 1px solid $ui-03;
+  border-radius: 8px;
+  background-color: $ui-01;
+}
+
+.capturePromptText {
+  @include type.type-style('heading-compact-01');
+  color: $ui-05;
+}
+
+.capturePromptHint {
+  @include type.type-style('label-01');
+  color: $text-02;
+}
+
+.captureActions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: layout.$spacing-04;
+  margin-top: layout.$spacing-02;
+}
+
+.failNote {
+  @include type.type-style('label-01');
+  color: colors.$red-60;
+  margin: 0;
+}
+
+/* In-page note explaining the switch to OTP after biometric failure */
+.fallbackNote {
+  display: flex;
+  align-items: flex-start;
+  gap: layout.$spacing-03;
+  padding: layout.$spacing-04 layout.$spacing-05;
+  border: 1px solid colors.$blue-20;
+  border-left: 4px solid colors.$blue-60;
+  border-radius: 8px;
+  background-color: colors.$blue-10;
+  @include type.type-style('body-01');
+  color: $ui-05;
+}
+
+.fallbackNoteIcon {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: colors.$blue-60;
+}
+
+/* Centered loading state (e.g. checking whitelist status) */
+.loadingCard {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: layout.$spacing-07 layout.$spacing-05;
+  border: 1px solid $ui-03;
+  border-radius: 8px;
+  background-color: $ui-01;
+}
+
+.centerText {
+  @include type.type-style('body-01');
+  color: $text-02;
+  margin: 0;
+}
+
+/* Inline notice (e.g. OTP not working) */
+.noticeBox {
+  display: flex;
+  align-items: flex-start;
+  gap: layout.$spacing-04;
+  padding: layout.$spacing-05;
+  border: 1px solid colors.$yellow-30;
+  border-left: 4px solid colors.$yellow-30;
+  border-radius: 8px;
+  background-color: colors.$yellow-10;
+}
+
+.noticeIcon {
+  flex-shrink: 0;
+  color: #b28600;
+}
+
+.noticeTitle {
+  @include type.type-style('heading-compact-01');
+  color: $ui-05;
+  margin: 0 0 layout.$spacing-02;
+}
+
+/* Read-only info field (e.g. attempts failed) */
+.readonlyField {
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-02;
+}
+
+.readonlyLabel {
+  @include type.type-style('label-01');
+  color: $text-02;
+}
+
+.readonlyValue {
+  @include type.type-style('body-01');
+  color: $ui-05;
+  padding: layout.$spacing-03 layout.$spacing-05;
+  background-color: $ui-01;
+  border: 1px solid $ui-03;
+  border-radius: 4px;
+}
+
+/* Drag-and-drop image upload */
+.uploadField {
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-02;
+}
+
+.uploadHint {
+  @include type.type-style('label-01');
+  color: $text-02;
+  margin: 0 0 layout.$spacing-02;
+}
+
+/* Beautiful custom drag-and-drop zone */
+.dropZone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: layout.$spacing-02;
+  width: 100%;
+  min-height: 8rem;
+  padding: layout.$spacing-06 layout.$spacing-05;
+  border: 1.5px dashed $ui-04;
+  border-radius: 8px;
+  background-color: $ui-01;
+  cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease;
+}
+
+.dropZone:hover,
+.dropZone:focus-visible {
+  border-color: colors.$blue-60;
+  background-color: colors.$blue-10;
+  outline: none;
+}
+
+.dropZoneActive {
+  border-color: colors.$blue-60;
+  border-style: solid;
+  background-color: colors.$blue-10;
+}
+
+.dropZoneInvalid {
+  border-color: colors.$red-60;
+  background-color: colors.$red-10;
+}
+
+.dropZoneInvalid .dropIcon {
+  background-color: colors.$red-10;
+  color: colors.$red-60;
+}
+
+.fieldError {
+  @include type.type-style('label-01');
+  color: colors.$red-60;
+  margin-top: layout.$spacing-02;
+}
+
+.dropIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  background-color: colors.$blue-10;
+  color: colors.$blue-60;
+  margin-bottom: layout.$spacing-02;
+}
+
+.dropZone:hover .dropIcon,
+.dropZoneActive .dropIcon {
+  background-color: colors.$white;
+}
+
+.dropTitle {
+  @include type.type-style('heading-compact-01');
+  color: $ui-05;
+}
+
+.dropSubtitle {
+  @include type.type-style('label-01');
+  color: $text-02;
+}
+
+.hiddenInput {
+  display: none;
+}
+
+/* Neatly spaced selected-file chip */
+.uploadField :global(.cds--file__selected-file) {
+  max-width: 100%;
+  margin-top: layout.$spacing-03;
+  border-radius: 6px;
+}
+
+.submitBtn {
+  align-self: flex-end;
+  width: auto;
+  margin-top: layout.$spacing-03;
+}
+
+.infoNote {
+  display: flex;
+  align-items: flex-start;
+  gap: layout.$spacing-03;
+  padding: layout.$spacing-04 layout.$spacing-05;
+  background-color: colors.$blue-10;
+  border-left: 3px solid colors.$blue-60;
+  border-radius: 4px;
+}
+
+.infoNoteIcon {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: colors.$blue-60;
+}
+
+.infoNoteText {
+  @include type.type-style('body-compact-01');
+  color: $ui-05;
+  margin: 0;
+}
+
+/* Inline error callout — e.g. OTP send failed */
+.errorNote {
+  display: flex;
+  align-items: flex-start;
+  gap: layout.$spacing-03;
+  padding: layout.$spacing-04 layout.$spacing-05;
+  background-color: colors.$red-10;
+  border-left: 3px solid colors.$red-60;
+  border-radius: 4px;
+}
+
+.errorNoteIcon {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: colors.$red-60;
+}
+
+.errorNoteBody {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.errorNoteTitle {
+  @include type.type-style('heading-compact-01');
+  color: $ui-05;
+}
+
+.errorNoteText {
+  @include type.type-style('body-compact-01');
+  color: $ui-05;
+  margin: 0;
+}
+
+.successRow {
+  display: flex;
+  align-items: center;
+  gap: layout.$spacing-03;
+  @include type.type-style('heading-compact-01');
+  color: $ui-05;
+}
+
+/* ---- Pending / awaiting-approval status card ---- */
+.statusCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: layout.$spacing-04;
+  padding: layout.$spacing-06 layout.$spacing-05;
+  border: 1px solid colors.$yellow-30;
+  border-radius: 8px;
+  background-color: colors.$yellow-10;
+}
+
+.statusBadge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background-color: colors.$white;
+  border: 1px solid colors.$yellow-30;
+  color: #b28600;
+}
+
+/* Danger variant — e.g. no biometric scanner configured */
+.statusCardDanger {
+  border-color: colors.$red-30;
+  background-color: colors.$red-10;
+}
+
+.statusBadgeDanger {
+  width: 2.5rem;
+  height: 2.5rem;
+  background-color: colors.$red-60;
+  border-color: colors.$red-60;
+  color: colors.$white;
+}
+
+.statusTitle {
+  @include type.type-style('heading-compact-02');
+  color: $ui-05;
+  margin: 0;
+}
+
+.statusText {
+  @include type.type-style('body-01');
+  color: $text-02;
+  margin: 0;
+  max-width: 24rem;
+}
+
+.statusActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: layout.$spacing-04;
+  margin-top: layout.$spacing-02;
+}
+
+/* ---- Footer ---- */
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: layout.$spacing-04;
+  padding: layout.$spacing-05;
+  border-top: 1px solid $ui-03;
+}
+
+.footerRight {
+  display: flex;
+  gap: layout.$spacing-04;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

@@ -1,20 +1,23 @@
 import React, { useEffect } from 'react';
 import { useState } from 'react';
 import { type FacilityBillsDto, type FacilityBill, BillingView } from '../types';
-import { Button, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@carbon/react';
+import { Button, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tag } from '@carbon/react';
 import { showSnackbar } from '@openmrs/esm-framework';
 import { fetchFacilityBills } from '../../../billing-claims.resource';
 import styles from './facility-bills.component.scss';
 import PatientBillDetails from '../patient-bill-details/patient-bill-details';
+import TableToolbar from '../shared/table-toolbar.component';
 
 interface facilityBillsProps {
   billingDate: string;
   locationUuid: string;
+  onDateChange?: (value: string) => void;
 }
-const FacilityBills: React.FC<facilityBillsProps> = ({ billingDate, locationUuid }) => {
+const FacilityBills: React.FC<facilityBillsProps> = ({ billingDate, locationUuid, onDateChange }) => {
   const [facilityBills, setFacilityBills] = useState<FacilityBill[]>([]);
   const [currentView, setCurrentView] = useState<BillingView>(BillingView.Bills);
   const [selectedPatientUuid, setSelectedPatientUuid] = useState<string>('');
+  const [search, setSearch] = useState<string>('');
   useEffect(() => {
     if (locationUuid && billingDate) {
       getFacilityBills();
@@ -74,7 +77,15 @@ const FacilityBills: React.FC<facilityBillsProps> = ({ billingDate, locationUuid
     <>
       {currentView === BillingView.Bills ? (
         <>
-          <Table aria-label="sample table" size="lg">
+          <TableToolbar
+            id="facility-bills"
+            search={search}
+            onSearch={setSearch}
+            date={billingDate}
+            onDate={onDateChange}
+            searchPlaceholder="Search patient, status or cash point…"
+          />
+          <Table aria-label="facility bills" size="sm">
             <TableHead>
               <TableRow>
                 <TableHeader>No</TableHeader>
@@ -85,8 +96,17 @@ const FacilityBills: React.FC<facilityBillsProps> = ({ billingDate, locationUuid
               </TableRow>
             </TableHead>
             <TableBody>
-              {facilityBills &&
-                facilityBills.map((fb, index) => {
+              {(facilityBills ?? [])
+                .filter((fb) => {
+                  const term = search.trim().toLowerCase();
+                  return (
+                    !term ||
+                    `${fb.patient_name} ${formatStatusColumn(fb.paid_status)} ${fb.cash_point}`
+                      .toLowerCase()
+                      .includes(term)
+                  );
+                })
+                .map((fb, index) => {
                   return (
                     <>
                       <TableRow key={fb.patient_uuid}>
@@ -100,7 +120,17 @@ const FacilityBills: React.FC<facilityBillsProps> = ({ billingDate, locationUuid
                             {fb.patient_name}
                           </div>
                         </TableCell>
-                        <TableCell>{formatStatusColumn(fb.paid_status)}</TableCell>
+                        <TableCell>
+                          {(() => {
+                            const s = formatStatusColumn(fb.paid_status);
+                            const type = s === 'PAID' ? 'green' : s === 'PENDING' ? 'gray' : 'blue';
+                            return (
+                              <Tag size="sm" type={type}>
+                                {s}
+                              </Tag>
+                            );
+                          })()}
+                        </TableCell>
                         <TableCell>{fb.cash_point}</TableCell>
                       </TableRow>
                     </>

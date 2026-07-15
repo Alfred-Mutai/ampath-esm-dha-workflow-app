@@ -1,0 +1,609 @@
+@use '@carbon/layout';
+@use '@carbon/type';
+@use '@carbon/colors';
+@use '@openmrs/esm-styleguide/src/vars' as *;
+
+.workspace {
+  display: flex;
+  flex-direction: column;
+  min-height: 60vh;
+}
+
+.wsHeader {
+  display: flex;
+  align-items: center;
+  gap: layout.$spacing-05;
+  padding-bottom: layout.$spacing-04;
+  border-bottom: 1px solid $ui-03;
+}
+
+.wsTitle {
+  @include type.type-style('heading-03');
+  color: $ui-05;
+  margin: 0;
+}
+
+.wsBody {
+  display: grid;
+  grid-template-columns: 15rem 1fr;
+  gap: layout.$spacing-07;
+  padding: layout.$spacing-06 0;
+  flex: 1 1 auto;
+}
+
+@media (max-width: 42rem) {
+  .wsBody {
+    grid-template-columns: 1fr;
+    gap: layout.$spacing-05;
+  }
+}
+
+.wsRail {
+  position: sticky;
+  top: layout.$spacing-05;
+  align-self: start;
+}
+
+.wsContent {
+  min-width: 0;
+}
+
+.panel {
+  max-width: 46rem;
+}
+
+.panelTitle {
+  @include type.type-style('heading-compact-02');
+  color: $ui-05;
+  margin: 0 0 layout.$spacing-02;
+}
+
+.panelSub {
+  @include type.type-style('body-01');
+  color: $text-02;
+  margin: 0 0 layout.$spacing-05;
+  max-width: 56ch;
+}
+
+.inlineForm {
+  display: flex;
+  align-items: flex-end;
+  gap: layout.$spacing-04;
+  flex-wrap: wrap;
+  margin-bottom: layout.$spacing-05;
+}
+
+.leftBtn {
+  align-self: flex-start;
+  width: auto;
+  margin-top: layout.$spacing-05;
+}
+
+/* eligibility card */
+.eligCard {
+  border: 1px solid $ui-03;
+  border-radius: 10px;
+  padding: layout.$spacing-05;
+  background-color: $ui-01;
+}
+
+.eligName {
+  @include type.type-style('heading-compact-01');
+  color: $ui-05;
+}
+
+.eligCr {
+  @include type.type-style('label-01');
+  color: $text-02;
+  font-family: 'IBM Plex Mono', monospace;
+  margin-bottom: layout.$spacing-04;
+}
+
+.schemeRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: layout.$spacing-03;
+}
+
+.hintBad {
+  @include type.type-style('label-01');
+  color: colors.$red-60;
+  margin: layout.$spacing-04 0 0;
+}
+
+/* interventions grid */
+.ivGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: layout.$spacing-04;
+}
+
+.ivTile {
+  text-align: left;
+  background-color: $ui-01;
+  border: 1px solid $ui-03;
+  border-radius: 10px;
+  padding: layout.$spacing-04;
+  cursor: pointer;
+  transition: border-color 70ms, background-color 70ms;
+
+  &:hover {
+    border-color: colors.$blue-40;
+  }
+}
+
+.ivTileActive {
+  border-color: colors.$blue-60;
+  background-color: colors.$blue-10;
+  box-shadow: inset 0 0 0 1px colors.$blue-60;
+}
+
+.ivTileAdded {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* selected interventions */
+.selectedList {
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-03;
+  margin-bottom: layout.$spacing-05;
+}
+
+.selectedRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: layout.$spacing-04;
+  padding: layout.$spacing-03 layout.$spacing-04;
+  border: 1px solid $ui-03;
+  border-radius: 8px;
+  background-color: colors.$blue-10;
+}
+
+.selName {
+  @include type.type-style('heading-compact-01');
+  color: $ui-05;
+  margin-left: layout.$spacing-03;
+}
+
+.selMeta {
+  display: flex;
+  align-items: center;
+  gap: layout.$spacing-02;
+  @include type.type-style('label-01');
+  color: $text-02;
+  margin-top: layout.$spacing-02;
+  text-transform: capitalize;
+}
+
+.availLabel {
+  @include type.type-style('label-01');
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: $text-02;
+  margin: layout.$spacing-05 0 layout.$spacing-03;
+}
+
+.addError {
+  display: flex;
+  align-items: center;
+  gap: layout.$spacing-03;
+  padding: layout.$spacing-03 layout.$spacing-04;
+  background-color: colors.$red-10;
+  border-left: 3px solid colors.$red-60;
+  border-radius: 4px;
+  color: $ui-05;
+  @include type.type-style('body-compact-01');
+  margin-bottom: layout.$spacing-04;
+}
+
+.addError svg {
+  color: colors.$red-60;
+  flex: 0 0 auto;
+}
+
+.switchPrompt {
+  display: flex;
+  align-items: flex-start;
+  gap: layout.$spacing-03;
+  padding: layout.$spacing-04 layout.$spacing-05;
+  background-color: colors.$yellow-10;
+  border-left: 3px solid colors.$yellow-30;
+  border-radius: 4px;
+  margin-bottom: layout.$spacing-05;
+}
+
+.switchPrompt svg {
+  color: #b28600;
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.switchBody p {
+  @include type.type-style('body-compact-01');
+  color: $ui-05;
+  margin: 0 0 layout.$spacing-03;
+}
+
+.switchActions {
+  display: flex;
+  gap: layout.$spacing-03;
+}
+
+/* preauth list */
+.preauthList {
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-03;
+}
+
+.preauthRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: layout.$spacing-04;
+  padding: layout.$spacing-04;
+  border: 1px solid $ui-03;
+  border-radius: 8px;
+}
+
+.preauthInfo {
+  display: flex;
+  align-items: center;
+  gap: layout.$spacing-03;
+  flex-wrap: wrap;
+}
+
+.electiveHint {
+  @include type.type-style('label-01');
+  color: $text-02;
+  margin: layout.$spacing-03 0 0;
+  max-width: 56ch;
+}
+
+/* billing list */
+.billList {
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-04;
+}
+
+.billRow {
+  border: 1px solid $ui-03;
+  border-radius: 10px;
+  padding: layout.$spacing-05;
+}
+
+.billHead {
+  display: flex;
+  align-items: center;
+  gap: layout.$spacing-03;
+  margin-bottom: layout.$spacing-04;
+  flex-wrap: wrap;
+}
+
+.billFields {
+  display: flex;
+  gap: layout.$spacing-05;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.billAmount {
+  @include type.type-style('heading-compact-01');
+  color: $ui-05;
+  margin-top: layout.$spacing-04;
+  text-align: right;
+}
+
+.claimTotal {
+  @include type.type-style('heading-compact-02');
+  color: $ui-05;
+  text-align: right;
+  margin-top: layout.$spacing-05;
+  padding-top: layout.$spacing-04;
+  border-top: 1px solid $ui-03;
+}
+
+/* harmonisation split */
+.split {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: layout.$spacing-03;
+  margin-top: layout.$spacing-04;
+  padding-top: layout.$spacing-04;
+  border-top: 1px dashed $ui-03;
+  @include type.type-style('body-compact-01');
+}
+
+.splitSha {
+  font-weight: 600;
+  color: colors.$green-60;
+}
+
+.splitPlus {
+  color: $text-03;
+}
+
+.splitCopay {
+  font-weight: 600;
+  color: colors.$red-60;
+}
+
+.splitFull {
+  color: $text-03;
+}
+
+.copayDropdown {
+  min-width: 12rem;
+}
+
+/* totals card */
+.totalsCard {
+  margin-top: layout.$spacing-05;
+  border: 1px solid $ui-03;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.totalsCard > div {
+  display: flex;
+  justify-content: space-between;
+  gap: layout.$spacing-05;
+  padding: layout.$spacing-04 layout.$spacing-05;
+  border-bottom: 1px solid $ui-03;
+  @include type.type-style('body-compact-01');
+  color: $text-02;
+}
+
+.totalsCard > div strong {
+  color: $ui-05;
+  font-variant-numeric: tabular-nums;
+}
+
+.totalsGrand {
+  border-bottom: none !important;
+  background-color: $ui-01;
+}
+
+.totalsGrand strong {
+  @include type.type-style('heading-compact-01');
+}
+
+.attachList {
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-03;
+  margin-top: layout.$spacing-04;
+}
+
+.attachChip {
+  display: inline-flex;
+  align-items: center;
+  gap: layout.$spacing-03;
+  padding: layout.$spacing-03 layout.$spacing-04;
+  border: 1px solid $ui-03;
+  border-radius: 8px;
+  background-color: $ui-01;
+  @include type.type-style('label-01');
+  color: $ui-05;
+}
+
+.attachMeta {
+  color: $text-02;
+}
+
+.hintMuted {
+  @include type.type-style('label-01');
+  color: $text-03;
+  margin: layout.$spacing-03 0 0;
+}
+
+/* diagnoses */
+.dxBlock {
+  margin-top: layout.$spacing-06;
+  padding-top: layout.$spacing-05;
+  border-top: 1px solid $ui-03;
+}
+
+.dxTitle {
+  @include type.type-style('heading-compact-01');
+  color: $ui-05;
+  margin: 0 0 layout.$spacing-02;
+}
+
+.dxSub {
+  @include type.type-style('label-01');
+  color: $text-02;
+  margin: 0 0 layout.$spacing-04;
+}
+
+.dxList {
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-02;
+}
+
+.dxRow {
+  display: flex;
+  align-items: center;
+  gap: layout.$spacing-04;
+  padding: layout.$spacing-02 layout.$spacing-03;
+  border: 1px solid $ui-03;
+  border-radius: 8px;
+}
+
+.dxCode {
+  @include type.type-style('label-01');
+  font-family: 'IBM Plex Mono', monospace;
+  color: colors.$blue-70;
+  margin-left: auto;
+}
+
+.ivHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: layout.$spacing-03;
+}
+
+.ivCode {
+  @include type.type-style('label-01');
+  font-family: 'IBM Plex Mono', monospace;
+  color: colors.$blue-70;
+}
+
+.ivName {
+  @include type.type-style('heading-compact-01');
+  color: $ui-05;
+  margin: layout.$spacing-02 0 layout.$spacing-02;
+}
+
+.ivFlags {
+  display: flex;
+  gap: layout.$spacing-02;
+  @include type.type-style('label-01');
+  color: $text-02;
+  text-transform: capitalize;
+}
+
+.ivScenario {
+  @include type.type-style('label-01');
+  color: $text-03;
+  margin-top: layout.$spacing-03;
+}
+
+/* consent / preauth notes */
+.consentOk,
+.okNote {
+  display: flex;
+  align-items: center;
+  gap: layout.$spacing-03;
+  padding: layout.$spacing-04 layout.$spacing-05;
+  background-color: colors.$green-10;
+  border-left: 3px solid colors.$green-50;
+  border-radius: 4px;
+  color: $ui-05;
+  @include type.type-style('body-compact-01');
+  margin-top: layout.$spacing-05;
+}
+
+.consentOk svg,
+.okNote svg {
+  color: colors.$green-60;
+  flex: 0 0 auto;
+}
+
+.warnNote {
+  display: flex;
+  align-items: flex-start;
+  gap: layout.$spacing-03;
+  padding: layout.$spacing-04 layout.$spacing-05;
+  background-color: colors.$yellow-10;
+  border-left: 3px solid colors.$yellow-30;
+  border-radius: 4px;
+  color: $ui-05;
+  @include type.type-style('body-compact-01');
+  margin-top: layout.$spacing-04;
+}
+
+.warnNote svg {
+  color: #b28600;
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+/* billing line editor */
+.lineEditor {
+  border: 1px solid $ui-03;
+  border-radius: 10px;
+  padding: layout.$spacing-05;
+}
+
+.lineRowTop {
+  display: flex;
+  align-items: baseline;
+  gap: layout.$spacing-04;
+  margin-bottom: layout.$spacing-04;
+}
+
+.lineCode {
+  @include type.type-style('label-01');
+  font-family: 'IBM Plex Mono', monospace;
+  color: colors.$blue-70;
+}
+
+.lineDesc {
+  @include type.type-style('heading-compact-01');
+  color: $ui-05;
+}
+
+.lineFields {
+  display: flex;
+  gap: layout.$spacing-05;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.tariffChip {
+  align-self: center;
+  @include type.type-style('label-01');
+  color: $text-02;
+  background-color: $ui-01;
+  border: 1px solid $ui-03;
+  border-radius: 999px;
+  padding: layout.$spacing-02 layout.$spacing-04;
+  margin-top: layout.$spacing-05;
+}
+
+.lineTotal {
+  @include type.type-style('heading-compact-01');
+  color: $ui-05;
+  margin-top: layout.$spacing-05;
+}
+
+/* summary */
+.summary {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+  border: 1px solid $ui-03;
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 0;
+}
+
+.summary > div {
+  display: flex;
+  justify-content: space-between;
+  gap: layout.$spacing-05;
+  padding: layout.$spacing-04 layout.$spacing-05;
+  border-bottom: 1px solid $ui-03;
+}
+
+.summary > div:last-child {
+  border-bottom: none;
+}
+
+.summary dt {
+  @include type.type-style('label-01');
+  color: $text-02;
+}
+
+.summary dd {
+  @include type.type-style('body-compact-01');
+  color: $ui-05;
+  margin: 0;
+  text-align: right;
+}
+
+.wsFooter {
+  display: flex;
+  justify-content: space-between;
+  gap: layout.$spacing-04;
+  padding-top: layout.$spacing-05;
+  border-top: 1px solid $ui-03;
+}
