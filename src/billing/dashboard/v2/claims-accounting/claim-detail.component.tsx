@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Button, InlineLoading, Tag, TextArea } from '@carbon/react';
-import { ArrowLeft, Receipt, Renew, WarningAltFilled } from '@carbon/react/icons';
+import { Breadcrumb, BreadcrumbItem, Button, InlineLoading, Tag, TextArea } from '@carbon/react';
+import { Receipt, Renew, WarningAltFilled } from '@carbon/react/icons';
 import { showSnackbar } from '@openmrs/esm-framework';
 import styles from './claims-accounting.component.scss';
 import { recallClaim, resubmitClaim, type ShaClaim } from './claims-accounting.resource';
@@ -16,6 +16,7 @@ const money = (n: number) => `KES ${n.toLocaleString('en-KE')}`;
 
 const ClaimDetail: React.FC<ClaimDetailProps> = ({ claim, onBack, onChanged }) => {
   const [note, setNote] = useState('');
+  const [noteError, setNoteError] = useState('');
   const [busy, setBusy] = useState(false);
   const meta = statusMeta(claim.status);
 
@@ -33,6 +34,10 @@ const ClaimDetail: React.FC<ClaimDetailProps> = ({ claim, onBack, onChanged }) =
   };
 
   const handleRecall = async () => {
+    if (!note.trim()) {
+      setNoteError('Give a reason for the recall.');
+      return;
+    }
     setBusy(true);
     try {
       await recallClaim(claim.id, note.trim());
@@ -45,6 +50,10 @@ const ClaimDetail: React.FC<ClaimDetailProps> = ({ claim, onBack, onChanged }) =
   };
 
   const handleResubmit = async () => {
+    if (!note.trim()) {
+      setNoteError('Describe what changed before resubmitting.');
+      return;
+    }
     setBusy(true);
     try {
       await resubmitClaim(claim.id, note.trim());
@@ -58,22 +67,44 @@ const ClaimDetail: React.FC<ClaimDetailProps> = ({ claim, onBack, onChanged }) =
 
   const lineTotal = claim.lines.reduce((sum, l) => sum + l.unitPrice * l.quantity, 0);
 
+  const initials = claim.patientName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join('')
+    .toUpperCase();
+
   return (
     <div className={styles.detail}>
-      <Button kind="ghost" size="sm" renderIcon={ArrowLeft} onClick={onBack} className={styles.backBtn}>
-        Back to claims
-      </Button>
+      <Breadcrumb noTrailingSlash className={styles.breadcrumb}>
+        <BreadcrumbItem
+          href="#"
+          onClick={(e) => {
+            e.preventDefault();
+            onBack();
+          }}
+        >
+          Claims
+        </BreadcrumbItem>
+        <BreadcrumbItem isCurrentPage>{claim.claimCode}</BreadcrumbItem>
+      </Breadcrumb>
 
+      <div className={styles.topCard}>
       <div className={styles.detailHead}>
-        <div>
-          <div className={styles.detailCode}>{claim.claimCode}</div>
-          <h4 className={styles.detailName}>{claim.patientName}</h4>
-          <div className={styles.detailMeta}>
-            <span>{claim.crNumber}</span>
-            <span className={styles.dot} />
-            <span>{claim.fund}</span>
-            <span className={styles.dot} />
-            <span>{claim.serviceType === 'INPATIENT' ? 'Inpatient' : 'Outpatient'}</span>
+        <div className={styles.detailIdentity}>
+          <span className={styles.detailAvatar}>{initials}</span>
+          <div>
+            <h4 className={styles.detailName}>{claim.patientName}</h4>
+            <div className={styles.detailMeta}>
+              <span className={styles.mono}>{claim.crNumber}</span>
+              <Tag type="blue" size="sm">
+                {claim.fund}
+              </Tag>
+              <Tag type="cool-gray" size="sm">
+                {claim.serviceType === 'INPATIENT' ? 'Inpatient' : 'Outpatient'}
+              </Tag>
+            </div>
           </div>
         </div>
         <Tag type={meta.tag} size="md">
@@ -91,82 +122,6 @@ const ClaimDetail: React.FC<ClaimDetailProps> = ({ claim, onBack, onChanged }) =
         </div>
       ) : null}
 
-      <section className={styles.detailSection}>
-        <h5 className={styles.detailSectionTitle}>Interventions</h5>
-        <ul className={styles.interventionList}>
-          {claim.interventions.map((i) => (
-            <li key={i}>{i}</li>
-          ))}
-        </ul>
-      </section>
-
-      {claim.diagnoses && claim.diagnoses.length > 0 ? (
-        <section className={styles.detailSection}>
-          <h5 className={styles.detailSectionTitle}>Diagnoses (ICD-11)</h5>
-          <ul className={styles.diagnosisList}>
-            {claim.diagnoses.map((d) => (
-              <li key={d.icd11Code}>
-                <span className={styles.mono}>{d.icd11Code}</span> · {d.display}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      <section className={styles.detailSection}>
-        <h5 className={styles.detailSectionTitle}>Claim lines</h5>
-        <div className={styles.tableWrap}>
-          <table className={styles.lineTable}>
-            <thead>
-              <tr>
-                <th>Code</th>
-                <th>Description</th>
-                <th className={styles.num}>Qty</th>
-                <th className={styles.num}>Unit price</th>
-                <th className={styles.num}>Tariff</th>
-                <th className={styles.num}>Line total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {claim.lines.map((l) => {
-                const overTariff = l.unitPrice > l.tariff;
-                return (
-                  <tr key={l.code}>
-                    <td className={styles.mono}>{l.code}</td>
-                    <td>{l.description}</td>
-                    <td className={styles.num}>{l.quantity}</td>
-                    <td className={`${styles.num} ${overTariff ? styles.over : ''}`}>{money(l.unitPrice)}</td>
-                    <td className={styles.num}>{money(l.tariff)}</td>
-                    <td className={styles.num}>{money(l.unitPrice * l.quantity)}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-            <tfoot>
-              <tr>
-                <td colSpan={5} className={styles.num}>
-                  Claim total
-                </td>
-                <td className={styles.num}>{money(lineTotal)}</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      </section>
-
-      {claim.attachments && claim.attachments.length > 0 ? (
-        <section className={styles.detailSection}>
-          <h5 className={styles.detailSectionTitle}>Attachments</h5>
-          <ul className={styles.attachmentList}>
-            {claim.attachments.map((a) => (
-              <li key={a}>
-                <Receipt size={16} /> {a}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
       {claim.status === 'PAID' ? (
         <div className={styles.paidBanner}>
           <Receipt size={20} />
@@ -176,82 +131,179 @@ const ClaimDetail: React.FC<ClaimDetailProps> = ({ claim, onBack, onChanged }) =
         </div>
       ) : null}
 
-      <section className={styles.detailSection}>
-        <h5 className={styles.detailSectionTitle}>
-          Companion bill{bill.copay > 0 ? ' · copay' : ''}
-        </h5>
-        <div className={styles.billPanel}>
-          <div className={styles.billLine}>
-            <span>Bill no.</span>
-            <span className={styles.mono}>{bill.billNo}</span>
-          </div>
-          <div className={styles.billLine}>
-            <span>Total charge</span>
-            <strong>{money(bill.totalCharge)}</strong>
-          </div>
-          <div className={styles.billLine}>
-            <span>SHA covered</span>
-            <span className={styles.shaAmt}>{money(bill.shaCovered)}</span>
-          </div>
-          <div className={styles.billLine}>
-            <span>Copay{bill.copayPayer ? ` · ${bill.copayPayer}` : ''}</span>
-            {bill.copay > 0 ? (
-              <span className={styles.copayAmt}>{money(bill.copay)}</span>
-            ) : (
-              <span className={styles.fullyCovered}>None · fully covered by SHA</span>
-            )}
-          </div>
-          <div className={styles.billDoc}>
-            <Receipt size={16} />
-            <span>{bill.document}</span>
-            <Tag size="sm" type="green">
-              attached
-            </Tag>
-          </div>
+      {/* At-a-glance money split: total → SHA slice + copay slice. */}
+      <div className={styles.summaryRow}>
+        <div className={styles.summaryTile}>
+          <span className={styles.summaryLabel}>Total charge</span>
+          <span className={styles.summaryValue}>{money(bill.totalCharge)}</span>
         </div>
-      </section>
+        <div className={`${styles.summaryTile} ${styles.tileSha}`}>
+          <span className={styles.summaryLabel}>SHA covered</span>
+          <span className={`${styles.summaryValue} ${styles.shaAmt}`}>{money(bill.shaCovered)}</span>
+        </div>
+        <div className={`${styles.summaryTile} ${bill.copay > 0 ? styles.tileCopay : ''}`}>
+          <span className={styles.summaryLabel}>Copay{bill.copayPayer ? ` · ${bill.copayPayer}` : ''}</span>
+          <span className={`${styles.summaryValue} ${bill.copay > 0 ? styles.copayAmt : styles.fullyCovered}`}>
+            {bill.copay > 0 ? money(bill.copay) : 'None'}
+          </span>
+        </div>
+      </div>
+      </div>
 
-      <section className={styles.detailSection}>
-        <h5 className={styles.detailSectionTitle}>Timeline</h5>
-        <ol className={styles.timeline}>
-          {claim.timeline.map((e, idx) => (
-            <li key={idx}>
-              <span className={styles.timelineLabel}>{e.label}</span>
-              <span className={styles.timelineMeta}>
-                {new Date(e.at).toLocaleString('en-KE')}
-                {e.by ? ` · ${e.by}` : ''}
-              </span>
-            </li>
-          ))}
-        </ol>
-      </section>
+      <div className={styles.detailBody}>
+        <div className={styles.detailMain}>
+          <section className={styles.detailSection}>
+            <h5 className={styles.detailSectionTitle}>Interventions</h5>
+            <ul className={styles.interventionList}>
+              {claim.interventions.map((i) => (
+                <li key={i}>{i}</li>
+              ))}
+            </ul>
+          </section>
 
-      {canRecall || canResubmit ? (
-        <section className={styles.actionPanel}>
-          <TextArea
-            id="claim-note"
-            labelText={canResubmit ? 'Correction note (what changed)' : 'Reason for recall'}
-            placeholder={
-              canResubmit ? 'e.g. Corrected unit price to within tariff; attached diagnosis.' : 'e.g. Wrong tariff used.'
-            }
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            rows={2}
-          />
-          <div className={styles.actionRow}>
-            {canRecall ? (
-              <Button kind="danger--tertiary" size="sm" renderIcon={Renew} disabled={busy} onClick={handleRecall}>
-                {busy ? <InlineLoading description="Recalling…" /> : 'Recall for correction'}
-              </Button>
-            ) : null}
-            {canResubmit ? (
-              <Button kind="primary" size="sm" renderIcon={Renew} disabled={busy} onClick={handleResubmit}>
-                {busy ? <InlineLoading description="Resubmitting…" /> : 'Resubmit to SHA'}
-              </Button>
-            ) : null}
-          </div>
-        </section>
-      ) : null}
+          {claim.diagnoses && claim.diagnoses.length > 0 ? (
+            <section className={styles.detailSection}>
+              <h5 className={styles.detailSectionTitle}>Diagnoses (ICD-11)</h5>
+              <ul className={styles.diagnosisList}>
+                {claim.diagnoses.map((d) => (
+                  <li key={d.icd11Code}>
+                    <span className={styles.mono}>{d.icd11Code}</span> · {d.display}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
+          <section className={styles.detailSection}>
+            <h5 className={styles.detailSectionTitle}>Claim lines</h5>
+            <div className={styles.tableWrap}>
+              <table className={styles.lineTable}>
+                <thead>
+                  <tr>
+                    <th>Code</th>
+                    <th>Description</th>
+                    <th className={styles.num}>Qty</th>
+                    <th className={styles.num}>Unit price</th>
+                    <th className={styles.num}>Tariff</th>
+                    <th className={styles.num}>Line total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {claim.lines.map((l) => {
+                    const overTariff = l.unitPrice > l.tariff;
+                    return (
+                      <tr key={l.code}>
+                        <td className={styles.mono}>{l.code}</td>
+                        <td>{l.description}</td>
+                        <td className={styles.num}>{l.quantity}</td>
+                        <td className={`${styles.num} ${overTariff ? styles.over : ''}`}>{money(l.unitPrice)}</td>
+                        <td className={styles.num}>{money(l.tariff)}</td>
+                        <td className={styles.num}>{money(l.unitPrice * l.quantity)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <td colSpan={5} className={styles.num}>
+                      Claim total
+                    </td>
+                    <td className={styles.num}>{money(lineTotal)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </section>
+
+          {claim.attachments && claim.attachments.length > 0 ? (
+            <section className={styles.detailSection}>
+              <h5 className={styles.detailSectionTitle}>Attachments</h5>
+              <ul className={styles.attachmentList}>
+                {claim.attachments.map((a) => (
+                  <li key={a}>
+                    <Receipt size={16} /> {a}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
+          {canRecall || canResubmit ? (
+            <section className={styles.detailSection}>
+              <h5 className={styles.detailSectionTitle}>{canResubmit ? 'Resubmit to SHA' : 'Recall claim'}</h5>
+              <TextArea
+                id="claim-note"
+                labelText={canResubmit ? 'What changed' : 'Reason for recall'}
+                placeholder={
+                  canResubmit
+                    ? 'e.g. Corrected unit price to within tariff; attached diagnosis.'
+                    : 'e.g. Wrong tariff used.'
+                }
+                value={note}
+                onChange={(e) => {
+                  setNote(e.target.value);
+                  if (noteError) {
+                    setNoteError('');
+                  }
+                }}
+                invalid={!!noteError}
+                invalidText={noteError}
+                rows={2}
+              />
+              <div className={styles.actionRow}>
+                {canRecall ? (
+                  <Button kind="danger--tertiary" size="sm" renderIcon={Renew} disabled={busy} onClick={handleRecall}>
+                    {busy ? <InlineLoading description="Recalling…" /> : 'Recall for correction'}
+                  </Button>
+                ) : null}
+                {canResubmit ? (
+                  <Button kind="primary" size="sm" renderIcon={Renew} disabled={busy} onClick={handleResubmit}>
+                    {busy ? <InlineLoading description="Resubmitting…" /> : 'Resubmit to SHA'}
+                  </Button>
+                ) : null}
+              </div>
+            </section>
+          ) : null}
+        </div>
+
+        <aside className={styles.detailAside}>
+          <section className={styles.detailSection}>
+            <h5 className={styles.detailSectionTitle}>Companion bill{bill.copay > 0 ? ' · copay' : ''}</h5>
+            <div className={styles.billPanel}>
+              <div className={styles.billLine}>
+                <span>Bill no.</span>
+                <span className={styles.mono}>{bill.billNo}</span>
+              </div>
+              <div className={styles.billLine}>
+                <span>{bill.copay > 0 ? `Copay · ${bill.copayPayer ?? 'Cash'}` : 'Payer'}</span>
+                <span>{bill.copay > 0 ? money(bill.copay) : 'SHA — fully covered'}</span>
+              </div>
+              <div className={styles.billDoc}>
+                <Receipt size={16} />
+                <span>{bill.document}</span>
+                <Tag size="sm" type="green">
+                  attached
+                </Tag>
+              </div>
+            </div>
+          </section>
+
+          <section className={styles.detailSection}>
+            <h5 className={styles.detailSectionTitle}>Timeline</h5>
+            <ol className={styles.timeline}>
+              {claim.timeline.map((e, idx) => (
+                <li key={idx}>
+                  <span className={styles.timelineLabel}>{e.label}</span>
+                  <span className={styles.timelineMeta}>
+                    {new Date(e.at).toLocaleString('en-KE')}
+                    {e.by ? ` · ${e.by}` : ''}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </section>
+        </aside>
+      </div>
     </div>
   );
 };

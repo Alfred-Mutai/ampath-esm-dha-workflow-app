@@ -27,10 +27,13 @@ import {
   type HieClient,
   IDENTIFIER_TYPES,
   type IdentifierType,
+  type QueueEntryDto,
   type RequestCustomOtpDto,
   type VisitAttribute,
 } from './types';
 import { createVisit } from '../resources/visit.resource';
+import { createQueueEntry } from '../resources/queue.resource';
+import { QUEUE_PRIORITIES_UUIDS, QUEUE_STATUS_UUIDS } from '../shared/constants/concepts';
 import { VisitTypeUuids } from '../shared/constants/visit-types';
 import {
   createConsultationClearance,
@@ -39,9 +42,7 @@ import {
 } from '../shared/services/consultation-clearance.resource';
 import { fetchClientRegistryData } from './registry.resource';
 import { type Patient, showSnackbar, useSession } from '@openmrs/esm-framework';
-import OtpVerificationModal from './modal/otp-verification-modal/otp-verification-modal';
 import { maskCrNumber, maskExceptFirstAndLast } from './utils/mask-data';
-import ClientDetailsModal from './modal/client-details-modal/client-details-modal';
 import { searchPatientByCrNumber } from '../resources/patient-search.resource';
 import SendToTriageModal from './modal/send-to-triage/send-to-triage.modal';
 import WorkflowDrawer from './drawer/workflow-drawer.component';
@@ -50,7 +51,6 @@ import { getErrorMessages, getReadableErrorMessage } from './utils/error-handler
 import { IdentifierTypesUuids } from '../resources/identifier-types';
 import { formatPhoneNumberForOTP } from './utils/phone-number-formatter';
 import { usePatient } from '../context/patient-context';
-import StartPatientVisitModal from './modal/start-patient-visit/start-patient-visit.modal';
 
 interface RegistryComponentProps {}
 const RegistryComponent: React.FC<RegistryComponentProps> = () => {
@@ -62,10 +62,13 @@ const RegistryComponent: React.FC<RegistryComponentProps> = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [principal, setPrincipal] = useState<HieClient>();
   const [amrsPatients, setAmrsPatients] = useState<Patient[]>([]);
+  const [amrsChecked, setAmrsChecked] = useState<boolean>(false);
+  const [syncingAmrs, setSyncingAmrs] = useState<boolean>(false);
   const [selectedPatient, setSelectedPatient] = useState<string>('principal');
   const [displayOtpModal, setDisplayOtpModal] = useState<boolean>(false);
   const [displayClientDetailsModal, setDisplayClientDetailsModal] = useState<boolean>(false);
   const [displaytStartVisitModal, setdisplaytStartVisitModal] = useState<boolean>(false);
+  const [displayDrawer, setDisplayDrawer] = useState<boolean>(false);
   const [requestCustomOtpDto, setRequestCustomOtpDto] = useState<RequestCustomOtpDto>();
   const session = useSession();
   const locationUuid = session?.sessionLocation?.uuid;
@@ -187,12 +190,19 @@ const RegistryComponent: React.FC<RegistryComponentProps> = () => {
   const handleSelectedPatient = (sp: string) => {
     setSelectedPatient(sp);
   };
-  const handleOtpVerification = () => {
+  // Open the registration workflow drawer, which handles biometric + OTP verification,
+  // consent and starting the visit inline (replacing the old OTP/client-details modals).
+  const handleOtpVerification = async () => {
     const smsPayload = generateCustomSmsPayload();
-    if (isValidCustomSmsPayload(smsPayload)) {
-      setRequestCustomOtpDto(smsPayload);
-      setDisplayOtpModal(true);
+    if (!isValidCustomSmsPayload(smsPayload)) {
+      return;
     }
+    setRequestCustomOtpDto(smsPayload);
+    const client = getPatient();
+    if (client?.id) {
+      await searchAmrsPatient(client.id);
+    }
+    setDisplayDrawer(true);
   };
   const handleClearIdentifier = () => {
     setIdentifierValue('');
@@ -209,7 +219,7 @@ const RegistryComponent: React.FC<RegistryComponentProps> = () => {
   const handleClientDetailsSubmit = async (crId: string) => {
     setDisplayClientDetailsModal(false);
     await searchAmrsPatient(crId);
-    setdisplaytStartVisitModal(true);
+    setDisplayDrawer(true);
   };
   const handleEmergencyRegistration = () => {
     window.location.href = `${window.spaBase}/patient-registration`;
@@ -218,19 +228,34 @@ const RegistryComponent: React.FC<RegistryComponentProps> = () => {
     setdisplaytStartVisitModal(false);
     handleEmergencyRegistration();
   };
+  // Look the client up in the EMR. The found / not-found result is surfaced in the
+  // workflow drawer (see amrsPatients / amrsChecked) so the user can decide whether to
+  // create the patient in the EMR or sync an existing record.
   const searchAmrsPatient = async (crId: string) => {
+    setAmrsChecked(false);
     const resp = await searchPatientByCrNumber(crId);
     if (resp.totalCount > 0) {
-      showAlert(
-        'success',
-        `Patient with ${crId} found`,
-        '',
-      );
       const validPatients = validateAmrsPatient(crId, resp.results ?? []);
       setAmrsPatients(validPatients);
     } else {
-      showAlert('error', 'Patient not found in the system', '');
       setAmrsPatients([]);
+    }
+    setAmrsChecked(true);
+  };
+  // Refresh the matched EMR record so the latest state is used for the visit.
+  const syncAmrsPatient = async () => {
+    const client = getPatient();
+    if (!client?.id) {
+      return;
+    }
+    setSyncingAmrs(true);
+    try {
+      await searchAmrsPatient(client.id);
+      showAlert('success', 'EMR record refreshed', '');
+    } catch (e) {
+      showAlert('error', 'Could not sync the EMR record', '');
+    } finally {
+      setSyncingAmrs(false);
     }
   };
   const validateAmrsPatient = (crNo: string, patients: Patient[]) => {
@@ -254,7 +279,7 @@ const RegistryComponent: React.FC<RegistryComponentProps> = () => {
     const match = principal.dependants?.find((d) => d.result[0].id === selectedPatient);
     return match ? (match.result[0] as unknown as HieClient) : principal;
   };
-  const createAmrsPatient = async () => {
+  const createAmrsPatient = async (): Promise<Patient | undefined> => {
     const patient = getPatient();
     if (!patient) {
       showAlert('error', 'Principal or dependant not selected', '');
@@ -265,10 +290,108 @@ const RegistryComponent: React.FC<RegistryComponentProps> = () => {
       if (resp) {
         showAlert('success', 'Patient created succesfully', '');
         setAmrsPatients([resp]);
+        return resp;
       }
     } catch (e) {
       const errorResp = e['responseBody'] ?? e.message;
       showAlert('error', 'Error Creating Patient', '');
+      const errors = getErrorMessages(errorResp);
+      if (errors && errors.length > 0) {
+        for (let error of errors) {
+          showAlert('error', error, '');
+        }
+      }
+    }
+  };
+  // Create the AMRS visit for the verified client once the workflow drawer is submitted,
+  // add them to the selected triage queue, and raise the consultation clearance so they
+  // wait "Awaiting clearance" until Accounting settles the fee (exempt patients auto-clear).
+  const startVisitForClient = async (details: {
+    patientCategory: string;
+    room: string;
+    roomUuid: string;
+    visitType: string;
+    exempted: boolean;
+    method?: 'cash' | 'insurance';
+    exemptionCategory?: string;
+    insurance?: string;
+  }) => {
+    // Ensure the client exists in AMRS before starting a visit.
+    let amrsPatient = amrsPatients[0];
+    if (!amrsPatient) {
+      amrsPatient = await createAmrsPatient();
+    }
+    if (!amrsPatient?.uuid) {
+      showAlert('error', 'No patient available to start a visit for', '');
+      return;
+    }
+    if (!details.roomUuid) {
+      showAlert('error', 'Selected triage room could not be resolved to a queue', '');
+      return;
+    }
+    const visitType =
+      details.visitType === 'Inpatient'
+        ? VisitTypeUuids.INPATIENT_VISIT_TYPE_UUID
+        : VisitTypeUuids.OPD_VISIT_TYPE_UUID;
+    const visitDto: CreateVisitDto = {
+      visitType,
+      location: locationUuid ?? '',
+      startDatetime: null,
+      stopDatetime: null,
+      patient: amrsPatient.uuid,
+    };
+    try {
+      const visit = await createVisit(visitDto);
+      if (!visit?.uuid) {
+        showAlert('error', 'Error creating visit', '');
+        return;
+      }
+
+      // Place the patient in the selected triage queue (Waiting / Normal priority).
+      const queueEntryDto: QueueEntryDto = {
+        visit: { uuid: visit.uuid },
+        queueEntry: {
+          status: { uuid: QUEUE_STATUS_UUIDS.WAITING_UUID },
+          priority: { uuid: QUEUE_PRIORITIES_UUIDS.NORMAL_PRIORITY_UUID },
+          queue: { uuid: details.roomUuid },
+          patient: { uuid: amrsPatient.uuid },
+          startedAt: visit.startDatetime ?? new Date().toISOString(),
+          sortWeight: 0,
+        },
+      };
+      await createQueueEntry(queueEntryDto);
+
+      // Raise the consultation clearance. Cash patients sit "Awaiting clearance" in the
+      // Accounting dashboard until settled; exempt patients are cleared immediately.
+      const client = getPatient();
+      const payer = details.exempted
+        ? details.exemptionCategory || 'Exempt'
+        : details.method === 'insurance'
+          ? details.insurance || 'Insurance'
+          : 'Cash';
+      // A patient who prepaid on an earlier visit clears without a new fee.
+      const prepaid = client?.id ? findOpenPrepaidService(client.id) : undefined;
+      createConsultationClearance({
+        patientName: [client?.first_name, client?.middle_name, client?.last_name].filter(Boolean).join(' '),
+        crNumber: client?.id ?? '',
+        locationUuid: locationUuid ?? '',
+        queue: details.room,
+        visitType: details.visitType,
+        payer,
+        exempt: details.exempted,
+        preCleared: !!prepaid,
+        amountOverride: prepaid?.amount,
+      });
+      if (prepaid) {
+        fulfillPrepaidService(prepaid.id);
+      }
+
+      showAlert('success', 'Patient sent to the triage queue, awaiting clearance', '');
+      // Land on the accounting Pending clearance section so the new patient can be cleared.
+      window.location.href = `${window.spaBase}/home/billing`;
+    } catch (e) {
+      const errorResp = e['responseBody'] ?? e.message;
+      showAlert('error', 'Error creating visit', '');
       const errors = getErrorMessages(errorResp);
       if (errors && errors.length > 0) {
         for (let error of errors) {
@@ -520,13 +643,13 @@ const RegistryComponent: React.FC<RegistryComponentProps> = () => {
                     </div>
                     <div className={styles.patientConfirmSelection}>
                       <div className={styles.btnContainer}>
-                        <Button kind="primary" onClick={handleOtpVerification}>
+                        <Button kind="primary" size="sm" onClick={handleOtpVerification}>
                           {' '}
                           Confirm
                         </Button>
                       </div>
                       <div className={styles.btnContainer}>
-                        <Button kind="secondary" onClick={handleCancel}>
+                        <Button kind="secondary" size="sm" onClick={handleCancel}>
                           Cancel
                         </Button>
                       </div>
@@ -544,53 +667,20 @@ const RegistryComponent: React.FC<RegistryComponentProps> = () => {
                       locationUuid={locationUuid}
                       requestCustomOtpDto={generateCustomSmsPayload()}
                       phoneNumber={principal.phone ? formatPhoneNumberForOTP(principal.phone) : ''}
-                      onClose={() => setDisplayDrawer(false)}
+                      amrsPatient={amrsPatients[0] ?? null}
+                      amrsChecked={amrsChecked}
+                      syncingAmrs={syncingAmrs}
+                      onCreatePatient={createAmrsPatient}
+                      onSyncPatient={syncAmrsPatient}
+                      onClose={() => {
+                        setDisplayDrawer(false);
+                        setAmrsChecked(false);
+                      }}
                       onStartVisit={(details) => {
                         setDisplayDrawer(false);
                         startVisitForClient(details);
                       }}
                     />
-
-                    {displayOtpModal && requestCustomOtpDto ? (
-                      <OtpVerificationModal
-                        requestCustomOtpDto={requestCustomOtpDto}
-                        phoneNumber={formatPhoneNumberForOTP(principal.phone)}
-                        open={displayOtpModal}
-                        onModalClose={handleModelClose}
-                        onOtpSuccessfullVerification={handleOtpSuccessfullVerification}
-                      />
-                    ) : (
-                      <></>
-                    )}
-
-                    {principal && displayClientDetailsModal ? (
-                      <>
-                        <ClientDetailsModal
-                          client={getPatient()}
-                          open={displayClientDetailsModal}
-                          onModalClose={onClientDetailsModalClose}
-                          onSubmit={handleClientDetailsSubmit}
-                        />{' '}
-                      </>
-                    ) : (
-                      <></>
-                    )}
-
-                    {principal && displaytStartVisitModal ? (
-                      <>
-                        <StartPatientVisitModal
-                          client={getPatient()}
-                          amrsPatient={amrsPatients[0]}
-                          open={displaytStartVisitModal}
-                          onModalClose={onSendToTriageModalClose}
-                          onSubmit={handleSendToTriageModalSubmit}
-                          onCreateAmrsPatient={createAmrsPatient}
-                          onManualRegistration={handleManualRegistration}
-                        />
-                      </>
-                    ) : (
-                      <></>
-                    )}
                   </div>
                 </div>
               </Layer>

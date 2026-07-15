@@ -5,6 +5,7 @@ import {
   FileUploaderItem,
   FormLabel,
   InlineLoading,
+  Modal,
   ProgressIndicator,
   ProgressStep,
   RadioButton,
@@ -24,7 +25,7 @@ import {
   ScanDisabled,
   WarningAltFilled,
 } from '@carbon/react/icons';
-import { showSnackbar } from '@openmrs/esm-framework';
+import { type Patient, showSnackbar } from '@openmrs/esm-framework';
 import styles from './workflow-drawer.component.scss';
 import { type HieClient, type RequestCustomOtpDto, type Scheme } from '../types';
 import { getClientEligibityStatus } from '../../shared/services/eligibility.resource';
@@ -115,10 +116,17 @@ interface WorkflowDrawerProps {
   locationUuid?: string;
   requestCustomOtpDto?: RequestCustomOtpDto;
   phoneNumber?: string;
+  // EMR lookup result for the client, so the user can create or sync the record.
+  amrsPatient?: Patient | null;
+  amrsChecked?: boolean;
+  syncingAmrs?: boolean;
+  onCreatePatient?: () => void;
+  onSyncPatient?: () => void;
   onClose: () => void;
   onStartVisit: (details: {
     patientCategory: string;
     room: string;
+    roomUuid: string;
     visitType: string;
     exempted: boolean;
     method?: Method;
@@ -134,10 +142,16 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
   locationUuid,
   requestCustomOtpDto,
   phoneNumber,
+  amrsPatient,
+  amrsChecked,
+  syncingAmrs,
+  onCreatePatient,
+  onSyncPatient,
   onClose,
   onStartVisit,
 }) => {
   const [phase, setPhase] = useState<Phase>('biometric');
+  const [pendingEmrAction, setPendingEmrAction] = useState<'create' | 'sync' | null>(null);
   const [isOtpWhitelisted, setIsOtpWhitelisted] = useState(false);
   const [consent, setConsent] = useState(false);
   const [launchingBiometric, setLaunchingBiometric] = useState(false);
@@ -160,6 +174,8 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
   const [insurance, setInsurance] = useState<string>('');
   const [visitType, setVisitType] = useState<string>('');
   const [triageRooms, setTriageRooms] = useState<string[]>([]);
+  // Maps each triage room label to its service-queue uuid, needed to enqueue the patient.
+  const [triageQueueByRoom, setTriageQueueByRoom] = useState<Record<string, string>>({});
   const [loadingRooms, setLoadingRooms] = useState(false);
   const [insuranceSchemes, setInsuranceSchemes] = useState<string[]>([]);
   const [loadingSchemes, setLoadingSchemes] = useState(false);
@@ -176,6 +192,7 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
   useEffect(() => {
     if (open) {
       setPhase(isBiometricConfigured() ? 'biometric' : 'biometric-not-setup');
+      setPendingEmrAction(null);
       setIsOtpWhitelisted(false);
       setConsent(false);
       setLaunchingBiometric(false);
@@ -198,6 +215,7 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
       setInsuranceError('');
       setVisitTypeError('');
       setTriageRooms([]);
+      setTriageQueueByRoom({});
       setInsuranceSchemes([]);
       setHasCashPoint(null);
       setHasCashMode(null);
@@ -255,13 +273,21 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
         if (!active) {
           return;
         }
-        const rooms = (resp?.results ?? [])
+        const triageQueues = (resp?.results ?? [])
           // Strictly this location — never queues from sibling/child locations.
           .filter((q) => q.location?.uuid === locationUuid)
           .filter((q) => /triage/i.test(q.name ?? q.display ?? ''))
-          .map((q) => decodeHtmlEntities(q.display || q.name))
-          .filter(Boolean);
-        setTriageRooms(Array.from(new Set(rooms)));
+          .map((q) => ({ label: decodeHtmlEntities(q.display || q.name), uuid: q.uuid }))
+          .filter((q) => q.label && q.uuid);
+        const byRoom: Record<string, string> = {};
+        for (const q of triageQueues) {
+          // First queue wins for a given label (deduped below for the dropdown).
+          if (!byRoom[q.label]) {
+            byRoom[q.label] = q.uuid;
+          }
+        }
+        setTriageQueueByRoom(byRoom);
+        setTriageRooms(Array.from(new Set(triageQueues.map((q) => q.label))));
       })
       .catch((err) => {
         if (active) {
@@ -402,6 +428,87 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
     </div>
   );
 
+  // The single action button on the EMR status card. Clicking it opens a focused
+  // confirmation dialog (emrConfirmModal) rather than expanding the card inline.
+  const emrActionArea = (kind: 'create' | 'sync') => {
+    const handler = kind === 'create' ? onCreatePatient : onSyncPatient;
+    if (!handler) {
+      return null;
+    }
+    return kind === 'create' ? (
+      <Button kind="primary" size="sm" onClick={() => setPendingEmrAction('create')}>
+        Create in EMR
+      </Button>
+    ) : (
+      <Button kind="tertiary" size="sm" renderIcon={Renew} disabled={syncingAmrs} onClick={() => setPendingEmrAction('sync')}>
+        {syncingAmrs ? 'Syncing…' : 'Sync'}
+      </Button>
+    );
+  };
+
+  // Focused confirmation dialog for the create / sync EMR actions.
+  const emrConfirmModal = (
+    <Modal
+      open={pendingEmrAction !== null}
+      size="sm"
+      modalHeading={pendingEmrAction === 'create' ? 'Create patient in the EMR?' : 'Sync EMR record?'}
+      primaryButtonText={pendingEmrAction === 'create' ? 'Yes, create' : 'Yes, sync'}
+      secondaryButtonText="Cancel"
+      primaryButtonDisabled={syncingAmrs}
+      onRequestClose={() => setPendingEmrAction(null)}
+      onSecondarySubmit={() => setPendingEmrAction(null)}
+      onRequestSubmit={() => {
+        const action = pendingEmrAction;
+        setPendingEmrAction(null);
+        if (action === 'create') {
+          onCreatePatient?.();
+        } else if (action === 'sync') {
+          onSyncPatient?.();
+        }
+      }}
+    >
+      <p className={styles.emrConfirmText}>
+        {pendingEmrAction === 'create'
+          ? `This patient does not yet exist in our records. A new EMR record will be created for CR ${maskCrNumber(
+              client.id,
+            )} so they can be registered and attended to.`
+          : `This patient already exists in our records. Their EMR record for CR ${maskCrNumber(
+              client.id,
+            )} will be updated with the latest registry details so their information is current before they are attended to.`}
+      </p>
+    </Modal>
+  );
+
+  // Shows the EMR lookup result for the client and lets the user act on it:
+  // create the patient in the EMR (not found) or sync an existing record (found).
+  const emrStatusCard = !amrsChecked ? null : amrsPatient ? (
+    <div className={`${styles.emrStatus} ${styles.emrStatusFound}`}>
+      <span className={styles.emrStatusIcon}>
+        <CheckmarkOutline size={20} />
+      </span>
+      <div className={styles.emrStatusBody}>
+        <span className={styles.emrStatusTitle}>Patient found in the EMR</span>
+        <span className={styles.emrStatusText}>
+          CR {maskCrNumber(client.id)} already has a record. Sync to update it with the latest registry details.
+        </span>
+      </div>
+      {emrActionArea('sync')}
+    </div>
+  ) : (
+    <div className={`${styles.emrStatus} ${styles.emrStatusMissing}`}>
+      <span className={styles.emrStatusIcon}>
+        <WarningAltFilled size={20} />
+      </span>
+      <div className={styles.emrStatusBody}>
+        <span className={styles.emrStatusTitle}>Patient not found in the system</span>
+        <span className={styles.emrStatusText}>
+          No EMR record matches CR {maskCrNumber(client.id)}. Create the patient in the EMR to continue.
+        </span>
+      </div>
+      {emrActionArea('create')}
+    </div>
+  );
+
   const launchBiometric = async () => {
     setLaunchingBiometric(true);
     try {
@@ -507,6 +614,7 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
     onStartVisit({
       patientCategory,
       room,
+      roomUuid: triageQueueByRoom[room] ?? '',
       visitType,
       exempted: isExempt,
       method: isExempt ? undefined : method,
@@ -907,6 +1015,8 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
                       </dl>
                     </div>
                   </div>
+                  {emrStatusCard}
+                  {emrConfirmModal}
                 </>
               ) : (
                 <></>
@@ -1126,7 +1236,14 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
         </div>
 
         <footer className={styles.footer}>
-          <div />
+          {phase === 'consent' && amrsChecked && !amrsPatient ? (
+            <span className={styles.footerHint}>
+              <WarningAltFilled size={16} className={styles.footerHintIcon} />
+              Create the patient in the EMR to continue.
+            </span>
+          ) : (
+            <div />
+          )}
           <div className={styles.footerRight}>
             <Button kind="secondary" size="sm" onClick={onClose}>
               Cancel
@@ -1136,7 +1253,8 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
                 kind="primary"
                 size="sm"
                 renderIcon={ArrowRight}
-                disabled={!consent}
+                // Block continuing until the patient exists in the EMR (found or created).
+                disabled={!consent || !amrsPatient}
                 onClick={() => setPhase('visit')}
               >
                 Continue

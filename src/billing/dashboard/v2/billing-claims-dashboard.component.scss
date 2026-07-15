@@ -1,6 +1,75 @@
 @use '@carbon/layout';
 @use '@carbon/type';
+@use '@carbon/colors';
 @use '@openmrs/esm-styleguide/src/vars' as *;
+
+/* Top summary: at-a-glance counts across clearance, visits and claims. */
+.summaryRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: layout.$spacing-04;
+  padding-bottom: layout.$spacing-06;
+  margin-bottom: layout.$spacing-03;
+  border-bottom: 1px solid $ui-03;
+}
+
+.summaryTile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: layout.$spacing-04 layout.$spacing-05;
+  border: 1px solid $ui-03;
+  border-left: 3px solid colors.$gray-30;
+  border-radius: 8px;
+  background-color: colors.$white;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  transition: box-shadow 70ms ease, background-color 70ms ease;
+
+  &:hover {
+    background-color: $ui-01;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--brand-03);
+    outline-offset: 1px;
+  }
+}
+
+.summaryValue {
+  @include type.type-style('heading-04');
+  color: $ui-05;
+  font-variant-numeric: tabular-nums;
+}
+
+.summaryLabel {
+  @include type.type-style('label-01');
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: $text-03;
+}
+
+.toneAmber {
+  border-left-color: colors.$yellow-30;
+}
+
+.toneBlue {
+  border-left-color: colors.$blue-50;
+}
+
+.toneRed {
+  border-left-color: colors.$red-50;
+}
+
+.pendingHint {
+  @include type.type-style('body-01');
+  color: $text-02;
+  margin: 0 0 layout.$spacing-05;
+  max-width: 70ch;
+}
 
 .bcLayout {
     display: flex;

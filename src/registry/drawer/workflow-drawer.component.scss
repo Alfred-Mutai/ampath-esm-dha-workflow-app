@@ -1024,6 +1024,65 @@ $header-height: 3rem;
   margin-top: layout.$spacing-02;
 }
 
+/* ---- EMR lookup status (found / not found) ---- */
+.emrStatus {
+  display: flex;
+  align-items: center;
+  gap: layout.$spacing-04;
+  padding: layout.$spacing-04 layout.$spacing-05;
+  border: 1px solid transparent;
+  border-radius: 8px;
+}
+
+.emrStatusIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.emrStatusBody {
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-01;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.emrStatusTitle {
+  @include type.type-style('heading-compact-01');
+  color: $ui-05;
+}
+
+.emrStatusText {
+  @include type.type-style('label-01');
+  color: $text-02;
+}
+
+.emrStatusFound {
+  border-color: colors.$green-30;
+  background-color: colors.$green-10;
+
+  .emrStatusIcon {
+    color: colors.$green-60;
+  }
+}
+
+.emrStatusMissing {
+  border-color: colors.$yellow-30;
+  background-color: colors.$yellow-10;
+
+  .emrStatusIcon {
+    color: #b28600;
+  }
+}
+
+.emrConfirmText {
+  @include type.type-style('body-01');
+  color: $text-02;
+  margin: 0;
+}
+
 /* ---- Footer ---- */
 .footer {
   display: flex;
@@ -1037,6 +1096,20 @@ $header-height: 3rem;
 .footerRight {
   display: flex;
   gap: layout.$spacing-04;
+}
+
+.footerHint {
+  display: flex;
+  align-items: center;
+  gap: layout.$spacing-03;
+  @include type.type-style('label-01');
+  color: #8a6d00;
+  min-width: 0;
+}
+
+.footerHintIcon {
+  flex-shrink: 0;
+  color: #b28600;
 }
 
 @keyframes slideIn {

@@ -2,10 +2,10 @@
 @use '@carbon/type';
 @use '@openmrs/esm-styleguide/src/vars' as *;
 
-/* Fluid, auto-collapsing grid — many columns on desktop down to one on mobile */
+/* Fixed 4-column grid so the 7 metrics lay out 4 on top, 3 below */
 .container {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(13.5rem, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: layout.$spacing-05;
   width: 100%;
 }
@@ -107,6 +107,12 @@
   border: 1px solid $ui-03;
   border-radius: 6px;
   padding: layout.$spacing-05;
+}
+
+@media (max-width: 66rem) {
+  .container {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 42rem) {

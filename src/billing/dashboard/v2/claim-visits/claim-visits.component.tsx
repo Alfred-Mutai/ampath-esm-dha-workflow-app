@@ -25,6 +25,7 @@ const ClaimVisits: React.FC<claimVisitsProps> = ({ locationUuid, billingDate, on
   const [showClaimsVisitModal, setShowClaimsVisitModal] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [consentToken, setConsentToken] = useState<string>();
+  const [search, setSearch] = useState<string>('');
   const { claimVisit, isLoading } = useProviderClaimPreview(consentToken, locationUuid);
   useEffect(() => {
     if (locationUuid && billingDate) {
@@ -102,9 +103,11 @@ const ClaimVisits: React.FC<claimVisitsProps> = ({ locationUuid, billingDate, on
                         <div>{cv.patientId}</div>
                       </TableCell>
                       <TableCell>{cv.serviceType}</TableCell>
-                      <Button kind="ghost" onClick={() => handleSelectedClaimsVisit(cv)} size="sm">
-                        {loading ? <InlineLoading description="Fetching data...." /> : 'View Claim'}
-                      </Button>
+                      <TableCell>
+                        <Button kind="ghost" onClick={() => handleSelectedClaimsVisit(cv)} size="sm">
+                          {loading ? <InlineLoading description="Fetching data...." /> : 'View Claim'}
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   </>
                 );

@@ -1,0 +1,26 @@
+@use '@carbon/layout';
+@use '@carbon/colors';
+@use '@carbon/type';
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: layout.$spacing-03;
+  padding: layout.$spacing-09 layout.$spacing-05;
+  text-align: center;
+  border: 1px dashed colors.$gray-30;
+  border-radius: 8px;
+  background-color: colors.$gray-10;
+}
+
+.emptyIcon {
+  color: colors.$gray-40;
+}
+
+.emptyText {
+  @include type.type-style('body-01');
+  color: colors.$gray-70;
+  margin: 0;
+}

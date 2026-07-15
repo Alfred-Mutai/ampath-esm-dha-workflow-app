@@ -69,6 +69,10 @@
   font-variant-numeric: tabular-nums;
 }
 
+.muted {
+  color: $text-02;
+}
+
 .tableLoading,
 .empty {
   padding: layout.$spacing-06 layout.$spacing-05;
@@ -114,8 +118,21 @@
   padding: layout.$spacing-03 0 layout.$spacing-06;
 }
 
-.backBtn {
-  margin-bottom: layout.$spacing-04;
+/* Top card: identity header + status/rejection banner + money tiles. */
+.topCard {
+  border: 1px solid $ui-03;
+  border-radius: 8px;
+  background-color: colors.$white;
+  padding: layout.$spacing-06;
+  margin-bottom: layout.$spacing-06;
+}
+
+.topCard > *:last-child {
+  margin-bottom: 0;
+}
+
+.breadcrumb {
+  margin-bottom: layout.$spacing-05;
 }
 
 .detailHead {
@@ -128,6 +145,27 @@
   margin-bottom: layout.$spacing-05;
 }
 
+.detailIdentity {
+  display: flex;
+  align-items: center;
+  gap: layout.$spacing-05;
+  min-width: 0;
+}
+
+.detailAvatar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background-color: var(--brand-01);
+  color: colors.$white;
+  @include type.type-style('heading-compact-01');
+  letter-spacing: 0.02em;
+}
+
 .detailCode {
   @include type.type-style('label-01');
   font-family: 'IBM Plex Mono', monospace;
@@ -138,7 +176,7 @@
 .detailName {
   @include type.type-style('heading-03');
   color: $ui-05;
-  margin: 0 0 layout.$spacing-02;
+  margin: 0 0 layout.$spacing-03;
 }
 
 .detailMeta {
@@ -148,13 +186,6 @@
   gap: layout.$spacing-03;
   @include type.type-style('body-compact-01');
   color: $text-02;
-}
-
-.dot {
-  width: 3px;
-  height: 3px;
-  border-radius: 50%;
-  background-color: $text-03;
 }
 
 .reasonNote {
@@ -185,12 +216,88 @@
   margin: 2px 0 0;
 }
 
-.detailSection {
+/* Financial summary tiles: total → SHA slice + copay slice */
+.summaryRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: layout.$spacing-04;
   margin-bottom: layout.$spacing-06;
 }
 
+.summaryTile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: layout.$spacing-04 layout.$spacing-05;
+  border: 1px solid $ui-03;
+  border-left: 3px solid colors.$gray-30;
+  border-radius: 8px;
+  background-color: $ui-01;
+}
+
+.tileSha {
+  border-left-color: colors.$green-50;
+}
+
+.tileCopay {
+  border-left-color: colors.$red-50;
+}
+
+.summaryLabel {
+  @include type.type-style('label-01');
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: $text-03;
+}
+
+.summaryValue {
+  @include type.type-style('heading-compact-02');
+  color: $ui-05;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Two-column body: clinical content (left) + bill / timeline / actions (right) */
+.detailBody {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+  gap: layout.$spacing-07;
+  align-items: stretch;
+}
+
+.detailMain,
+.detailAside {
+  border: 1px solid $ui-03;
+  border-radius: 8px;
+  padding: layout.$spacing-06;
+  background-color: colors.$white;
+}
+
+@media (max-width: 66rem) {
+  .detailBody {
+    grid-template-columns: 1fr;
+  }
+}
+
+.detailSection {
+  margin-bottom: layout.$spacing-05;
+}
+
+/* Clear divider between stacked sections within a column card. */
+.detailSection + .detailSection {
+  border-top: 1px solid $ui-03;
+  padding-top: layout.$spacing-05;
+}
+
+.detailMain .detailSection:last-child,
+.detailAside .detailSection:last-child {
+  margin-bottom: 0;
+}
+
 .detailSectionTitle {
-  @include type.type-style('heading-compact-01');
+  @include type.type-style('label-01');
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  font-weight: 700;
   color: $ui-05;
   margin: 0 0 layout.$spacing-03;
 }
@@ -198,13 +305,32 @@
 .interventionList,
 .diagnosisList {
   margin: 0;
-  padding-left: layout.$spacing-05;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-03;
   @include type.type-style('body-01');
   color: $ui-05;
 }
 
+.interventionList li,
 .diagnosisList li {
-  margin: layout.$spacing-02 0;
+  position: relative;
+  padding-left: layout.$spacing-05;
+}
+
+/* Neat brand-coloured bullet. */
+.interventionList li::before,
+.diagnosisList li::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 0.55em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--brand-01);
 }
 
 .attachmentList {
@@ -361,16 +487,9 @@
   color: $text-03;
 }
 
-.actionPanel {
-  border-top: 1px solid $ui-03;
-  padding-top: layout.$spacing-05;
-  display: flex;
-  flex-direction: column;
-  gap: layout.$spacing-04;
-}
-
 .actionRow {
   display: flex;
   gap: layout.$spacing-04;
   flex-wrap: wrap;
+  margin-top: layout.$spacing-04;
 }

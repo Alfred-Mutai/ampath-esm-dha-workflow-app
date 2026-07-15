@@ -75,19 +75,3 @@
   margin: 0;
   max-width: 60ch;
 }
-
-.prepaidForm {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
-  gap: layout.$spacing-05;
-  align-items: end;
-  padding: layout.$spacing-05;
-  margin-bottom: layout.$spacing-05;
-  border: 1px solid $ui-03;
-  border-radius: 10px;
-  background-color: $ui-01;
-}
-
-.prepaidSave {
-  align-self: end;
-}

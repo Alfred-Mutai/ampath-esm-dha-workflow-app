@@ -11,7 +11,7 @@ interface TableToolbarProps {
   onDate?: (value: string) => void;
 }
 
-/** Search (3/4 width) + a right-floated date filter (1/4 width) above a table. */
+/** Search (2/3 width) + a date filter (1/3 width) on the same row above a table. */
 const TableToolbar: React.FC<TableToolbarProps> = ({
   id,
   search,

@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
-  Button,
   Tab,
   TabList,
   TabPanel,
@@ -16,7 +14,6 @@ import {
   Tag,
   InlineLoading,
 } from '@carbon/react';
-import { Add } from '@carbon/react/icons';
 import styles from './claims-accounting.component.scss';
 import {
   CLAIM_TABS,
@@ -29,6 +26,7 @@ import { statusMeta } from './status-meta';
 import ClaimDetail from './claim-detail.component';
 import RemittancesView from './remittances.component';
 import TableToolbar from '../shared/table-toolbar.component';
+import EmptyState from '../shared/empty-state.component';
 
 const money = (n: number) => `KES ${n.toLocaleString('en-KE')}`;
 
@@ -61,7 +59,7 @@ const ClaimsTable: React.FC<ClaimsTableProps> = ({ statuses, reloadKey, onOpen }
   }
 
   if (claims.length === 0) {
-    return <p className={styles.empty}>No claims in this state.</p>;
+    return <EmptyState message="No claims in this state." />;
   }
 
   const term = search.trim().toLowerCase();
@@ -82,7 +80,7 @@ const ClaimsTable: React.FC<ClaimsTableProps> = ({ statuses, reloadKey, onOpen }
         searchPlaceholder="Search claim, patient or fund…"
       />
       {filtered.length === 0 ? (
-        <p className={styles.empty}>No claims match your filters.</p>
+        <EmptyState message="No claims match your filters." />
       ) : (
         <div className={styles.tableCard}>
           <Table size="sm" aria-label="claims" useZebraStyles>
@@ -92,7 +90,8 @@ const ClaimsTable: React.FC<ClaimsTableProps> = ({ statuses, reloadKey, onOpen }
                 <TableHeader>Patient</TableHeader>
                 <TableHeader>Fund</TableHeader>
                 <TableHeader>Type</TableHeader>
-                <TableHeader className={styles.numCol}>Amount</TableHeader>
+                <TableHeader className={styles.numCol}>SHA amount</TableHeader>
+                <TableHeader>Copay bill</TableHeader>
                 <TableHeader>Status</TableHeader>
                 <TableHeader>Updated</TableHeader>
               </TableRow>
@@ -110,7 +109,16 @@ const ClaimsTable: React.FC<ClaimsTableProps> = ({ statuses, reloadKey, onOpen }
                 <TableCell>{c.patientName}</TableCell>
                 <TableCell>{c.fund}</TableCell>
                 <TableCell>{c.serviceType === 'INPATIENT' ? 'IP' : 'OP'}</TableCell>
-                <TableCell className={styles.numCol}>{money(c.amount)}</TableCell>
+                <TableCell className={styles.numCol}>{money(c.bill?.shaCovered ?? c.amount)}</TableCell>
+                <TableCell>
+                  {c.bill && c.bill.copay > 0 ? (
+                    <span>
+                      {money(c.bill.copay)} · {c.bill.copayPayer ?? 'Cash'}
+                    </span>
+                  ) : (
+                    <span className={styles.muted}>SHA-covered</span>
+                  )}
+                </TableCell>
                 <TableCell>
                   <Tag type={meta.tag} size="sm">
                     {meta.label}
@@ -128,17 +136,27 @@ const ClaimsTable: React.FC<ClaimsTableProps> = ({ statuses, reloadKey, onOpen }
   );
 };
 
-const ClaimsAccounting: React.FC = () => {
-  const navigate = useNavigate();
+const ClaimsAccounting: React.FC<{ initialTabKey?: string; navNonce?: number }> = ({ initialTabKey, navNonce }) => {
   const [reloadKey, setReloadKey] = useState(0);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [selected, setSelected] = useState<ShaClaim | null>(null);
+  const [tabIndex, setTabIndex] = useState(0);
 
   const refresh = () => setReloadKey((k) => k + 1);
 
   useEffect(() => {
     getClaimCounts().then(setCounts);
   }, [reloadKey]);
+
+  // Jump to the sub-tab requested from the dashboard summary tiles.
+  useEffect(() => {
+    const i = CLAIM_TABS.findIndex((t) => t.key === initialTabKey);
+    if (i >= 0) {
+      setTabIndex(i);
+      setSelected(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navNonce]);
 
   if (selected) {
     return <ClaimDetail claim={selected} onBack={() => setSelected(null)} onChanged={refresh} />;
@@ -154,12 +172,9 @@ const ClaimsAccounting: React.FC = () => {
             resubmit; rejected claims can be fixed and resubmitted.
           </p>
         </div>
-        <Button size="sm" renderIcon={Add} onClick={() => navigate('/claim/new')}>
-          New SHA claim
-        </Button>
       </div>
 
-      <Tabs>
+      <Tabs selectedIndex={tabIndex} onChange={({ selectedIndex }) => setTabIndex(selectedIndex)}>
         <TabList scrollDebounceWait={200} aria-label="Claim lifecycle">
           {CLAIM_TABS.map((tab) => (
             <Tab key={tab.key}>

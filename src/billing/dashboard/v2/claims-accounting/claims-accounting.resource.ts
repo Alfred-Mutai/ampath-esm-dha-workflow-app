@@ -259,14 +259,19 @@ let CLAIMS: ShaClaim[] = [
   },
 ];
 
-/** Tabs shown in the accounting area, each mapping to one or more statuses. */
+/**
+ * Claim lifecycle tabs, ordered as a workflow: a claim is drafted, submitted and
+ * sits Pending a payer decision, then lands in Approved (awaiting remittance),
+ * Rejected (payer declined) or Needs resubmission (recalled to correct), and finally
+ * Paid once a remittance settles it. Each tab maps to one or more claim statuses.
+ */
 export const CLAIM_TABS: { key: string; label: string; statuses: ClaimStatus[] }[] = [
   { key: 'draft', label: 'Drafts', statuses: ['DRAFT'] },
-  { key: 'preauth', label: 'Preauths', statuses: ['PREAUTH_PENDING'] },
-  { key: 'submitted', label: 'Submitted', statuses: ['SUBMITTED', 'APPROVED'] },
+  { key: 'pending', label: 'Pending', statuses: ['PREAUTH_PENDING', 'SUBMITTED'] },
+  { key: 'approved', label: 'Approved', statuses: ['APPROVED'] },
   { key: 'rejected', label: 'Rejected', statuses: ['REJECTED'] },
-  { key: 'recalled', label: 'Recalled', statuses: ['RECALLED'] },
-  { key: 'remittances', label: 'Remittances', statuses: ['PAID'] },
+  { key: 'resubmission', label: 'Needs resubmission', statuses: ['RECALLED'] },
+  { key: 'remittances', label: 'Paid', statuses: ['PAID'] },
 ];
 
 export async function getClaimsByStatuses(statuses: ClaimStatus[]): Promise<ShaClaim[]> {

@@ -27,6 +27,7 @@ import {
 } from '../../../../shared/services/consultation-clearance.resource';
 import PrepaidServices from './prepaid-services.component';
 import TableToolbar from '../shared/table-toolbar.component';
+import EmptyState from '../shared/empty-state.component';
 
 const money = (n: number) => (n > 0 ? `KES ${n.toLocaleString('en-KE')}` : 'Waived');
 
@@ -68,7 +69,9 @@ const ClearanceTable: React.FC<{
     return <InlineLoading description="Loading…" className={styles.loading} />;
   }
   if (rows.length === 0) {
-    return <p className={styles.empty}>{status === 'AWAITING_PAYMENT' ? 'No patients awaiting clearance.' : 'No cleared patients yet.'}</p>;
+    return (
+      <EmptyState message={status === 'AWAITING_PAYMENT' ? 'No patients awaiting clearance.' : 'No cleared patients yet.'} />
+    );
   }
 
   const term = search.trim().toLowerCase();
@@ -89,7 +92,7 @@ const ClearanceTable: React.FC<{
         searchPlaceholder="Search patient, queue or payer…"
       />
       {filtered.length === 0 ? (
-        <p className={styles.empty}>No records match your filters.</p>
+        <EmptyState message="No clearances match your filters." />
       ) : (
         <div className={styles.tableCard}>
           <Table size="sm" aria-label="clearance" useZebraStyles>
@@ -138,11 +141,20 @@ const ClearanceTable: React.FC<{
   );
 };
 
-const Clearance: React.FC<{ onChange?: () => void }> = ({ onChange }) => {
+const Clearance: React.FC<{
+  onChange?: () => void;
+  pendingTab?: React.ReactNode;
+  initialTab?: string;
+  navNonce?: number;
+}> = ({ onChange, pendingTab, initialTab, navNonce }) => {
   const session = useSession();
   const locationUuid = session?.sessionLocation?.uuid ?? '';
   const [reloadKey, setReloadKey] = useState(0);
   const [counts, setCounts] = useState<{ awaiting: number; cleared: number }>({ awaiting: 0, cleared: 0 });
+  const [tabIndex, setTabIndex] = useState(0);
+
+  // Order of the sub-tabs (the "pending" tab only exists when pendingTab is passed).
+  const tabKeys = [...(pendingTab ? ['pending'] : []), 'awaiting', 'cleared', 'prepaid'];
 
   const refresh = () => {
     setReloadKey((k) => k + 1);
@@ -153,6 +165,15 @@ const Clearance: React.FC<{ onChange?: () => void }> = ({ onChange }) => {
     getClearanceCounts(locationUuid).then(setCounts);
   }, [locationUuid, reloadKey]);
 
+  // Jump to the sub-tab requested from the dashboard summary tiles.
+  useEffect(() => {
+    const i = tabKeys.indexOf(initialTab ?? '');
+    if (i >= 0) {
+      setTabIndex(i);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navNonce]);
+
   return (
     <div className={styles.clearance}>
       <div className={styles.intro}>
@@ -162,8 +183,9 @@ const Clearance: React.FC<{ onChange?: () => void }> = ({ onChange }) => {
           Mark it paid to release them to be seen.
         </p>
       </div>
-      <Tabs>
+      <Tabs selectedIndex={tabIndex} onChange={({ selectedIndex }) => setTabIndex(selectedIndex)}>
         <TabList aria-label="Clearance">
+          {pendingTab ? <Tab>Pending clearance</Tab> : null}
           <Tab>
             Awaiting payment{counts.awaiting ? <span className={styles.pill}>{counts.awaiting}</span> : null}
           </Tab>
@@ -171,6 +193,7 @@ const Clearance: React.FC<{ onChange?: () => void }> = ({ onChange }) => {
           <Tab>Scheduled (prepaid)</Tab>
         </TabList>
         <TabPanels>
+          {pendingTab ? <TabPanel>{pendingTab}</TabPanel> : null}
           <TabPanel>
             <ClearanceTable status="AWAITING_PAYMENT" locationUuid={locationUuid} reloadKey={reloadKey} onCleared={refresh} />
           </TabPanel>
