@@ -190,3 +190,22 @@ export interface FhirReference<TType extends string> {
 export interface FhirReferenceWithDisplay<TType extends string> extends FhirReference<TType> {
   display: string;
 }
+
+export type BillStatus = 'PAID' | 'PENDING' | 'NOT_BILLED';
+
+export type FacilityEncounterBill = {
+  encounter_datetime: string;
+  date_created: string;
+  bill_uuid: string;
+  receipt_number: string;
+  patient_name: string;
+  bill_status: string;
+  patient_uuid: string;
+  date_started: string | null;
+  date_stopped: string | null;
+  bed_number: string | null;
+}
+
+export type FacilityBillsEncounterResponse = {
+  results: FacilityEncounterBill[];
+};

@@ -2,8 +2,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import styles from './admissions-dashboard.component.scss';
 import StatCard from '../shared/ui/stat-card/stat-card.component';
 import { InlineLoading, Tab, TabList, TabPanel, TabPanels, Tabs } from '@carbon/react';
-import { useSession } from '@openmrs/esm-framework';
+import { Patient, useConfig, useSession } from '@openmrs/esm-framework';
 import {
+  fetchFacilityEncounterBills,
   getAdmissionLoactionData,
   getAdmissionRequests,
   getAdmittedPatientsData,
@@ -15,28 +16,70 @@ import {
   type BedLayout,
   type FhirEncounter,
   type FhirEncounterBundle,
+  FacilityEncounterBill,
 } from './types';
 import AdmittedPatientsList from './admitted-list/admitted-patients-list';
 import AdmissionsRequestList from './admission-request-list/admission-request-list';
 import { AdmissionEncounterTypeUuids } from './constants';
 import DischargedList from './discharged-list/discharged-list';
+import AwaitingDischargeList from './awaiting-discharge-list/awaiting-discharge-list';
+import { ConfigObject } from '../config-schema';
+import dayjs from 'dayjs';
 
 const AdmissionsDashboard: React.FC = () => {
   const [dashboardData, setDashboardData] = useState<AdmissionLocationData>(null);
   const [admissionListData, setAdmissionListData] = useState<Disposition[]>([]);
   const [admittedPatientsData, setAdmittedPatientsData] = useState<BedLayout[]>([]);
+  const [facilityBills, setFacilityBills] = useState<FacilityEncounterBill[]>([]);
   const [dischargeEncounterBundle, setDischargeEncounterBundle] = useState<FhirEncounterBundle>();
+  const [awaitingDischargeEncounterBundle, setAwaitingDischargeEncounterBundle] = useState<FhirEncounterBundle>();
   const [loading, setLoading] = useState<boolean>(false);
   const session = useSession();
   const locationUuid = session.sessionLocation.uuid;
+  const { maternityDischargeEncounterTypeUuid } = useConfig<ConfigObject>();
   const sortedDischargeEncounters = useMemo(() => generateDischargeEncounters(), [dischargeEncounterBundle]);
+
+  const getPatient = (patients: Patient[]) => {
+    if (patients) {
+      return patients[0];
+    }
+  }
+
+  const { awaiting, admitted } = useMemo(() => {
+    if (admittedPatientsData && awaitingDischargeEncounterBundle) {
+      const fhirEntries = awaitingDischargeEncounterBundle.entry;
+      let patientUuids = [];
+      fhirEntries.forEach((fe) => {
+        const resource = fe.resource;
+        if (resource && resource.resourceType === 'Encounter') {
+          const subject = resource.subject.reference.split("/");
+          const patientUuid = subject[1];
+          patientUuids.push(patientUuid);
+        }
+      });
+
+      const awaiting = admittedPatientsData.filter(p => patientUuids.includes(getPatient(p.patients)?.uuid));
+      const admitted = admittedPatientsData.filter(p => !patientUuids.includes(getPatient(p.patients)?.uuid));
+
+      return {
+        awaiting, admitted
+      }
+    }
+    return {
+      awaiting: [],
+      admitted: []
+    }
+  }, [admittedPatientsData, awaitingDischargeEncounterBundle]);
+
   useEffect(() => {
     fetchData();
   }, [locationUuid]);
   const fetchData = () => {
     setLoading(true);
     getDashboardData();
+    getFacilityEncounterBills();
     getAdmissionListData();
+    getAwaitingDischargeEncounters();
     getAdmittedPatients();
     getDisachargedEncounters();
   };
@@ -61,6 +104,10 @@ const AdmissionsDashboard: React.FC = () => {
     setAdmittedPatientsData(res);
     setLoading(false);
   };
+  const getAwaitingDischargeEncounters = async () => {
+    const res = await getDichargedEncounters(maternityDischargeEncounterTypeUuid, locationUuid);
+    setAwaitingDischargeEncounterBundle(res);
+  };
   const getDisachargedEncounters = async () => {
     const res = await getDichargedEncounters(AdmissionEncounterTypeUuids.DISCHARGE_ENCOUNTER_TYPE_UUID, locationUuid);
     setDischargeEncounterBundle(res);
@@ -84,6 +131,12 @@ const AdmissionsDashboard: React.FC = () => {
       return [];
     }
   }
+  const getFacilityEncounterBills = async () => {
+    const billingFrom = dayjs().subtract(1, 'day').format('YYYY-MM-DD')
+    const res = await fetchFacilityEncounterBills(locationUuid, maternityDischargeEncounterTypeUuid, billingFrom);
+    setFacilityBills(res);
+    setLoading(false);
+  };
   const handleRefresh = () => {
     fetchData();
   };
@@ -118,6 +171,7 @@ const AdmissionsDashboard: React.FC = () => {
                 <TabList contained>
                   <Tab>Admission Requests</Tab>
                   <Tab>Admitted</Tab>
+                  <Tab>Awaiting Discharge</Tab>
                   <Tab>Discharged</Tab>
                 </TabList>
                 <TabPanels>
@@ -134,7 +188,14 @@ const AdmissionsDashboard: React.FC = () => {
                   </TabPanel>
                   <TabPanel>
                     {admittedPatientsData ? (
-                      <AdmittedPatientsList admittedPatientsData={admittedPatientsData} refresh={handleRefresh} />
+                      <AdmittedPatientsList admittedPatientsData={admitted} refresh={handleRefresh} />
+                    ) : (
+                      <></>
+                    )}
+                  </TabPanel>
+                  <TabPanel>
+                    {admittedPatientsData ? (
+                      <AwaitingDischargeList admittedPatientsData={awaiting} refresh={handleRefresh} facilityBills={facilityBills}/>
                     ) : (
                       <></>
                     )}
