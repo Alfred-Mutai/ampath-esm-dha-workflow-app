@@ -256,7 +256,7 @@ const QueueList: React.FC<QueueListProps> = ({
               <TableRow>
                 <TableHeader>No</TableHeader>
                 <TableHeader>Name</TableHeader>
-                <TableHeader>Age</TableHeader>
+                <TableHeader>Age(Years)</TableHeader>
                 <TableHeader>Phone Number</TableHeader>
                 <TableHeader>Identifiers</TableHeader>
                 <TableHeader>Coming From</TableHeader>
@@ -331,7 +331,7 @@ const QueueList: React.FC<QueueListProps> = ({
                               }
                               onClick={() => handleServePatient(val)}
                             >
-                              Serve
+                              Call
                             </Button>
                           </>
                         ) : (
@@ -339,7 +339,7 @@ const QueueList: React.FC<QueueListProps> = ({
                             {checkIn ? (
                               <>
                                 <OverflowMenu aria-label="overflow-menu">
-                                  <OverflowMenuItem itemText="Transfer" onClick={() => handleMovePatient(val)} />
+                                  <OverflowMenuItem itemText="Assign To" onClick={() => handleMovePatient(val)} />
                                   <OverflowMenuItem
                                     itemText="Transition"
                                     onClick={() => handleTransitionPatient(val)}

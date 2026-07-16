@@ -80,7 +80,7 @@ const ServiceQueuePatientBanner: React.FC<ServiceQueuePatientBannerProps> = ({ r
               </div>
               <div>
                 <Button className={styles.transferBtn} size="xs" onClick={displayTransferModal}>
-                  Transfer
+                  Assign To
                 </Button>
               </div>
             </div>

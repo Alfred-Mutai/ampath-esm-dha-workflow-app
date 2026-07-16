@@ -88,7 +88,7 @@ const MovePatientModal: React.FC<MovePatientModalProps> = ({
         onSecondarySubmit={() => onModalClose()}
         onRequestClose={() => onModalClose()}
         onRequestSubmit={loading ? placeHolderFunction : transtionQueueEntry}
-        primaryButtonText={loading ? <InlineLoading description="Transfering..." /> : 'Transfer'}
+        primaryButtonText={loading ? <InlineLoading description="Assign To..." /> : 'Assign To'}
         secondaryButtonText="Cancel"
       >
         <ModalBody>
