@@ -1,0 +1,20 @@
+.fhwrSlotLayout{
+    display: flex;
+    flex-direction: column;
+    row-gap: 10px;
+    width: 100%;
+    padding: 10px 10px;
+}
+
+.fhwrSlotContent{
+    display: flex;
+    flex-direction: row;
+    column-gap: 5px;
+    width: 100%;
+}
+
+.fhwrSlot{
+    display: flex;
+    flex-direction: column;
+    width: 50%;
+}

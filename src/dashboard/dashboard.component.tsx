@@ -8,6 +8,7 @@ import { type QueueEntryResult } from '../registry/types';
 import { useSession } from '@openmrs/esm-framework';
 import { QUEUE_SERVICE_UUIDS } from '../shared/constants/concepts';
 import { getDashBoardSummary } from '../resources/dashboard.resource';
+import FacilityAndWorkerSlot from '../shared/ui/facility-worker-slot/facility-worker.component-slot.component';
 
 interface DashboardProps {}
 
@@ -28,6 +29,9 @@ const Dashboard: React.FC<DashboardProps> = () => {
 
   return (
     <div className={styles.container}>
+      <div className={styles.hieHeaderSlot}>
+            <FacilityAndWorkerSlot />
+      </div>
       <div className={styles.header}>
         <span className={styles.headerIcon}>
           <Analytics size={24} />

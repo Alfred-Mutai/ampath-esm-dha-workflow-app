@@ -51,6 +51,7 @@ import { getErrorMessages, getReadableErrorMessage } from './utils/error-handler
 import { IdentifierTypesUuids } from '../resources/identifier-types';
 import { formatPhoneNumberForOTP } from './utils/phone-number-formatter';
 import { usePatient } from '../context/patient-context';
+import FacilityAndWorkerSlot from '../shared/ui/facility-worker-slot/facility-worker.component-slot.component';
 
 interface RegistryComponentProps {}
 const RegistryComponent: React.FC<RegistryComponentProps> = () => {
@@ -421,6 +422,9 @@ const RegistryComponent: React.FC<RegistryComponentProps> = () => {
   return (
     <>
       <div className={styles.registryLayout}>
+        <div className={styles.headerSection}>
+            <FacilityAndWorkerSlot />
+        </div>
         <div className={styles.mainContent}>
           <div className={styles.registryHeader}>
             <h4>Registration</h4>
