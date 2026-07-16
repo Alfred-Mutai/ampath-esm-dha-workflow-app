@@ -1,5 +1,6 @@
 import { Encounter, fhirBaseUrl, FHIRResource, openmrsFetch, restBaseUrl } from '@openmrs/esm-framework';
-import { AdmitPatientDto, AssignBedToPatientDto, BedLayout, BedSwapDto, CancelAdmissionDto, DischargePatientDto, Disposition, DispositionResponse, FhirEncounterBundle, TransferPatientDto, UnAssignBedDto, type AdmissionLocationData } from './types';
+import { AdmitPatientDto, AssignBedToPatientDto, BedLayout, BedSwapDto, CancelAdmissionDto, DischargePatientDto, Disposition, DispositionResponse, FacilityBillsEncounterResponse, FacilityEncounterBill, FhirEncounterBundle, TransferPatientDto, UnAssignBedDto, type AdmissionLocationData } from './types';
+import { getEtlBaseUrl } from '../shared/utils/get-base-url';
 
 const customRep =
   'custom:(ward,totalBeds,occupiedBeds,bedLayouts:(rowNumber,columnNumber,bedNumber,bedId,bedUuid,status,location,patients:(person:full,identifiers,uuid)))';
@@ -115,4 +116,12 @@ export async function getDichargedEncounters(encounterTypeUuid: string, location
   const resp = await openmrsFetch(encountersUrl);
   const result = await resp.json();
   return result;
+}
+
+export async function fetchFacilityEncounterBills(locationUuid: string, encounterTypeUuid: string, billingFrom: string): Promise<FacilityEncounterBill[]> {
+  const etlBaseUrl = await getEtlBaseUrl();
+  const facilityBillsUrl = `${etlBaseUrl}/facility/encounter-bills?locationUuid=${locationUuid}&billingFrom=${billingFrom}&encounterTypeUuid=${encounterTypeUuid}`;
+  const response = await openmrsFetch(facilityBillsUrl);
+  const data = (await response.json()) as FacilityBillsEncounterResponse;
+  return data.results ?? [];
 }

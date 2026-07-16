@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useState } from 'react';
 import {
   OverflowMenu,
   OverflowMenuItem,
@@ -11,7 +11,6 @@ import {
 } from '@carbon/react';
 import { type BedLayout } from '../types';
 import BedSwapModal from '../modal/bed-swap/bed-swap.modal';
-import DischargeModal from '../modal/discharge/discharge-patient.modal';
 import { launchWorkspace2, useConfig } from '@openmrs/esm-framework';
 import { ConfigObject } from '../../config-schema';
 import { getPatientByUuid } from '../admissions.resource';
@@ -23,7 +22,6 @@ interface AdmittedPatientsListProps {
 
 const AdmittedPatientsList: React.FC<AdmittedPatientsListProps> = ({ admittedPatientsData, refresh }) => {
   const [showBedSwapModal, setShowBedSwapModal] = useState<boolean>(false);
-  const [showDischargeModal, setShowDischargeModal] = useState<boolean>(false);
   const [selectedLayout, setSelectedLayout] = useState<any>();
   const { maternityDischargeFormUuid } = useConfig<ConfigObject>();
 
@@ -38,7 +36,6 @@ const AdmittedPatientsList: React.FC<AdmittedPatientsListProps> = ({ admittedPat
     setShowBedSwapModal(true);
   };
   const handleDischargeRequest = async (layout: any) => {
-    console.log('Discharge request row:', layout);
     setSelectedLayout(layout);
 
     if (!layout) {
@@ -69,13 +66,6 @@ const AdmittedPatientsList: React.FC<AdmittedPatientsListProps> = ({ admittedPat
   };
   const handleBedSwapModalClose = () => {
     setShowBedSwapModal(false);
-    refresh();
-  };
-  const handleDischargeModalClose = () => {
-    setShowDischargeModal(false);
-  };
-  const handleSuccessfullDischarge = () => {
-    handleBedSwapModalClose();
     refresh();
   };
 
@@ -133,7 +123,7 @@ const AdmittedPatientsList: React.FC<AdmittedPatientsListProps> = ({ admittedPat
                   <OverflowMenu aria-label="overflow-menu">
                     <OverflowMenuItem itemText="Transfer" onClick={() => handleTransferRequest(row as any)} />
                     <OverflowMenuItem itemText="Bed Swap" onClick={() => handleBedSwapRequest(row as any)} />
-                    <OverflowMenuItem itemText="Discharge" onClick={() => handleDischargeRequest(row as any)} />
+                    <OverflowMenuItem itemText="Fill Discharge Form" onClick={() => handleDischargeRequest(row as any)} />
                   </OverflowMenu>
                 </>
               </TableCell>
@@ -150,19 +140,6 @@ const AdmittedPatientsList: React.FC<AdmittedPatientsListProps> = ({ admittedPat
             disposition={null}
             person={selectedLayout.person}
             bedLayouts={admittedPatientsData}
-          />
-        </>
-      ) : (
-        <></>
-      )}
-
-      {showDischargeModal && selectedLayout ? (
-        <>
-          <DischargeModal
-            open={showDischargeModal}
-            onModalClose={handleDischargeModalClose}
-            onDischarge={handleSuccessfullDischarge}
-            admissionRequest={selectedLayout}
           />
         </>
       ) : (
