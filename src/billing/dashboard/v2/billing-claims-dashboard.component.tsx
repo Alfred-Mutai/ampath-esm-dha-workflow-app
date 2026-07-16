@@ -1,23 +1,32 @@
 import React, { useEffect, useState } from 'react';
 import styles from './billing-claims-dashboard.component.scss';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from '@carbon/react';
+import { Wallet } from '@carbon/react/icons';
 import FacilityBills from './facility-bills/facility-bills.component';
 import ClaimsAccounting from './claims-accounting/claims-accounting.component';
 import { useSession } from '@openmrs/esm-framework';
 import ActiveVisits from './active-visits/active-visits.component';
-import { useActiveVisits } from './active-visits/active-visits.resource';
 import Clearance from './clearance/clearance.component';
+import CashChecklist from './cash-checklist/cash-checklist.component';
+import { billBalance, getPayableBills } from './cash-checklist/cash-checklist.resource';
 import { getClearanceCounts } from '../../../shared/services/consultation-clearance.resource';
 import { getClaimCounts } from './claims-accounting/claims-accounting.resource';
+import {
+  MetricsCard,
+  MetricsCardHeader,
+  MetricsCardBody,
+  MetricsCardItem,
+} from '../../../service-queues/metrics/metrics-cards/metrics-card.component';
 interface billingClaimsDashboardProps { }
 const BillingClaimsDashboard: React.FC<billingClaimsDashboardProps> = () => {
   const session = useSession();
   const locationUuid = session.sessionLocation?.uuid ?? '';
   const [billingDate, setBillingDate] = useState<string>(new Date().toLocaleDateString('en-CA'));
-  const { activeVisits } = useActiveVisits();
   const [awaiting, setAwaiting] = useState(0);
+  const [cashDue, setCashDue] = useState(0);
   const [claimCounts, setClaimCounts] = useState<Record<string, number>>({});
   const [selectedTab, setSelectedTab] = useState(0);
+  const [billsSub, setBillsSub] = useState(0);
   // Which sub-tab to open, with a nonce so repeat clicks still re-navigate.
   const [claimsNav, setClaimsNav] = useState<{ key?: string; nonce: number }>({ nonce: 0 });
   const [clearanceNav, setClearanceNav] = useState<{ key?: string; nonce: number }>({ nonce: 0 });
@@ -27,23 +36,37 @@ const BillingClaimsDashboard: React.FC<billingClaimsDashboardProps> = () => {
       getClearanceCounts(locationUuid).then((c) => setAwaiting(c.awaiting));
     }
     getClaimCounts().then(setClaimCounts);
+    getPayableBills(locationUuid).then((bills) => setCashDue(bills.filter((b) => billBalance(b) > 0).length));
   }, [locationUuid]);
 
-  const summary = [
-    { key: 'awaiting', label: 'Awaiting clearance', value: awaiting, tone: styles.toneAmber, tab: 0, clearKey: 'awaiting' },
-    { key: 'active', label: 'Active visits', value: activeVisits?.length ?? 0, tone: styles.toneBlue, tab: 0, clearKey: 'pending' },
-    { key: 'pending', label: 'Pending claims', value: claimCounts.pending ?? 0, tone: styles.toneBlue, tab: 2, claimKey: 'pending' },
-    { key: 'rejected', label: 'Rejected claims', value: claimCounts.rejected ?? 0, tone: styles.toneRed, tab: 2, claimKey: 'rejected' },
-    { key: 'resubmission', label: 'Needs resubmission', value: claimCounts.resubmission ?? 0, tone: styles.toneAmber, tab: 2, claimKey: 'resubmission' },
+  const summary: {
+    key: string;
+    label: string;
+    unit: string;
+    value: number;
+    tab: number;
+    color?: 'red';
+    claimKey?: string;
+    clearKey?: string;
+    billsSub?: number;
+  }[] = [
+    { key: 'awaiting', label: 'Awaiting clearance', unit: 'Patients', value: awaiting, tab: 0, clearKey: 'pending' },
+    { key: 'cashdue', label: 'Cash due', unit: 'Patients', value: cashDue, tab: 1, billsSub: 0 },
+    { key: 'pending', label: 'Pending claims', unit: 'Claims', value: claimCounts.pending ?? 0, tab: 2, claimKey: 'pending' },
+    { key: 'rejected', label: 'Rejected claims', unit: 'Claims', value: claimCounts.rejected ?? 0, color: 'red', tab: 2, claimKey: 'rejected' },
+    { key: 'resubmission', label: 'Needs resubmission', unit: 'Claims', value: claimCounts.resubmission ?? 0, tab: 2, claimKey: 'resubmission' },
   ];
 
-  const handleTileClick = (s: { tab: number; claimKey?: string; clearKey?: string }) => {
+  const handleTileClick = (s: { tab: number; claimKey?: string; clearKey?: string; billsSub?: number }) => {
     setSelectedTab(s.tab);
     if (s.claimKey) {
       setClaimsNav((p) => ({ key: s.claimKey, nonce: p.nonce + 1 }));
     }
     if (s.clearKey) {
       setClearanceNav((p) => ({ key: s.clearKey, nonce: p.nonce + 1 }));
+    }
+    if (s.billsSub !== undefined) {
+      setBillsSub(s.billsSub);
     }
   };
 
@@ -55,20 +78,23 @@ const BillingClaimsDashboard: React.FC<billingClaimsDashboardProps> = () => {
     <>
             <div className={styles.bcLayout}>
               <div className={styles.bcHeader}>
+                <span className={styles.bcHeaderIcon}>
+                  <Wallet size={24} />
+                </span>
                 <div className={styles.bcHeaderTitle}>
-                  <h4>Billing and Claims Dashboard</h4>
+                  <h3 className={styles.bcTitle}>Billing &amp; Claims</h3>
+                  <p className={styles.bcSubtitle}>Consultation clearance, facility bills and SHA claims.</p>
                 </div>
               </div>
               <div className={styles.summaryRow}>
                 {summary.map((s) => (
-                  <button
-                    key={s.key}
-                    type="button"
-                    className={`${styles.summaryTile} ${s.tone}`}
-                    onClick={() => handleTileClick(s)}
-                  >
-                    <span className={styles.summaryValue}>{s.value}</span>
-                    <span className={styles.summaryLabel}>{s.label}</span>
+                  <button key={s.key} type="button" className={styles.metricButton} onClick={() => handleTileClick(s)}>
+                    <MetricsCard>
+                      <MetricsCardHeader title={s.label} />
+                      <MetricsCardBody>
+                        <MetricsCardItem label={s.unit} value={s.value ? s.value : '--'} color={s.color} />
+                      </MetricsCardBody>
+                    </MetricsCard>
                   </button>
                 ))}
               </div>
@@ -97,7 +123,24 @@ const BillingClaimsDashboard: React.FC<billingClaimsDashboardProps> = () => {
                         />
                       </TabPanel>
                       <TabPanel>
-                        <FacilityBills locationUuid={locationUuid} billingDate={billingDate} onDateChange={handleDateChange} />
+                        <Tabs selectedIndex={billsSub} onChange={({ selectedIndex }) => setBillsSub(selectedIndex)}>
+                          <TabList aria-label="Bills">
+                            <Tab>Cash payments</Tab>
+                            <Tab>Facility bills</Tab>
+                          </TabList>
+                          <TabPanels>
+                            <TabPanel>
+                              <CashChecklist />
+                            </TabPanel>
+                            <TabPanel>
+                              <FacilityBills
+                                locationUuid={locationUuid}
+                                billingDate={billingDate}
+                                onDateChange={handleDateChange}
+                              />
+                            </TabPanel>
+                          </TabPanels>
+                        </Tabs>
                       </TabPanel>
                       <TabPanel>
                         <ClaimsAccounting initialTabKey={claimsNav.key} navNonce={claimsNav.nonce} />

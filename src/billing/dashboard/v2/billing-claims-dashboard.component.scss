@@ -3,65 +3,79 @@
 @use '@carbon/colors';
 @use '@openmrs/esm-styleguide/src/vars' as *;
 
-/* Top summary: at-a-glance counts across clearance, visits and claims. */
+/* Header: icon + title + subtitle (matches the facility dashboard header). */
+.bcHeader {
+  display: flex;
+  align-items: flex-start;
+  column-gap: layout.$spacing-04;
+  padding-bottom: layout.$spacing-05;
+  border-bottom: 1px solid $ui-03;
+}
+
+.bcHeaderIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  background-color: colors.$blue-10;
+  color: colors.$blue-60;
+}
+
+/* Top summary: at-a-glance counts (shared MetricsCard style, as on the lab dashboard). */
 .summaryRow {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
   gap: layout.$spacing-04;
-  padding-bottom: layout.$spacing-06;
+  width: 100%;
+  padding-bottom: layout.$spacing-05;
   margin-bottom: layout.$spacing-03;
   border-bottom: 1px solid $ui-03;
 }
 
-.summaryTile {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  padding: layout.$spacing-04 layout.$spacing-05;
-  border: 1px solid $ui-03;
-  border-left: 3px solid colors.$gray-30;
-  border-radius: 8px;
-  background-color: colors.$white;
-  text-align: left;
-  font: inherit;
+/* Reset the button wrapper so the MetricsCard stays clickable, and keep the card compact. */
+.metricButton {
+  all: unset;
+  display: block;
   cursor: pointer;
-  transition: box-shadow 70ms ease, background-color 70ms ease;
-
-  &:hover {
-    background-color: $ui-01;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
-  }
 
   &:focus-visible {
     outline: 2px solid var(--brand-03);
     outline-offset: 1px;
   }
+
+  :global(.cds--tile) {
+    min-height: 0;
+    padding: layout.$spacing-03 layout.$spacing-05;
+
+    /* Tighten the header row — Carbon forces a 2rem-tall label row. */
+    > div:first-child {
+      margin-bottom: layout.$spacing-02;
+
+      > div {
+        height: auto;
+      }
+    }
+
+    /* Slimmer value. */
+    p {
+      @include type.type-style('heading-03');
+    }
+  }
 }
 
-.summaryValue {
-  @include type.type-style('heading-04');
+.bcTitle {
+  @include type.type-style('heading-03');
   color: $ui-05;
-  font-variant-numeric: tabular-nums;
+  margin: 0 0 layout.$spacing-02;
 }
 
-.summaryLabel {
-  @include type.type-style('label-01');
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  color: $text-03;
-}
-
-.toneAmber {
-  border-left-color: colors.$yellow-30;
-}
-
-.toneBlue {
-  border-left-color: colors.$blue-50;
-}
-
-.toneRed {
-  border-left-color: colors.$red-50;
+.bcSubtitle {
+  @include type.type-style('body-01');
+  color: $text-02;
+  margin: 0;
 }
 
 .pendingHint {

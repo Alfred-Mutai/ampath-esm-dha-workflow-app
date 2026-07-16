@@ -1,11 +1,16 @@
-import { FluidDropdown, Tab, TabList, TabPanel, TabPanels, Tabs, Tile } from '@carbon/react';
+import { FluidDropdown, Tab, TabList, TabPanel, TabPanels, Tabs } from '@carbon/react';
 import React, { useState } from 'react';
-import { UserMultiple, CheckmarkFilled, Time, Hospital, Chemistry, Medication } from '@carbon/react/icons';
 
 import styles from './overview.component.scss';
 import { type QueueEntryResult } from '../../registry/types';
 import PatientList from '../patient-list/patient-list.component';
 import Chart from '../charts/chart.component';
+import {
+  MetricsCard,
+  MetricsCardHeader,
+  MetricsCardBody,
+  MetricsCardItem,
+} from '../../service-queues/metrics/metrics-cards/metrics-card.component';
 
 interface OverviewProps {
   triageCount?: QueueEntryResult[];
@@ -60,72 +65,32 @@ const Overview: React.FC<OverviewProps> = ({ triageCount, consultationCount, das
       break;
   }
 
+  const cards = [
+    { key: 'opd', title: 'Total OPD Visits', unit: 'Visits', value: dashboardSummary?.total_opd_visits ?? 0 },
+    { key: 'completed', title: 'Completed Visits', unit: 'Visits', value: dashboardSummary?.completed_visits ?? 0 },
+    { key: 'uncompleted', title: 'Uncompleted Visits', unit: 'Visits', value: dashboardSummary?.uncompleted_visits ?? 0 },
+    { key: 'labs', title: 'Labs', unit: 'Orders', value: dashboardSummary?.labs ?? 0 },
+    { key: 'pharmacy', title: 'Pharmacy', unit: 'Orders', value: dashboardSummary?.pharmacy ?? 0 },
+    { key: 'emergencies', title: 'Emergencies', unit: 'Patients', value: dashboardSummary?.emergencies ?? 0 },
+    {
+      key: 'waiting',
+      title: 'Avg. Waiting Time',
+      unit: 'Minutes',
+      value: `${dashboardSummary?.average_waiting_minutes ?? 0} mins`,
+    },
+  ];
+
   return (
     <>
       <div className={styles.container}>
-        <Tile className={`${styles.card} ${styles.opd}`}>
-          <span className={styles.cardIcon}>
-            <UserMultiple size={20} />
-          </span>
-          <div className={styles.cardBody}>
-            <p className={styles.cardLabel}>Total OPD Visits</p>
-            <p className={styles.cardValue}>{dashboardSummary?.total_opd_visits ?? 0}</p>
-          </div>
-        </Tile>
-        <Tile className={`${styles.card} ${styles.completed}`}>
-          <span className={styles.cardIcon}>
-            <CheckmarkFilled size={20} />
-          </span>
-          <div className={styles.cardBody}>
-            <p className={styles.cardLabel}>Completed Visits</p>
-            <p className={styles.cardValue}>{dashboardSummary?.completed_visits ?? 0}</p>
-          </div>
-        </Tile>
-        <Tile className={`${styles.card} ${styles.uncompleted}`}>
-          <span className={styles.cardIcon}>
-            <Time size={20} />
-          </span>
-          <div className={styles.cardBody}>
-            <p className={styles.cardLabel}>Uncompleted Visits</p>
-            <p className={styles.cardValue}>{dashboardSummary?.uncompleted_visits ?? 0}</p>
-          </div>
-        </Tile>
-        <Tile className={`${styles.card} ${styles.labs}`}>
-          <span className={styles.cardIcon}>
-            <Chemistry size={20} />
-          </span>
-          <div className={styles.cardBody}>
-            <p className={styles.cardLabel}>Labs</p>
-            <p className={styles.cardValue}>{dashboardSummary?.labs ?? 0}</p>
-          </div>
-        </Tile>
-        <Tile className={`${styles.card} ${styles.pharmacy}`}>
-          <span className={styles.cardIcon}>
-            <Medication size={20} />
-          </span>
-          <div className={styles.cardBody}>
-            <p className={styles.cardLabel}>Pharmacy</p>
-            <p className={styles.cardValue}>{dashboardSummary?.pharmacy ?? 0}</p>
-          </div>
-        </Tile>
-        <Tile className={`${styles.card} ${styles.emergencies}`}>
-          <span className={styles.cardIcon}>
-            <Hospital size={20} />
-          </span>
-          <div className={styles.cardBody}>
-            <p className={styles.cardLabel}>Emergencies</p>
-            <p className={styles.cardValue}>{dashboardSummary?.emergencies ?? 0}</p>
-          </div>
-        </Tile>
-        <Tile className={`${styles.card} ${styles.waitingTime}`}>
-          <span className={styles.cardIcon}>
-            <Time size={20} />
-          </span>
-          <div className={styles.cardBody}>
-            <p className={styles.cardLabel}>Avg. Waiting Time</p>
-            <p className={styles.cardValue}>{dashboardSummary?.average_waiting_minutes ?? 0} mins</p>
-          </div>
-        </Tile>
+        {cards.map(({ key, title, unit, value }) => (
+          <MetricsCard key={key}>
+            <MetricsCardHeader title={title} />
+            <MetricsCardBody>
+              <MetricsCardItem label={unit} value={value} />
+            </MetricsCardBody>
+          </MetricsCard>
+        ))}
       </div>
       <div className={styles.tabsContainer}>
         <Tabs>

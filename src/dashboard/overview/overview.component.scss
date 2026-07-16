@@ -2,102 +2,31 @@
 @use '@carbon/type';
 @use '@openmrs/esm-styleguide/src/vars' as *;
 
-/* Fixed 4-column grid so the 7 metrics lay out 4 on top, 3 below */
+/* Shared MetricsCard counts (plain, uniform with the accounting dashboard), full width. */
 .container {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: layout.$spacing-05;
   width: 100%;
-}
 
-.card {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: layout.$spacing-04;
-  min-height: 0;
-  padding: layout.$spacing-04 layout.$spacing-05;
-  background-color: $ui-02;
-  border: 1px solid $ui-03;
-  border-left: 3px solid $ui-04;
-  border-radius: 6px;
-}
+  /* Slim the shared card down (the default metric tile is tall). */
+  :global(.cds--tile) {
+    min-height: 0;
+    padding: layout.$spacing-03 layout.$spacing-05;
 
-.cardIcon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 50%;
-  background-color: $ui-01;
-}
+    /* Tighten the header row — Carbon forces a 2rem-tall label row. */
+    > div:first-child {
+      margin-bottom: layout.$spacing-02;
 
-.cardBody {
-  display: flex;
-  flex-direction: column;
-  gap: layout.$spacing-01;
-  min-width: 0;
-}
+      > div {
+        height: auto;
+      }
+    }
 
-.cardLabel {
-  @include type.type-style('label-01');
-  color: $text-02;
-  margin: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.cardValue {
-  @include type.type-style('heading-03');
-  color: $ui-05;
-  margin: 0;
-  line-height: 1.1;
-}
-
-/* Metric accent colours on the left border + icon */
-.opd {
-  border-left-color: #2b579a;
-  svg {
-    fill: #2b579a;
-  }
-}
-.completed {
-  border-left-color: #24a148;
-  svg {
-    fill: #24a148;
-  }
-}
-.uncompleted {
-  border-left-color: #f1c21b;
-  svg {
-    fill: #b28600;
-  }
-}
-.labs {
-  border-left-color: #8a3ffc;
-  svg {
-    fill: #8a3ffc;
-  }
-}
-.pharmacy {
-  border-left-color: #007d79;
-  svg {
-    fill: #007d79;
-  }
-}
-.emergencies {
-  border-left-color: #da1e28;
-  svg {
-    fill: #da1e28;
-  }
-}
-.waitingTime {
-  border-left-color: #0f62fe;
-  svg {
-    fill: #0f62fe;
+    /* Slimmer value. */
+    p {
+      @include type.type-style('heading-03');
+    }
   }
 }
 

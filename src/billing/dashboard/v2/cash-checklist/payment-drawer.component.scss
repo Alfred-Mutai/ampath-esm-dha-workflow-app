@@ -1,0 +1,249 @@
+@use '@carbon/layout';
+@use '@carbon/type';
+@use '@carbon/colors';
+@use '@openmrs/esm-styleguide/src/vars' as *;
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 8000;
+}
+
+.drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 34rem;
+  max-width: 100%;
+  background-color: colors.$white;
+  z-index: 8001;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.15);
+  animation: paymentDrawerIn 160ms ease-out;
+}
+
+@keyframes paymentDrawerIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: layout.$spacing-05;
+  border-bottom: 1px solid $ui-03;
+}
+
+.title {
+  @include type.type-style('heading-compact-02');
+  color: $ui-05;
+  margin: 0;
+}
+
+.subtitle {
+  @include type.type-style('label-01');
+  color: $text-02;
+}
+
+.close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: $ui-05;
+  padding: layout.$spacing-02;
+
+  &:hover {
+    background-color: $ui-03;
+  }
+}
+
+.body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: layout.$spacing-06;
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-06;
+
+  /* Carbon reserves a helper/invalid-text row under each field; collapse it when
+     empty so fields sit closer together. */
+  :global(.cds--form-requirement:empty) {
+    display: none;
+  }
+}
+
+.itemName {
+  @include type.type-style('heading-compact-02');
+  color: $ui-05;
+}
+
+.summaryCard {
+  display: flex;
+  padding: layout.$spacing-05;
+  border: 1px solid $ui-03;
+  border-radius: 8px;
+  background-color: $ui-01;
+}
+
+.summaryItem {
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-02;
+  flex: 1 1 0;
+  min-width: 0;
+
+  & + & {
+    padding-left: layout.$spacing-05;
+    border-left: 1px solid $ui-03;
+  }
+}
+
+.summaryLabel {
+  @include type.type-style('label-01');
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: $text-03;
+}
+
+.summaryValue {
+  @include type.type-style('heading-compact-01');
+  color: $ui-05;
+  font-variant-numeric: tabular-nums;
+}
+
+.summaryBalance {
+  color: colors.$red-60;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-06;
+  width: 100%;
+}
+
+.sectionLabel {
+  @include type.type-style('label-01');
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  font-weight: 700;
+  color: $text-02;
+  padding-bottom: layout.$spacing-03;
+  border-bottom: 1px solid $ui-03;
+  margin-bottom: -(layout.$spacing-02);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-03;
+}
+
+.fieldLabel {
+  @include type.type-style('label-01');
+  color: $text-02;
+}
+
+.methodCard {
+  display: flex;
+  align-items: center;
+  gap: layout.$spacing-03;
+  padding: layout.$spacing-04 layout.$spacing-05;
+  border: 1px solid $ui-03;
+  border-radius: 8px;
+  background-color: $ui-01;
+}
+
+.methodDot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background-color: colors.$green-50;
+  flex-shrink: 0;
+}
+
+.methodCardText {
+  @include type.type-style('body-compact-01');
+  font-weight: 600;
+  color: $ui-05;
+}
+
+.methodCardSub {
+  @include type.type-style('label-01');
+  color: $text-03;
+  margin-left: auto;
+}
+
+.required {
+  color: colors.$red-60;
+  margin-left: 2px;
+}
+
+.methodNote {
+  @include type.type-style('body-compact-01');
+  color: $text-02;
+  margin: 0;
+}
+
+.divider {
+  border: none;
+  border-top: 1px solid $ui-03;
+  margin: 0;
+  width: 100%;
+}
+
+.newBalance {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: layout.$spacing-05;
+  padding: layout.$spacing-04 layout.$spacing-05;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  @include type.type-style('label-01');
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.newBalanceValue {
+  @include type.type-style('heading-compact-02');
+  color: inherit;
+  font-variant-numeric: tabular-nums;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* Outstanding balance remaining */
+.newBalanceDue {
+  border-color: colors.$red-20;
+  background-color: colors.$red-10;
+  color: colors.$red-70;
+}
+
+/* Fully paid after this payment */
+.newBalanceClear {
+  border-color: colors.$green-30;
+  background-color: colors.$green-10;
+  color: colors.$green-70;
+}
+
+.footer {
+  display: flex;
+  border-top: 1px solid $ui-03;
+
+  :global(.cds--btn) {
+    flex: 1 1 50%;
+    max-width: none;
+  }
+}

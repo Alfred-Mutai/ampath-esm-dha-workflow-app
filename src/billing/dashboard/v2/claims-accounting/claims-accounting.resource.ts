@@ -103,7 +103,7 @@ let CLAIMS: ShaClaim[] = [
     amount: KES(3500),
     status: 'PREAUTH_PENDING',
     updatedAt: '2026-07-10T09:02:00',
-    lines: [{ code: 'SHA-05-104', description: 'Chest X-ray', quantity: 1, unitPrice: 3500, tariff: 4000 }],
+    lines: [{ code: 'SHA-05-104', description: 'Chest X-ray', quantity: 1, unitPrice: 4500, tariff: 3500 }],
     bill: {
       billNo: 'INV-2026-1002',
       totalCharge: 4500,
@@ -112,6 +112,7 @@ let CLAIMS: ShaClaim[] = [
       copayPayer: 'Cash',
       document: 'cash-copay-receipt.pdf',
     },
+    attachments: ['referral-letter.pdf', 'lab-request.pdf'],
     timeline: [
       { at: '2026-07-10T08:40:00', label: 'Claim created', by: 'A. Mutai' },
       { at: '2026-07-10T09:02:00', label: 'Preauth raised — awaiting FINALISED', by: 'A. Mutai' },
@@ -147,6 +148,7 @@ let CLAIMS: ShaClaim[] = [
     updatedAt: '2026-07-09T14:12:00',
     rejectionReason: 'Diagnosis (ICD-11) does not support the billed intervention. Attach a valid diagnosis and resubmit.',
     lines: [{ code: 'UHC-OP-001', description: 'Primary care visit', quantity: 1, unitPrice: 800, tariff: 800 }],
+    attachments: ['referral-letter.pdf', 'lab-request.pdf'],
     timeline: [
       { at: '2026-07-08T10:00:00', label: 'Claim created', by: 'A. Mutai' },
       { at: '2026-07-08T10:20:00', label: 'Submitted to SHA', by: 'A. Mutai' },

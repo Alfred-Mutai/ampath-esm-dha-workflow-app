@@ -73,6 +73,14 @@
   color: $text-02;
 }
 
+/* Rendered off-screen so the invoice can be sent to the printer without showing. */
+.printArea {
+  position: absolute;
+  left: -10000px;
+  top: 0;
+  width: 60rem;
+}
+
 .tableLoading,
 .empty {
   padding: layout.$spacing-06 layout.$spacing-05;
@@ -254,6 +262,55 @@
   @include type.type-style('heading-compact-02');
   color: $ui-05;
   font-variant-numeric: tabular-nums;
+}
+
+/* Supporting documents list */
+.docList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-03;
+}
+
+.docItem {
+  display: flex;
+  align-items: center;
+  gap: layout.$spacing-04;
+  padding: layout.$spacing-03 layout.$spacing-04;
+  border: 1px solid $ui-03;
+  border-radius: 6px;
+}
+
+.docIcon {
+  display: flex;
+  align-items: center;
+  color: $text-02;
+  flex-shrink: 0;
+}
+
+.docBody {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.docName {
+  @include type.type-style('body-compact-01');
+  color: $ui-05;
+}
+
+.docMeta {
+  @include type.type-style('label-01');
+  color: $text-03;
+}
+
+.docHint {
+  @include type.type-style('label-01');
+  color: $text-03;
+  margin: layout.$spacing-03 0 0;
 }
 
 /* Two-column body: clinical content (left) + bill / timeline / actions (right) */
