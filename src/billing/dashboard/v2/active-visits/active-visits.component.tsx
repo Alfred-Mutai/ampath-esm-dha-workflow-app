@@ -1,11 +1,13 @@
 import React, { useMemo, useState } from 'react';
 import { useActiveVisits } from './active-visits.resource';
-import { Button, DataTable, DataTableCell, DataTableRow, DataTableSkeleton, Layer, Pagination, Table, TableBody, TableCell, TableContainer, TableExpandHeader, TableExpandRow, TableHead, TableHeader, TableRow, TableToolbar, TableToolbarContent, TableToolbarSearch, Tile } from '@carbon/react';
-import { showModal, usePagination } from '@openmrs/esm-framework';
+import { Button, DataTable, type DataTableRow, DataTableSkeleton, Pagination, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@carbon/react';
+import { usePagination } from '@openmrs/esm-framework';
 import { useTranslation } from 'react-i18next';
 import styles from "./active-visits.scss";
 import dayjs from 'dayjs';
 import { Add } from '@carbon/react/icons';
+import TableToolbar from '../shared/table-toolbar.component';
+import EmptyState from '../shared/empty-state.component';
 import SendToQueueModal from '../../../../registry/modal/send-to-triage/send-to-queue.modal';
 
 const ActiveVisits: React.FC = () => {
@@ -97,6 +99,19 @@ const ActiveVisits: React.FC = () => {
     }
 
     return <>
+        {(activeVisitsTableRows?.length ?? 0) === 0 ? (
+            <EmptyState message="No active visits." />
+        ) : (
+        <>
+        <TableToolbar
+            id="active-visits"
+            search={searchString}
+            onSearch={setSearchString}
+            searchPlaceholder={t('searchThisList', 'Search this list')}
+        />
+        {(searchResults?.length ?? 0) === 0 ? (
+            <EmptyState message="No active visits match your filters." />
+        ) : (
         <DataTable rows={paginatedVisits} headers={columns}>
             {({
                 rows,
@@ -106,27 +121,17 @@ const ActiveVisits: React.FC = () => {
                 getRowProps,
                 getCellProps,
             }) => (
-                <div className={styles.tableContainer}>
-                    <TableToolbar>
-                        <TableToolbarContent className={styles.tableToolBar}>
-                            <Layer className={styles.toolbarItem}>
-                                <TableToolbarSearch
-                                    expanded
-                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchString(e.target.value)}
-                                    placeholder={t('searchThisList', 'Search this list')}
-                                    size="sm"
-                                />
-                            </Layer>
-                        </TableToolbarContent>
-                    </TableToolbar>
-                    <Table className={styles.tableWrapper} {...getTableProps()}>
+                <div className={styles.tableCard}>
+                    <Table size="sm" useZebraStyles aria-label="active visits" {...getTableProps()}>
                         <TableHead>
                             <TableRow>
-                                {headers.map((header) => (
-                                    <TableHeader {...getHeaderProps({ header })}>
-                                        {header.header}
-                                    </TableHeader>
-                                ))}
+                                {headers
+                                    .filter((header) => header.key !== "visitTypeUuid")
+                                    .map((header) => (
+                                        <TableHeader {...getHeaderProps({ header })}>
+                                            {header.header}
+                                        </TableHeader>
+                                    ))}
                             </TableRow>
                         </TableHead>
                         <TableBody>
@@ -134,39 +139,50 @@ const ActiveVisits: React.FC = () => {
                                 <TableRow {...getRowProps({ row })}>
                                     {row.cells.map((cell) => {
                                         if (cell.info.header === "visitTypeUuid") {
-                                            return;
+                                            return null;
                                         }
                                         if (cell.info.header === "action") {
-                                            return <TableCell>
-                                                <Button hasIconOnly iconDescription="Add patient to queue" renderIcon={() => <Add />} onClick={() => handleRowClick(row)}></Button>
-                                            </TableCell>
+                                            return (
+                                                <TableCell key={cell.id}>
+                                                    <Button
+                                                        kind="ghost"
+                                                        size="sm"
+                                                        renderIcon={Add}
+                                                        onClick={() => handleRowClick(row)}
+                                                    >
+                                                        Send to queue
+                                                    </Button>
+                                                </TableCell>
+                                            );
                                         }
                                         return (
-                                            <TableCell {...getCellProps({ cell })}>{cell.value}</TableCell>
+                                            <TableCell key={cell.id} {...getCellProps({ cell })}>{cell.value}</TableCell>
                                         )
                                     })}
                                 </TableRow>
                             ))}
                         </TableBody>
                     </Table>
-                    {rows.length > 0 && (
-                        <Pagination
-                            forwardText={t('nextPage', 'Next page')}
-                            backwardText={t('previousPage', 'Previous page')}
-                            page={currentPage}
-                            pageSize={currentPageSize}
-                            pageSizes={pageSizes}
-                            totalItems={searchResults?.length}
-                            className={styles.pagination}
-                            onChange={({ pageSize, page }) => {
-                                if (pageSize !== currentPageSize) setPageSize(pageSize);
-                                if (page !== currentPage) goTo(page);
-                            }}
-                        />
-                    )}
                 </div>
             )}
         </DataTable>
+        )}
+        {(searchResults?.length ?? 0) > 0 && (
+            <Pagination
+                forwardText={t('nextPage', 'Next page')}
+                backwardText={t('previousPage', 'Previous page')}
+                page={currentPage}
+                pageSize={currentPageSize}
+                pageSizes={pageSizes}
+                totalItems={searchResults?.length}
+                onChange={({ pageSize, page }) => {
+                    if (pageSize !== currentPageSize) setPageSize(pageSize);
+                    if (page !== currentPage) goTo(page);
+                }}
+            />
+        )}
+        </>
+        )}
 
         {
             patientUuid && visitUuid &&

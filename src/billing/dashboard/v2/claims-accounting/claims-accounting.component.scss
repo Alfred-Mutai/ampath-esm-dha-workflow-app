@@ -1,0 +1,552 @@
+@use '@carbon/layout';
+@use '@carbon/type';
+@use '@carbon/colors';
+@use '@openmrs/esm-styleguide/src/vars' as *;
+
+.claimsArea {
+  padding: layout.$spacing-03 0;
+}
+
+.claimsIntro {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: layout.$spacing-05;
+  margin-bottom: layout.$spacing-05;
+}
+
+.claimsTitle {
+  @include type.type-style('heading-compact-02');
+  color: $ui-05;
+  margin: 0 0 layout.$spacing-02;
+}
+
+.claimsSubtitle {
+  @include type.type-style('body-01');
+  color: $text-02;
+  margin: 0;
+  max-width: 60ch;
+}
+
+.countPill {
+  display: inline-block;
+  margin-left: layout.$spacing-03;
+  min-width: 1.15rem;
+  padding: 0 layout.$spacing-02;
+  border-radius: 999px;
+  background-color: var(--brand-01);
+  color: colors.$white;
+  font-size: 0.68rem;
+  line-height: 1.15rem;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.claimLink {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--brand-01);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+
+  &:hover {
+    color: var(--brand-02);
+    text-decoration: underline;
+  }
+}
+
+/* Table wrapper — visual styling comes from the page-level table rules so every
+   section looks the same. This only handles horizontal scroll for wide tables. */
+.tableCard {
+  overflow-x: auto;
+}
+
+.numCol {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.muted {
+  color: $text-02;
+}
+
+/* Rendered off-screen so the invoice can be sent to the printer without showing. */
+.printArea {
+  position: absolute;
+  left: -10000px;
+  top: 0;
+  width: 60rem;
+}
+
+.tableLoading,
+.empty {
+  padding: layout.$spacing-06 layout.$spacing-05;
+  color: $text-02;
+}
+
+/* remittance drill-down header */
+.remitHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: layout.$spacing-05;
+  padding: layout.$spacing-04 0 layout.$spacing-05;
+  border-bottom: 1px solid $ui-03;
+  margin-bottom: layout.$spacing-04;
+}
+
+.remitRef {
+  @include type.type-style('heading-compact-01');
+  font-family: 'IBM Plex Mono', monospace;
+  color: $ui-05;
+}
+
+.remitPayer {
+  @include type.type-style('label-01');
+  color: $text-02;
+  margin-left: layout.$spacing-04;
+}
+
+.remitAmt {
+  @include type.type-style('heading-compact-02');
+  color: $ui-05;
+  font-variant-numeric: tabular-nums;
+}
+
+.empty {
+  @include type.type-style('body-01');
+  text-align: center;
+}
+
+/* ---- Claim detail ---- */
+.detail {
+  padding: layout.$spacing-03 0 layout.$spacing-06;
+}
+
+/* Top card: identity header + status/rejection banner + money tiles. */
+.topCard {
+  border: 1px solid $ui-03;
+  border-radius: 8px;
+  background-color: colors.$white;
+  padding: layout.$spacing-06;
+  margin-bottom: layout.$spacing-06;
+}
+
+.topCard > *:last-child {
+  margin-bottom: 0;
+}
+
+.breadcrumb {
+  margin-bottom: layout.$spacing-05;
+}
+
+.detailHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: layout.$spacing-05;
+  padding-bottom: layout.$spacing-05;
+  border-bottom: 1px solid $ui-03;
+  margin-bottom: layout.$spacing-05;
+}
+
+.detailIdentity {
+  display: flex;
+  align-items: center;
+  gap: layout.$spacing-05;
+  min-width: 0;
+}
+
+.detailAvatar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background-color: var(--brand-01);
+  color: colors.$white;
+  @include type.type-style('heading-compact-01');
+  letter-spacing: 0.02em;
+}
+
+.detailCode {
+  @include type.type-style('label-01');
+  font-family: 'IBM Plex Mono', monospace;
+  color: var(--brand-01);
+  margin-bottom: 2px;
+}
+
+.detailName {
+  @include type.type-style('heading-03');
+  color: $ui-05;
+  margin: 0 0 layout.$spacing-03;
+}
+
+.detailMeta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: layout.$spacing-03;
+  @include type.type-style('body-compact-01');
+  color: $text-02;
+}
+
+.reasonNote {
+  display: flex;
+  align-items: flex-start;
+  gap: layout.$spacing-03;
+  padding: layout.$spacing-04 layout.$spacing-05;
+  background-color: colors.$red-10;
+  border-left: 3px solid colors.$red-60;
+  border-radius: 4px;
+  margin-bottom: layout.$spacing-05;
+}
+
+.reasonIcon {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: colors.$red-60;
+}
+
+.reasonTitle {
+  @include type.type-style('heading-compact-01');
+  color: $ui-05;
+}
+
+.reasonText {
+  @include type.type-style('body-compact-01');
+  color: $text-02;
+  margin: 2px 0 0;
+}
+
+/* Financial summary tiles: total → SHA slice + copay slice */
+.summaryRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: layout.$spacing-04;
+  margin-bottom: layout.$spacing-06;
+}
+
+.summaryTile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: layout.$spacing-04 layout.$spacing-05;
+  border: 1px solid $ui-03;
+  border-left: 3px solid colors.$gray-30;
+  border-radius: 8px;
+  background-color: $ui-01;
+}
+
+.tileSha {
+  border-left-color: colors.$green-50;
+}
+
+.tileCopay {
+  border-left-color: colors.$red-50;
+}
+
+.summaryLabel {
+  @include type.type-style('label-01');
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: $text-03;
+}
+
+.summaryValue {
+  @include type.type-style('heading-compact-02');
+  color: $ui-05;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Supporting documents list */
+.docList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-03;
+}
+
+.docItem {
+  display: flex;
+  align-items: center;
+  gap: layout.$spacing-04;
+  padding: layout.$spacing-03 layout.$spacing-04;
+  border: 1px solid $ui-03;
+  border-radius: 6px;
+}
+
+.docIcon {
+  display: flex;
+  align-items: center;
+  color: $text-02;
+  flex-shrink: 0;
+}
+
+.docBody {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.docName {
+  @include type.type-style('body-compact-01');
+  color: $ui-05;
+}
+
+.docMeta {
+  @include type.type-style('label-01');
+  color: $text-03;
+}
+
+.docHint {
+  @include type.type-style('label-01');
+  color: $text-03;
+  margin: layout.$spacing-03 0 0;
+}
+
+/* Two-column body: clinical content (left) + bill / timeline / actions (right) */
+.detailBody {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+  gap: layout.$spacing-07;
+  align-items: stretch;
+}
+
+.detailMain,
+.detailAside {
+  border: 1px solid $ui-03;
+  border-radius: 8px;
+  padding: layout.$spacing-06;
+  background-color: colors.$white;
+}
+
+@media (max-width: 66rem) {
+  .detailBody {
+    grid-template-columns: 1fr;
+  }
+}
+
+.detailSection {
+  margin-bottom: layout.$spacing-05;
+}
+
+/* Clear divider between stacked sections within a column card. */
+.detailSection + .detailSection {
+  border-top: 1px solid $ui-03;
+  padding-top: layout.$spacing-05;
+}
+
+.detailMain .detailSection:last-child,
+.detailAside .detailSection:last-child {
+  margin-bottom: 0;
+}
+
+.detailSectionTitle {
+  @include type.type-style('label-01');
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  font-weight: 700;
+  color: $ui-05;
+  margin: 0 0 layout.$spacing-03;
+}
+
+.interventionList,
+.diagnosisList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-03;
+  @include type.type-style('body-01');
+  color: $ui-05;
+}
+
+.interventionList li,
+.diagnosisList li {
+  position: relative;
+  padding-left: layout.$spacing-05;
+}
+
+/* Neat brand-coloured bullet. */
+.interventionList li::before,
+.diagnosisList li::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 0.55em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--brand-01);
+}
+
+.attachmentList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-02;
+}
+
+.attachmentList li {
+  display: flex;
+  align-items: center;
+  gap: layout.$spacing-03;
+  @include type.type-style('body-compact-01');
+  color: $ui-05;
+}
+
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid $ui-03;
+  border-radius: 8px;
+}
+
+.lineTable {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 40rem;
+  @include type.type-style('body-compact-01');
+
+  th,
+  td {
+    padding: layout.$spacing-03 layout.$spacing-04;
+    border-bottom: 1px solid $ui-03;
+    text-align: left;
+  }
+
+  thead th {
+    @include type.type-style('label-01');
+    color: $text-02;
+    background-color: $ui-01;
+  }
+
+  tfoot td {
+    font-weight: 600;
+    border-bottom: none;
+  }
+}
+
+.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.mono {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.82rem;
+}
+
+.over {
+  color: colors.$red-60;
+  font-weight: 600;
+}
+
+.paidBanner {
+  display: flex;
+  align-items: center;
+  gap: layout.$spacing-03;
+  padding: layout.$spacing-04 layout.$spacing-05;
+  background-color: colors.$green-10;
+  border-left: 3px solid colors.$green-50;
+  border-radius: 4px;
+  margin-bottom: layout.$spacing-06;
+  color: $ui-05;
+  @include type.type-style('body-compact-01');
+}
+
+/* Companion bill panel (married to the claim) */
+.billPanel {
+  border: 1px solid $ui-03;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.billLine {
+  display: flex;
+  justify-content: space-between;
+  gap: layout.$spacing-05;
+  padding: layout.$spacing-03 layout.$spacing-05;
+  border-bottom: 1px solid $ui-03;
+  @include type.type-style('body-compact-01');
+  color: $text-02;
+}
+
+.billLine strong,
+.billLine .shaAmt,
+.billLine .copayAmt {
+  font-variant-numeric: tabular-nums;
+}
+
+.billLine strong {
+  color: $ui-05;
+}
+
+.shaAmt {
+  color: colors.$green-60;
+  font-weight: 600;
+}
+
+.copayAmt {
+  color: colors.$red-60;
+  font-weight: 600;
+}
+
+.fullyCovered {
+  color: $text-03;
+}
+
+.billDoc {
+  display: flex;
+  align-items: center;
+  gap: layout.$spacing-03;
+  padding: layout.$spacing-03 layout.$spacing-05;
+  background-color: $ui-01;
+  @include type.type-style('label-01');
+  color: $ui-05;
+}
+
+.timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-03;
+}
+
+.timeline li {
+  display: flex;
+  flex-direction: column;
+  padding-left: layout.$spacing-05;
+  border-left: 2px solid $ui-03;
+}
+
+.timelineLabel {
+  @include type.type-style('body-compact-01');
+  color: $ui-05;
+  font-weight: 600;
+}
+
+.timelineMeta {
+  @include type.type-style('label-01');
+  color: $text-03;
+}
+
+.actionRow {
+  display: flex;
+  gap: layout.$spacing-04;
+  flex-wrap: wrap;
+  margin-top: layout.$spacing-04;
+}

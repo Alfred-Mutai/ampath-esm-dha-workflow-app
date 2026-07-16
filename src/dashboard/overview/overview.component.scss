@@ -1,150 +1,51 @@
+@use '@carbon/layout';
+@use '@carbon/type';
+@use '@openmrs/esm-styleguide/src/vars' as *;
+
+/* Shared MetricsCard counts (plain, uniform with the accounting dashboard), full width. */
 .container {
-    display: flex;
-    width: 100%;
-    justify-content: flex-start;
-    flex-wrap: wrap;
-    gap: 1rem;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: layout.$spacing-05;
+  width: 100%;
 
-.card {
-    border: 1px solid grey;
-    border-radius: 5px;
-    background-color: white;
-    font-weight: bold;
-    flex: 0 0 250px;
-    height: 5rem;
-    min-width: 0;
-  }
+  /* Slim the shared card down (the default metric tile is tall). */
+  :global(.cds--tile) {
+    min-height: 0;
+    padding: layout.$spacing-03 layout.$spacing-05;
 
-  .title {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  white-space: nowrap;
-}
-}
+    /* Tighten the header row — Carbon forces a 2rem-tall label row. */
+    > div:first-child {
+      margin-bottom: layout.$spacing-02;
 
-@media (max-width: 1584px) {
-  .container .card {
-    flex: 0 0 calc(20% - 1rem);
-  }
+      > div {
+        height: auto;
+      }
+    }
 
-  .text {
-    font-size: 1rem;
-  }
-}
-@media (max-width: 1456px) {
-  .container .card {
-    flex: 0 0 calc(25% - 1rem);
-  }
-
-  .text {
-    font-size: 1rem;
+    /* Slimmer value. */
+    p {
+      @include type.type-style('heading-03');
+    }
   }
 }
 
-@media (max-width: 1356px) {
-  .container .card {
-    flex: 0 0 calc(25% - 1rem);
-  }
-
-  .text {
-    font-size: 1rem;
-  }
-}
-
-@media (max-width: 1264px) {
-  .container .card {
-    flex: 0 0 calc(30% - 1rem);
-  }
-
-  .text {
-    font-size: 1rem;
-  }
-}
-
-@media (max-width: 1095px) {
-  .container .card {
-    flex: 0 0 calc(30% - 1rem);
-  }
-
-  .text {
-    font-size: 1rem;
-  }
-}
-
-@media (max-width: 1024px) {
-  .container .card {
-    flex: 0 0 calc(50% - 1rem);
-  }
-  .text {
-    font-size: 1rem;
-  }
-}
-
-@media (max-width: 600px) {
-  .container .card {
-    flex: 0 0 100%;
-  }
-}
-
-
-h4 {
-    font-weight: bold;
-}
-
-.dropdownItem {
-    display: flex;
-    justify-self: flex-end;
-    width: 25%; 
-    min-width: 180px; 
-    max-width: 280px;
-    margin-top: 5rem;
-    margin-bottom: 5rem;
-}
-
-.dropdownContainer {
-  .cds--list-box__menu-item__option {
-    font-weight: 600; 
-  }
-
-  .cds--list-box__field {
-    font-weight: 600; 
-  }
-}
-
-.opd {
-    background-color: #2B579A !important;
-}
-.completed {
-    background-color: #4CAF50 !important;
-}
-
-.uncompleted {
-    background-color: #FFC107 !important;
-}
-.emergencies {
-    background-color: lightcoral !important;
-}
-
-.waitingTime {
-    background-color: lightblue !important;
-}
-.labs {
-  background-color: lightgrey !important;
-}
-
-.pharmacy {
-  background-color: lightgreen !important;
-}
-
-.text {
-  color: white;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  white-space: nowrap;
-  font-size: 1rem;
-}
 .tabsContainer {
-  margin-top: 2rem;
+  margin-top: layout.$spacing-06;
+  background-color: $ui-02;
+  border: 1px solid $ui-03;
+  border-radius: 6px;
+  padding: layout.$spacing-05;
+}
+
+@media (max-width: 66rem) {
+  .container {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 42rem) {
+  .container {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

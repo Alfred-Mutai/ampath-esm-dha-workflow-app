@@ -139,7 +139,7 @@ export async function getBiometrictsRequestUrl(
     isBiometricsDischargeAuthorization: false,
     isEmergency: false,
     isIntegration: true,
-    workStationId: workstationId || '54cf356c-c4f9-4fd2-a9df-9ca1723b98a6-B0A460977E12',
+    workStationId: workstationId,
   };
   const url = `${hieBaseUrl}/client/biometrics-authorize`;
   const response = await openmrsFetch(url, {

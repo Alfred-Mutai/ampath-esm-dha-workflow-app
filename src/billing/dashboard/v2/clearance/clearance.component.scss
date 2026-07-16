@@ -1,0 +1,77 @@
+@use '@carbon/layout';
+@use '@carbon/type';
+@use '@carbon/colors';
+@use '@openmrs/esm-styleguide/src/vars' as *;
+
+.clearance {
+  padding: layout.$spacing-03 0;
+}
+
+.intro {
+  margin-bottom: layout.$spacing-05;
+}
+
+.title {
+  @include type.type-style('heading-compact-02');
+  color: $ui-05;
+  margin: 0 0 layout.$spacing-02;
+}
+
+.subtitle {
+  @include type.type-style('body-01');
+  color: $text-02;
+  margin: 0;
+  max-width: 62ch;
+}
+
+.pill {
+  display: inline-block;
+  margin-left: layout.$spacing-03;
+  min-width: 1.15rem;
+  padding: 0 layout.$spacing-02;
+  border-radius: 999px;
+  background-color: var(--brand-01);
+  color: colors.$white;
+  font-size: 0.68rem;
+  line-height: 1.15rem;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.loading,
+.empty {
+  padding: layout.$spacing-06 layout.$spacing-05;
+  color: $text-02;
+}
+
+/* Table wrapper — visual styling comes from the page-level table rules so every
+   section looks the same. This only handles horizontal scroll for wide tables. */
+.tableCard {
+  overflow-x: auto;
+}
+
+/* Right-align numeric columns with tabular figures */
+.numCol {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.empty {
+  @include type.type-style('body-01');
+  text-align: center;
+}
+
+.prepaidHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: layout.$spacing-05;
+  margin: layout.$spacing-03 0 layout.$spacing-05;
+}
+
+.prepaidHint {
+  @include type.type-style('body-01');
+  color: $text-02;
+  margin: 0;
+  max-width: 60ch;
+}

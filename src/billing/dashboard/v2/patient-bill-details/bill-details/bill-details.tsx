@@ -70,7 +70,7 @@ const BillDetails: React.FC<billDetailsProps> = ({ patientBillDetails, patientPa
                 <h6>Bill Items</h6>
               </div>
               <div>
-                <Table aria-label="sample table" size="lg">
+                <Table aria-label="bill details" size="sm">
                   <TableHead>
                     <TableRow>
                       <TableHeader>No</TableHeader>
@@ -129,7 +129,7 @@ const BillDetails: React.FC<billDetailsProps> = ({ patientBillDetails, patientPa
                 <h6>Bill Payments</h6>
               </div>
               <div>
-                <Table aria-label="sample table" size="lg">
+                <Table aria-label="bill details" size="sm">
                   <TableHead>
                     <TableRow>
                       <TableHeader>No</TableHeader>

@@ -1,6 +1,89 @@
 @use '@carbon/layout';
 @use '@carbon/type';
+@use '@carbon/colors';
 @use '@openmrs/esm-styleguide/src/vars' as *;
+
+/* Header: icon + title + subtitle (matches the facility dashboard header). */
+.bcHeader {
+  display: flex;
+  align-items: flex-start;
+  column-gap: layout.$spacing-04;
+  padding-bottom: layout.$spacing-05;
+  border-bottom: 1px solid $ui-03;
+}
+
+.bcHeaderIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  background-color: colors.$blue-10;
+  color: colors.$blue-60;
+}
+
+/* Top summary: at-a-glance counts (shared MetricsCard style, as on the lab dashboard). */
+.summaryRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: layout.$spacing-04;
+  width: 100%;
+  padding-bottom: layout.$spacing-05;
+  margin-bottom: layout.$spacing-03;
+  border-bottom: 1px solid $ui-03;
+}
+
+/* Reset the button wrapper so the MetricsCard stays clickable, and keep the card compact. */
+.metricButton {
+  all: unset;
+  display: block;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--brand-03);
+    outline-offset: 1px;
+  }
+
+  :global(.cds--tile) {
+    min-height: 0;
+    padding: layout.$spacing-03 layout.$spacing-05;
+
+    /* Tighten the header row — Carbon forces a 2rem-tall label row. */
+    > div:first-child {
+      margin-bottom: layout.$spacing-02;
+
+      > div {
+        height: auto;
+      }
+    }
+
+    /* Slimmer value. */
+    p {
+      @include type.type-style('heading-03');
+    }
+  }
+}
+
+.bcTitle {
+  @include type.type-style('heading-03');
+  color: $ui-05;
+  margin: 0 0 layout.$spacing-02;
+}
+
+.bcSubtitle {
+  @include type.type-style('body-01');
+  color: $text-02;
+  margin: 0;
+}
+
+.pendingHint {
+  @include type.type-style('body-01');
+  color: $text-02;
+  margin: 0 0 layout.$spacing-05;
+  max-width: 70ch;
+}
 
 .bcLayout {
     display: flex;

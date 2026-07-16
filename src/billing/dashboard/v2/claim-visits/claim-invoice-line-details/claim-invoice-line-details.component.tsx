@@ -37,7 +37,7 @@ const ClaimInvoiceLineDetails: React.FC<claimLineDetailsProps> = ({ claimInvoice
   }
 
   return <>
-    <Table>
+    <Table size="sm">
       <TableHead>
         <TableRow>
           <TableHeader>No</TableHeader>

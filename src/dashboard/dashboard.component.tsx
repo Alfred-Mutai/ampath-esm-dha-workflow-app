@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Tab, TabList, TabPanel, TabPanels, Tabs } from '@carbon/react';
+import { Analytics } from '@carbon/react/icons';
 
 import styles from './dashboard.component.scss';
 import Overview from './overview/overview.component';
@@ -28,22 +28,20 @@ const Dashboard: React.FC<DashboardProps> = () => {
 
   return (
     <div className={styles.container}>
-      <Tabs>
-        <TabList contained scrollDebounceWait={200}>
-          <Tab>
-            <span className={styles.tabText}>Overview</span>
-          </Tab>
-        </TabList>
-        <TabPanels>
-          <TabPanel>
-            <Overview
-              triageCount={triageQueueEntries}
-              consultationCount={consultationQueueEntries}
-              dashboardSummary={dashboardSummary}
-            />
-          </TabPanel>
-        </TabPanels>
-      </Tabs>
+      <div className={styles.header}>
+        <span className={styles.headerIcon}>
+          <Analytics size={24} />
+        </span>
+        <div>
+          <h3 className={styles.title}>Today at your facility</h3>
+          <p className={styles.subtitle}>A live snapshot of patient flow and service activity.</p>
+        </div>
+      </div>
+      <Overview
+        triageCount={triageQueueEntries}
+        consultationCount={consultationQueueEntries}
+        dashboardSummary={dashboardSummary}
+      />
     </div>
   );
 };

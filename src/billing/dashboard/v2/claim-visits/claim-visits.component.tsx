@@ -14,15 +14,18 @@ import {
   TableRow,
 } from '@carbon/react';
 import ClaimVisitDetailsModal from './modal/claim-visit-details/claim-visit-details.modal';
+import TableToolbar from '../shared/table-toolbar.component';
 interface claimVisitsProps {
   locationUuid: string;
   billingDate: string;
+  onDateChange?: (value: string) => void;
 }
-const ClaimVisits: React.FC<claimVisitsProps> = ({ locationUuid, billingDate }) => {
+const ClaimVisits: React.FC<claimVisitsProps> = ({ locationUuid, billingDate, onDateChange }) => {
   const [claimVisits, setClaimVisits] = useState<ClaimVisitReponse[]>();
   const [showClaimsVisitModal, setShowClaimsVisitModal] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [consentToken, setConsentToken] = useState<string>();
+  const [search, setSearch] = useState<string>('');
   const { claimVisit, isLoading } = useProviderClaimPreview(consentToken, locationUuid);
   useEffect(() => {
     if (locationUuid && billingDate) {
@@ -66,7 +69,15 @@ const ClaimVisits: React.FC<claimVisitsProps> = ({ locationUuid, billingDate }) 
   return (
     <>
       <div className={styles.claimVisitsLayout}>
-        <Table aria-label="sample table" size="lg">
+        <TableToolbar
+          id="claim-visits"
+          search={search}
+          onSearch={setSearch}
+          date={billingDate}
+          onDate={onDateChange}
+          searchPlaceholder="Search patient or service type…"
+        />
+        <Table aria-label="claim visits" size="sm">
           <TableHead>
             <TableRow>
               <TableHeader>No</TableHeader>
@@ -77,8 +88,12 @@ const ClaimVisits: React.FC<claimVisitsProps> = ({ locationUuid, billingDate }) 
             </TableRow>
           </TableHead>
           <TableBody>
-            {claimVisits &&
-              claimVisits.map((cv, index) => {
+            {(claimVisits ?? [])
+              .filter((cv) => {
+                const term = search.trim().toLowerCase();
+                return !term || `${cv.patientId} ${cv.serviceType}`.toLowerCase().includes(term);
+              })
+              .map((cv, index) => {
                 return (
                   <>
                     <TableRow key={cv.id}>
@@ -88,9 +103,11 @@ const ClaimVisits: React.FC<claimVisitsProps> = ({ locationUuid, billingDate }) 
                         <div>{cv.patientId}</div>
                       </TableCell>
                       <TableCell>{cv.serviceType}</TableCell>
-                      <Button kind="ghost" onClick={() => handleSelectedClaimsVisit(cv)} size="sm">
-                        {loading ? <InlineLoading description="Fetching data...." /> : 'View Claim'}
-                      </Button>
+                      <TableCell>
+                        <Button kind="ghost" onClick={() => handleSelectedClaimsVisit(cv)} size="sm">
+                          {loading ? <InlineLoading description="Fetching data...." /> : 'View Claim'}
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   </>
                 );

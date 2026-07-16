@@ -11,7 +11,7 @@ const ClaimDiagnosisDetails: React.FC<claimDiagnosisDetailsProps> = ({claimDiagn
       return <>No Diagnosis data</>
    }
    return <>
-   <Table>
+   <Table size="sm">
           <TableHead>
             <TableRow>
               <TableHeader>No</TableHeader>

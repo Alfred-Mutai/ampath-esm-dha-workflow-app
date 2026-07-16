@@ -1,11 +1,16 @@
-import { FluidDropdown, Tab, TabList, TabPanel, TabPanels, Tabs, Tile } from '@carbon/react';
+import { FluidDropdown, Tab, TabList, TabPanel, TabPanels, Tabs } from '@carbon/react';
 import React, { useState } from 'react';
-import { UserMultiple, CheckmarkFilled, Time, Hospital, Chemistry, Medication } from '@carbon/react/icons';
 
 import styles from './overview.component.scss';
 import { type QueueEntryResult } from '../../registry/types';
 import PatientList from '../patient-list/patient-list.component';
 import Chart from '../charts/chart.component';
+import {
+  MetricsCard,
+  MetricsCardHeader,
+  MetricsCardBody,
+  MetricsCardItem,
+} from '../../service-queues/metrics/metrics-cards/metrics-card.component';
 
 interface OverviewProps {
   triageCount?: QueueEntryResult[];
@@ -60,52 +65,32 @@ const Overview: React.FC<OverviewProps> = ({ triageCount, consultationCount, das
       break;
   }
 
+  const cards = [
+    { key: 'opd', title: 'Total OPD Visits', unit: 'Visits', value: dashboardSummary?.total_opd_visits ?? 0 },
+    { key: 'completed', title: 'Completed Visits', unit: 'Visits', value: dashboardSummary?.completed_visits ?? 0 },
+    { key: 'uncompleted', title: 'Uncompleted Visits', unit: 'Visits', value: dashboardSummary?.uncompleted_visits ?? 0 },
+    { key: 'labs', title: 'Labs', unit: 'Orders', value: dashboardSummary?.labs ?? 0 },
+    { key: 'pharmacy', title: 'Pharmacy', unit: 'Orders', value: dashboardSummary?.pharmacy ?? 0 },
+    { key: 'emergencies', title: 'Emergencies', unit: 'Patients', value: dashboardSummary?.emergencies ?? 0 },
+    {
+      key: 'waiting',
+      title: 'Avg. Waiting Time',
+      unit: 'Minutes',
+      value: `${dashboardSummary?.average_waiting_minutes ?? 0} mins`,
+    },
+  ];
+
   return (
     <>
       <div className={styles.container}>
-        <Tile className={`${styles.card} ${styles.opd}`}>
-          <h4 className={styles.text}>
-            <UserMultiple size={24} />
-            Total OPD Visits
-          </h4>
-          <h4 className={styles.text}>{dashboardSummary?.total_opd_visits ?? 0}</h4>
-        </Tile>
-        <Tile className={`${styles.card} ${styles.completed}`}>
-          <h4 className={styles.text}>
-            <CheckmarkFilled size={20} /> Completed Visits
-          </h4>
-          <h4 className={styles.text}>{dashboardSummary?.completed_visits ?? 0}</h4>
-        </Tile>
-        <Tile className={`${styles.card} ${styles.uncompleted}`}>
-          <h4 className={styles.text}>
-            <Time size={20} /> Uncompleted visits
-          </h4>
-          <h4 className={styles.text}>{dashboardSummary?.uncompleted_visits ?? 0}</h4>
-        </Tile>
-        <Tile className={`${styles.card} ${styles.labs}`}>
-          <h4 className={styles.text}>
-            <Chemistry size={20} /> Labs
-          </h4>
-          <h4 className={styles.text}>{dashboardSummary?.labs ?? 0}</h4>
-        </Tile>
-        <Tile className={`${styles.card} ${styles.pharmacy}`}>
-          <h4 className={styles.text}>
-            <Medication size={20} /> Pharmacy
-          </h4>
-          <h4 className={styles.text}>{dashboardSummary?.pharmacy ?? 0}</h4>
-        </Tile>
-        <Tile className={`${styles.card} ${styles.emergencies}`}>
-          <h4 className={styles.text}>
-            <Hospital size={20} /> Emergencies
-          </h4>
-          <h4 className={styles.text}>{dashboardSummary?.emergencies ?? 0}</h4>
-        </Tile>
-        <Tile className={`${styles.card} ${styles.waitingTime}`}>
-          <h4 className={styles.text}>
-            <Time size={20} /> Avg. Waiting Time
-          </h4>
-          <h4 className={styles.text}>{dashboardSummary?.average_waiting_minutes ?? 0} mins</h4>
-        </Tile>
+        {cards.map(({ key, title, unit, value }) => (
+          <MetricsCard key={key}>
+            <MetricsCardHeader title={title} />
+            <MetricsCardBody>
+              <MetricsCardItem label={unit} value={value} />
+            </MetricsCardBody>
+          </MetricsCard>
+        ))}
       </div>
       <div className={styles.tabsContainer}>
         <Tabs>
