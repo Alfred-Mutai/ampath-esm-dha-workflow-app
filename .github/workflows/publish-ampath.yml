@@ -76,7 +76,7 @@ jobs:
         run: yarn npm publish --tag "${NPM_DIST_TAG}" --access public
         env:
           YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
-          
+
   publish-release:
     runs-on: ubuntu-latest
     needs: build
