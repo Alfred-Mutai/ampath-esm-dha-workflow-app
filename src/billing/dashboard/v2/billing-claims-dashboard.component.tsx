@@ -17,6 +17,7 @@ import {
   MetricsCardBody,
   MetricsCardItem,
 } from '../../../service-queues/metrics/metrics-cards/metrics-card.component';
+import FacilityAndWorkerSlot from '../../../shared/ui/facility-worker-slot/facility-worker.component-slot.component';
 interface billingClaimsDashboardProps { }
 const BillingClaimsDashboard: React.FC<billingClaimsDashboardProps> = () => {
   const session = useSession();
@@ -77,6 +78,9 @@ const BillingClaimsDashboard: React.FC<billingClaimsDashboardProps> = () => {
   return (
     <>
             <div className={styles.bcLayout}>
+               <div className={styles.hwrSection}>
+                  <FacilityAndWorkerSlot />
+                </div>
               <div className={styles.bcHeader}>
                 <span className={styles.bcHeaderIcon}>
                   <Wallet size={24} />

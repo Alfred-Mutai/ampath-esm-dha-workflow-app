@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { ExtensionSlot, WorkspaceContainer } from '@openmrs/esm-framework';
+import React from 'react';
+import { ExtensionSlot } from '@openmrs/esm-framework';
 
 const Mortuary: React.FC = () => {
   

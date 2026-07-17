@@ -1,0 +1,16 @@
+.pharmacyLayout{
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    row-gap: 1px;
+    .hwrSection{
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+    }
+    .pharmacySection{
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+    }
+}

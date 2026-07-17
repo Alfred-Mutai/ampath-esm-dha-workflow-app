@@ -20,6 +20,7 @@ import { QUEUE_SERVICE_UUIDS } from '../../shared/constants/concepts';
 import ConfirmModal from '../../shared/ui/confirm-modal/confirm.modal';
 import { type ServiceQueueReportPatientList, type ServiceQueueDailyReport } from '../../shared/types';
 import DailyReportPatientListModal from '../modals/daily-report-patient-list/daily-report-patient-list';
+import FacilityAndWorkerSlot from '../../shared/ui/facility-worker-slot/facility-worker.component-slot.component';
 
 interface ServiceQueueComponentProps {
   serviceTypeUuid: string;

@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import styles from './admissions-dashboard.component.scss';
 import StatCard from '../shared/ui/stat-card/stat-card.component';
 import { InlineLoading, Tab, TabList, TabPanel, TabPanels, Tabs } from '@carbon/react';
-import { Patient, useConfig, useSession } from '@openmrs/esm-framework';
+import { type Patient, useConfig, useSession } from '@openmrs/esm-framework';
 import {
   fetchFacilityEncounterBills,
   getAdmissionLoactionData,
@@ -16,15 +16,16 @@ import {
   type BedLayout,
   type FhirEncounter,
   type FhirEncounterBundle,
-  FacilityEncounterBill,
+  type FacilityEncounterBill,
 } from './types';
 import AdmittedPatientsList from './admitted-list/admitted-patients-list';
 import AdmissionsRequestList from './admission-request-list/admission-request-list';
 import { AdmissionEncounterTypeUuids } from './constants';
 import DischargedList from './discharged-list/discharged-list';
 import AwaitingDischargeList from './awaiting-discharge-list/awaiting-discharge-list';
-import { ConfigObject } from '../config-schema';
+import { type ConfigObject } from '../config-schema';
 import dayjs from 'dayjs';
+import FacilityAndWorkerSlot from '../shared/ui/facility-worker-slot/facility-worker.component-slot.component';
 
 const AdmissionsDashboard: React.FC = () => {
   const [dashboardData, setDashboardData] = useState<AdmissionLocationData>(null);
@@ -143,6 +144,9 @@ const AdmissionsDashboard: React.FC = () => {
   return (
     <>
       <div className={styles.admissionsLayout}>
+      <div className={styles.hwrSection}>
+        <FacilityAndWorkerSlot />
+      </div>
         <div className={styles.headerSection}>
           <h4>Admissions</h4>
         </div>
