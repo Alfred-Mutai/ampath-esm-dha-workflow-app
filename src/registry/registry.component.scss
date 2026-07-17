@@ -5,6 +5,7 @@
 
 .registryLayout {
   display: flex;
+  flex-direction: column;
   width: 100%;
   padding: layout.$spacing-05;
   background-color: $ui-01;
