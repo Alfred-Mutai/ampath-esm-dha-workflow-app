@@ -239,7 +239,8 @@ const OTPWhitlistingModal: React.FC<OTPWhitlistingModalProps> = ({
               accept={['.pdf', '.jpg', '.jpeg', '.png']}
               filenameStatus="edit"
               onChange={(event) => {
-                const selectedFile = event.target.files?.[0] ?? null;
+                // const selectedFile = event.target.files?.[0] ?? null;
+                const selectedFile = (event.target as HTMLInputElement).files?.[0] ?? null;
                 setFile(selectedFile);
               }}
             />
