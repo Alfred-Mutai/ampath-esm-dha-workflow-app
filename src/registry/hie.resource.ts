@@ -170,3 +170,39 @@ export async function getWorkstationId(): Promise<BiometricsStatus> {
 
   return response.json();
 }
+
+export async function sendClaimAttachment(
+  consentToken: string,
+  documentType: string,
+  interventionCode: string,
+  fileBlob: string[],
+  locationUuid: string,
+): Promise<any> {
+  const hieBaseUrl = await getHieBaseUrl();
+
+  const payload = {
+    consentToken: consentToken,
+    documentType: documentType,
+    interventionCode: interventionCode,
+    fileBlob: fileBlob,
+    locationUuid: locationUuid,
+  };
+  const url = `${hieBaseUrl}/claim-attachment`;
+  const response = await openmrsFetch(url, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    const errorText = data.message || 'Failed to fetch OTP';
+    throw new Error(`Request failed with ${response.status}: ${errorText}`);
+  }
+
+  return data;
+}

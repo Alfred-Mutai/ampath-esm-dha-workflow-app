@@ -1,0 +1,97 @@
+.fieldContainer {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 10px;
+    border-bottom: 1px dotted #999;
+    padding-bottom: 4px;
+
+.fieldLabel {
+    width: 180px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.fieldValue {
+    flex: 1;
+    font-weight: 600;
+    color: grey;
+    word-break: break-word;
+}
+}
+
+.clinicianContainer {
+    width: 220px;
+    display: flex;
+    flex-direction: column;
+
+.clinicianLabel {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+}
+.footer {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 35px;
+  padding-top: 15px;
+  border-top: 1px solid #999;
+}
+
+.remarksValue {
+    border: 1px solid #000;
+    min-height: 80px;
+    padding: 10px;
+    line-height: 1.5
+}
+
+.remarksLabel {
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.container {
+    width: 190mm;
+    min-height: auto;
+    background: #fff;
+    padding: 10mm;
+    box-sizing: border-box;
+}
+
+.headerContainer {
+    border: 2px solid #000;
+    padding: 12px;
+    margin-bottom: 20px;
+    text-align: center;
+    border-radius: 4px;
+}
+
+.county {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+}
+
+.department {
+    font-size: 14px;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.hospitalName {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+}
+
+.encounterType {
+    border-top: 1px solid #000;
+    padding-top: 10px;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    background: #f5f5f5;
+    padding: 8px;
+}

@@ -4,7 +4,7 @@ import { type PatientFacilityBillDetails, type ClaimsVisit, ApplicableDocumentTy
 import ClaimInvoiceDetails from '../claim-invoice-details/claim-invoice-details.component';
 import ClaimInterventionDetails from '../claim-intervention-details/claim-intervention-details.component';
 import ClaimDiagnosisDetails from '../claim-diagnosis-details/claim-diagnosis-details.component';
-import { formatDate, parseDate } from '@openmrs/esm-framework';
+import { formatDate, launchWorkspace, parseDate } from '@openmrs/esm-framework';
 import { Button } from '@carbon/react';
 import CloseClaimModal from '../modal/close-claim/close-claim.modal';
 import SubmitClaimModal from '../modal/submit-claim/submit-claim.modal';
@@ -55,12 +55,28 @@ const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({ claimsVisit, loca
     handleCloseClaimModal();
     invalidateProviderClaimPreview();
   }
-  function handleAddDoctor(){
-     setShowAddDoctorModal(true);
+  function handleAddDoctor() {
+    setShowAddDoctorModal(true);
   }
   function handleCloseAddDoctorModal() {
     setShowAddDoctorModal(false);
   }
+
+  const handleAddAttachment = () => {
+    launchWorkspace('upload-intervention-attachments-workspace', {
+      patientUuid: '10',
+      claimInterventions: claimsVisit.interventions,
+      bill: patientBillDetails,
+    });
+  };
+
+  const handleGenerateAttachment = () => {
+    launchWorkspace('generate-intervention-attachments-workspace', {
+      patientUuid: '10',
+      claimInterventions: claimsVisit.interventions,
+      bill: patientBillDetails,
+    });
+  };
   return (
     <>
       <div className={styles.cvLayout}>
@@ -159,6 +175,14 @@ const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({ claimsVisit, loca
           </div>
           <div className={styles.cvRow}>
             <div className={styles.cvRow}>
+              <div className={styles.generateButtonSection}>
+                <Button onClick={handleAddAttachment}>Add Attachments</Button>
+                <Button onClick={handleGenerateAttachment}>Generate Attachments</Button>
+              </div>
+            </div>
+          </div>
+          <div className={styles.cvRow}>
+            <div className={styles.cvRow}>
               <h6>Attachments</h6>
             </div>
             <div className={styles.cvRow}>
@@ -186,14 +210,14 @@ const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({ claimsVisit, loca
           invoiceNumber={invoiceNumber}
         />
       )}
-      {
-         showAddDoctorModal && 
-         <AddClaimDoctorModal 
-         open={showAddDoctorModal} 
-         handleClose={handleCloseAddDoctorModal} 
-         claimDoctors={[]} 
-         consentToken={claimsVisit.authorization_code} />
-      }
+      {showAddDoctorModal && (
+        <AddClaimDoctorModal
+          open={showAddDoctorModal}
+          handleClose={handleCloseAddDoctorModal}
+          claimDoctors={[]}
+          consentToken={claimsVisit.authorization_code}
+        />
+      )}
     </>
   );
 };

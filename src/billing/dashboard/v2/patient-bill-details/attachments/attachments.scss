@@ -1,0 +1,77 @@
+.interventionHeader {
+    text-align: center;
+}
+
+
+.subSection {
+    margin: 2rem;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.formContent {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.uploadSection {
+  margin: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.fileList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.fileItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+}
+
+.fileActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.buttonSet {
+  margin-top: 1rem;
+  border-top: 1px solid #e0e0e0;
+  padding-top: 1rem;
+}
+
+.interventionSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.invoice {
+  th {
+   border: 1px solid black;
+  padding: 8px;
+  font-size: 10px;
+}
+}
+
+.applicableFiles {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: #6f6f6f;
+}
+
+.addAttachment {
+  margin: 1rem,
+}
