@@ -21,6 +21,9 @@
       "name": "dha-workflow-dashboard-link",
       "component": "dhaWorkflowDashboardLink",
       "slot": "homepage-dashboard-slot",
+       "privileges": [
+        "O3 View Facility Dashboard"
+      ],
       "meta": {
         "name": "dashboard",
         "slot": "dha-workflow-dashboard-slot",
@@ -28,7 +31,7 @@
       },
       "online": true,
       "offline": true,
-      "order": 0
+      "order": 1
     },
     {
       "component": "dhaWorkflowDashboard",
@@ -49,7 +52,7 @@
       },
       "online": true,
       "offline": true,
-      "order": 1
+      "order": 0
     },
     {
       "component": "registryExtension",
