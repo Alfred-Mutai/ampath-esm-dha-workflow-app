@@ -48,32 +48,37 @@ const BiometricsVerificationModal: React.FC<BiometricsVerificationModalProps> = 
 
   useEffect(() => {
     if (!patient || !locationUuid) return;
-    async function fetchBiometricUrl() {
+
+    const initialize = async () => {
       try {
+        const workstation: BiometricsStatus = await getWorkstationId();
+        setWorkstationId(workstation.workstationID);
+
         const urlData = await getBiometrictsRequestUrl(
-          patient!,
-          locationUuid!,
+          patient,
+          locationUuid,
           interventionCode,
           serviceType,
-          workstationId,
+          workstation.workstationID,
         );
+
         // eslint-disable-next-line no-console
         console.log('Biometric request URL response:', urlData);
 
-        // eslint-disable-next-line no-console
+        //       // eslint-disable-next-line no-console
         console.log('Request URL:', urlData?.shaVerificationRequest?.requestUrl);
 
         const url = urlData?.shaVerificationRequest?.requestUrl;
 
         setBiometricIframeUrl(url);
       } catch (err) {
-        console.error('Failed to fetch biometric URL:', err);
-        setError('Failed to load biometric verification. Please try again later.');
+        console.error(err);
+        setError('Failed to initialize biometric verification.');
       }
-    }
+    };
 
-    fetchBiometricUrl();
-  }, [patient, locationUuid, interventionCode, serviceType, workstationId]);
+    initialize();
+  }, [patient, locationUuid, interventionCode, serviceType]);
 
   const config = useMemo(
     () => ({
