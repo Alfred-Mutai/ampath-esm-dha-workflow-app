@@ -183,14 +183,10 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
   const [loadingSchemes, setLoadingSchemes] = useState(false);
   const [hasCashPoint, setHasCashPoint] = useState<boolean | null>(null);
   const [hasCashMode, setHasCashMode] = useState<boolean | null>(null);
-  const [shaScheme, setShaScheme] = useState<Scheme | null>(null);
   const [schemes, setSchemes] = useState<Scheme[]>([]);
   const [loadingEligibility, setLoadingEligibility] = useState(false);
   const [eligibilityChecked, setEligibilityChecked] = useState(false);
-  const [roomError, setRoomError] = useState('');
-  const [exemptionError, setExemptionError] = useState('');
   const [insuranceError, setInsuranceError] = useState('');
-  const [visitTypeError, setVisitTypeError] = useState('');
 
   useEffect(() => {
     if (open) {
@@ -213,29 +209,25 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
       setExemptionCategory('');
       setInsurance('');
       setVisitType('');
-      setRoomError('');
-      setExemptionError('');
       setInsuranceError('');
-      setVisitTypeError('');
       setTriageRooms([]);
       setTriageQueueByRoom({});
       setInsuranceSchemes([]);
       setHasCashPoint(null);
       setHasCashMode(null);
-      setShaScheme(null);
       setEligibilityChecked(false);
     }
   }, [open]);
 
-  // Check the patient's SHA (SHIF) eligibility up front so it can be shown on the
-  // consent summary and appended to the SHA payment option.
+  // Load the patient's eligibility schemes up front so the eligible schemes and
+  // SHA eligibility can be shown on the consent summary and appended to the SHA
+  // payment option.
   useEffect(() => {
     if (!open || !client?.id || !locationUuid) {
       return;
     }
     let active = true;
     setLoadingEligibility(true);
-    setShaScheme(null);
     setSchemes([]);
     setEligibilityChecked(false);
     getClientEligibityStatus({ requestIdNumber: client.id, requestIdType: '3', locationUuid })
@@ -243,15 +235,11 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
         if (!active) {
           return;
         }
-        const allSchemes = resp?.schemes ?? [];
-        const sha = allSchemes.find((s) => /sha|shif/i.test(s.schemeName) || s.coverageType === 'SHIF') ?? null;
-        setShaScheme(sha);
-        setSchemes(allSchemes);
+        setSchemes(resp?.schemes ?? []);
         setEligibilityChecked(true);
       })
       .catch(() => {
         if (active) {
-          setShaScheme(null);
           setSchemes([]);
           setEligibilityChecked(false);
         }
@@ -599,25 +587,10 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
     const isExempt = exempted === 'yes';
     const usingInsurance = !isExempt && method === 'insurance';
 
-    // Inline validation for the required visit fields.
-    let valid = true;
-    if (!room) {
-      setRoomError(`Select a ${patientCategory === 'Walk-in' ? 'walk-in' : 'triage'} room`);
-      valid = false;
-    }
-    if (!visitType) {
-      setVisitTypeError('Select a visit type');
-      valid = false;
-    }
-    if (isExempt && !exemptionCategory) {
-      setExemptionError('Select an exemption category');
-      valid = false;
-    }
-    if (usingInsurance && !insurance) {
-      setInsuranceError('Select an insurance scheme');
-      valid = false;
-    }
-    if (!valid) {
+    // The required fields show their red state on landing (see the derived
+    // *InvalidText below) and the button is disabled while any is empty — guard
+    // here too as a safety net.
+    if (!room || !visitType || (isExempt && !exemptionCategory) || (usingInsurance && !insurance)) {
       return;
     }
 
@@ -633,12 +606,31 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
     });
   };
 
-  // SHA (SHIF) eligibility indicator, shown on the consent summary and beside the
-  // SHA payment option.
-  const shaActive = shaScheme?.coverage?.status === '1';
+  // Required-field validation, shown as soon as the user lands on the visit step
+  // so a disabled "Start visit" button is always explained. Each message clears
+  // reactively once its field is filled.
+  const roomInvalidText = !room ? `Select a ${patientCategory === 'Walk-in' ? 'walk-in' : 'triage'} room` : '';
+  const visitTypeInvalidText = !visitType ? 'Select a visit type' : '';
+  const exemptionInvalidText = exempted === 'yes' && !exemptionCategory ? 'Select an exemption category' : '';
+  // The SHA-ineligibility message (set on selecting an ineligible scheme) takes
+  // precedence over the "select a scheme" prompt.
+  const insuranceInvalidText =
+    insuranceError || (exempted === 'no' && method === 'insurance' && !insurance ? 'Select an insurance scheme' : '');
+
+  // A scheme is active/eligible when its coverage status is '1'.
+  const isActiveScheme = (s: Scheme) => s.coverage?.status === '1';
+
+  // Every eligible scheme the registry returns for the patient (all active
+  // schemes) — shown in full on the consent summary.
+  const eligibleSchemes = schemes.filter(isActiveScheme);
+
+  // SHA eligibility indicator, shown on the consent summary and beside the SHA
+  // payment option. Derived from the eligible schemes: eligible when the patient
+  // has at least one active scheme.
+  const shaActive = eligibleSchemes.length > 0;
 
   // Insurance dropdown items. SHA carries its eligibility in the name and is not
-  // selectable unless the patient is eligible (active).
+  // selectable unless the patient is eligible (has an active eligible scheme).
   const insuranceItems = insuranceSchemes.map((name) => {
     const isSha = /sha|shif/i.test(name);
     if (!isSha) {
@@ -648,11 +640,9 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
       ? ' · checking eligibility…'
       : shaActive
         ? ' · eligible'
-        : shaScheme
-          ? ' · not active'
-          : eligibilityChecked
-            ? ' · not eligible'
-            : ' · eligibility unknown';
+        : eligibilityChecked
+          ? ' · not eligible'
+          : ' · eligibility unknown';
     return { id: name, label: `${name}${suffix}`, isSha: true, eligible: shaActive, disabled: !shaActive };
   });
 
@@ -660,9 +650,36 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
     <InlineLoading className={styles.eligibilityLoading} description="Checking SHA eligibility…" />
   ) : (
     <Tag size="sm" type={shaActive ? 'green' : 'red'}>
-      {shaActive ? 'SHA · Eligible' : shaScheme ? 'SHA · Not active' : eligibilityChecked ? 'SHA · Not eligible' : 'SHA · Unknown'}
+      {shaActive ? 'SHA · Eligible' : eligibilityChecked ? 'SHA · Not eligible' : 'SHA · Unknown'}
     </Tag>
   );
+
+  // The full list of the patient's eligible schemes — shared by the consent
+  // summary and the insurance payment section so both show the same detail.
+  const eligibleSchemesList =
+    eligibleSchemes.length > 0 ? (
+      <div className={styles.schemes}>
+        <div className={styles.schemesHead}>Eligible scheme{eligibleSchemes.length === 1 ? '' : 's'}</div>
+        <ul className={styles.schemeList}>
+          {eligibleSchemes.map((s, i) => (
+            <li key={`${s.schemeName}-${i}`} className={styles.schemeItem}>
+              <div className={styles.schemeTop}>
+                <span className={styles.schemeName}>{s.schemeName}</span>
+                <Tag size="sm" type="green">
+                  Active
+                </Tag>
+              </div>
+              <div className={styles.schemeMeta}>
+                {s.memberType ? (
+                  <span>{s.memberType.charAt(0).toUpperCase() + s.memberType.slice(1).toLowerCase()}</span>
+                ) : null}
+                {s.coverage?.endDate ? <span>Valid to {String(s.coverage.endDate).slice(0, 10)}</span> : null}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+    ) : null;
 
   return (
     <>
@@ -1024,36 +1041,7 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
                         </div>
                       </dl>
 
-                      {shaActive && schemes.length > 0 ? (
-                        <div className={styles.schemes}>
-                          <div className={styles.schemesHead}>
-                            Eligible scheme{schemes.length === 1 ? '' : 's'}
-                          </div>
-                          <ul className={styles.schemeList}>
-                            {schemes.map((s, i) => {
-                              const schemeActive = s.coverage?.status === '1';
-                              return (
-                                <li key={`${s.schemeName}-${i}`} className={styles.schemeItem}>
-                                  <div className={styles.schemeTop}>
-                                    <span className={styles.schemeName}>{s.schemeName}</span>
-                                    <Tag size="sm" type={schemeActive ? 'green' : 'gray'}>
-                                      {schemeActive ? 'Active' : 'Inactive'}
-                                    </Tag>
-                                  </div>
-                                  <div className={styles.schemeMeta}>
-                                    {s.memberType ? (
-                                      <span>
-                                        {s.memberType.charAt(0).toUpperCase() + s.memberType.slice(1).toLowerCase()}
-                                      </span>
-                                    ) : null}
-                                    {s.coverage?.endDate ? <span>Valid to {String(s.coverage.endDate).slice(0, 10)}</span> : null}
-                                  </div>
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        </div>
-                      ) : null}
+                      {eligibleSchemesList}
                     </div>
                   </div>
                   {emrStatusCard}
@@ -1081,24 +1069,22 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
                     label="Select a visit type"
                     items={VISIT_TYPE_OPTIONS}
                     selectedItem={visitType || null}
-                    invalid={!!visitTypeError}
-                    invalidText={visitTypeError}
+                    invalid={!!visitTypeInvalidText}
+                    invalidText={visitTypeInvalidText}
                     onChange={({ selectedItem }) => {
                       setVisitType((selectedItem as string) ?? '');
-                      setVisitTypeError('');
                     }}
                   />
                   <div className={styles.formSection}>
                     <h6 className={styles.sectionLabel}>Patient category</h6>
                     <RadioButtonGroup
-                      legendText="Where is the patient going first?"
+                      legendText="Patient destination"
                       name="patient-category-group"
                       orientation="horizontal"
                       valueSelected={patientCategory}
                       onChange={(v) => {
                         setPatientCategory(v as string);
                         setRoom('');
-                        setRoomError('');
                       }}
                     >
                       {PATIENT_CATEGORIES.map((cat) => (
@@ -1126,11 +1112,10 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
                       items={patientCategory === 'Walk-in' ? WALK_IN_ROOMS : triageRooms}
                       disabled={patientCategory === 'Triage' && (loadingRooms || triageRooms.length === 0)}
                       selectedItem={room || null}
-                      invalid={!!roomError}
-                      invalidText={roomError}
+                      invalid={!!roomInvalidText}
+                      invalidText={roomInvalidText}
                       onChange={({ selectedItem }) => {
                         setRoom((selectedItem as string) ?? '');
-                        setRoomError('');
                       }}
                     />
                   </div>
@@ -1144,7 +1129,6 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
                       valueSelected={exempted}
                       onChange={(v) => {
                         setExempted(v as 'yes' | 'no');
-                        setExemptionError('');
                         setInsuranceError('');
                       }}
                     >
@@ -1172,11 +1156,10 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
                         label="Select an exemption category"
                         items={EXEMPTION_CATEGORIES}
                         selectedItem={exemptionCategory || null}
-                        invalid={!!exemptionError}
-                        invalidText={exemptionError}
+                        invalid={!!exemptionInvalidText}
+                        invalidText={exemptionInvalidText}
                         onChange={({ selectedItem }) => {
                           setExemptionCategory((selectedItem as string) ?? '');
-                          setExemptionError('');
                         }}
                       />
                     ) : (
@@ -1188,7 +1171,11 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
                           valueSelected={method}
                           disabled={hasCashPoint === false}
                           onChange={(v) => {
+                            // Switching payment method clears any preselected
+                            // insurance so it can't carry into the payer mapping —
+                            // insurance→cash and cash→insurance both start fresh.
                             setMethod(v as Method);
+                            setInsurance('');
                             setInsuranceError('');
                           }}
                         >
@@ -1239,8 +1226,8 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
                             }
                             disabled={loadingSchemes || insuranceSchemes.length === 0}
                             selectedItem={insuranceItems.find((i) => i.id === insurance) ?? null}
-                            invalid={!!insuranceError}
-                            invalidText={insuranceError}
+                            invalid={!!insuranceInvalidText}
+                            invalidText={insuranceInvalidText}
                             onChange={({ selectedItem }) => {
                               if (!selectedItem) {
                                 return;
@@ -1260,10 +1247,13 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
                         )}
 
                         {method === 'insurance' && /sha|shif/i.test(insurance) ? (
-                          <div className={styles.eligibilityRow}>
-                            <span className={styles.eligibilityRowLabel}>Eligibility</span>
-                            {shaEligibilityTag}
-                          </div>
+                          <>
+                            <div className={styles.eligibilityRow}>
+                              <span className={styles.eligibilityRowLabel}>Eligibility</span>
+                              {shaEligibilityTag}
+                            </div>
+                            {eligibleSchemesList}
+                          </>
                         ) : null}
                       </>
                     )}

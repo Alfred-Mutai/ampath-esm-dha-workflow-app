@@ -619,7 +619,7 @@ const RegistryComponent: React.FC<RegistryComponentProps> = () => {
                         <div className={styles.optionBody}>
                           <div className={styles.optionTopline}>
                             <span className={styles.optionName}>
-                              {principal.first_name} {maskExceptFirstAndLast(principal.middle_name)}{' '}
+                              {maskExceptFirstAndLast(principal.first_name)} {maskExceptFirstAndLast(principal.middle_name)}{' '}
                               {maskExceptFirstAndLast(principal.last_name)}
                             </span>
                             <Tag type="blue" size="sm">
@@ -653,7 +653,7 @@ const RegistryComponent: React.FC<RegistryComponentProps> = () => {
                               <div className={styles.optionBody}>
                                 <div className={styles.optionTopline}>
                                   <span className={styles.optionName}>
-                                    {dependant.first_name} {maskExceptFirstAndLast(dependant.middle_name)}{' '}
+                                    {maskExceptFirstAndLast(dependant.first_name)} {maskExceptFirstAndLast(dependant.middle_name)}{' '}
                                     {maskExceptFirstAndLast(dependant.last_name)}
                                   </span>
                                   <Tag type="teal" size="sm">
