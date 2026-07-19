@@ -860,6 +860,7 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({
                             patientUuid: patientUuid,
                             triggerCreateVisit,
                             otp,
+                            authGuid,
                             visitType,
                             onSelectChange: () => { },
                             onClaimsVisitStart,

@@ -30,6 +30,7 @@ interface ClaimsComponentProps {
   triggerCreateVisit?: boolean;
   triggerAddIntervention?: boolean;
   otp?: string;
+  authGuid?: string;
   onSelectChange: (key, value) => void;
   onClaimsVisitStart?: (payload: ClaimResult) => void;
   onAddIntervention?: (intervention: any) => void;
@@ -44,6 +45,7 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
   triggerCreateVisit = false,
   triggerAddIntervention = false,
   otp = null,
+  authGuid = null,
   onSelectChange,
   onClaimsVisitStart,
   onAddIntervention,
@@ -107,7 +109,7 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
         clientRegistryId,
         serviceType,
         sessionLocation?.uuid,
-        { otp },
+        { otp, auth_guid: authGuid },
       );
       onClaimsVisitStart(claimVisit);
 
