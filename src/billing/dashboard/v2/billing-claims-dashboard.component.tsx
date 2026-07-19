@@ -31,6 +31,7 @@ const BillingClaimsDashboard: React.FC<billingClaimsDashboardProps> = () => {
   // Which sub-tab to open, with a nonce so repeat clicks still re-navigate.
   const [claimsNav, setClaimsNav] = useState<{ key?: string; nonce: number }>({ nonce: 0 });
   const [clearanceNav, setClearanceNav] = useState<{ key?: string; nonce: number }>({ nonce: 0 });
+  const hideCheckList = true;
 
   useEffect(() => {
     if (locationUuid) {
@@ -129,20 +130,26 @@ const BillingClaimsDashboard: React.FC<billingClaimsDashboardProps> = () => {
                       <TabPanel>
                         <Tabs selectedIndex={billsSub} onChange={({ selectedIndex }) => setBillsSub(selectedIndex)}>
                           <TabList aria-label="Bills">
-                            <Tab>Cash payments</Tab>
                             <Tab>Facility bills</Tab>
                           </TabList>
                           <TabPanels>
-                            <TabPanel>
-                              <CashChecklist />
-                            </TabPanel>
-                            <TabPanel>
+                             <TabPanel>
                               <FacilityBills
                                 locationUuid={locationUuid}
                                 billingDate={billingDate}
                                 onDateChange={handleDateChange}
                               />
                             </TabPanel>
+                           
+                              {
+                                 hideCheckList ? (<></>): (<>
+                                   <TabPanel>
+                                    <CashChecklist />
+                                    </TabPanel>
+                                  </>)
+                              }
+                             
+                           
                           </TabPanels>
                         </Tabs>
                       </TabPanel>

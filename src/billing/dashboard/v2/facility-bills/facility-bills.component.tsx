@@ -84,19 +84,19 @@ const FacilityBills: React.FC<facilityBillsProps> = ({ billingDate, locationUuid
 
   return (
     <>
-      {currentView === BillingView.Bills ? (
-        (facilityBills ?? []).length === 0 ? (
-          <EmptyState message="No bills." />
-        ) : (
-        <>
-          <TableToolbar
+      <TableToolbar
             id="facility-bills"
             search={search}
             onSearch={setSearch}
             date={billingDate}
             onDate={onDateChange}
             searchPlaceholder="Search patient, status or cash point…"
-          />
+      />
+      {currentView === BillingView.Bills ? (
+        (facilityBills ?? []).length === 0 ? (
+          <EmptyState message="No bills." />
+        ) : (
+        <>
           {filteredBills.length === 0 ? (
             <EmptyState message="No bills match your filters." />
           ) : (
