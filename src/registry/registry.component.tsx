@@ -52,6 +52,7 @@ import { IdentifierTypesUuids } from '../resources/identifier-types';
 import { formatPhoneNumberForOTP } from './utils/phone-number-formatter';
 import { usePatient } from '../context/patient-context';
 import FacilityAndWorkerSlot from '../shared/ui/facility-worker-slot/facility-worker.component-slot.component';
+import RegistrationList from './registration-list/registration-list.component';
 
 interface RegistryComponentProps {}
 const RegistryComponent: React.FC<RegistryComponentProps> = () => {
@@ -695,12 +696,7 @@ const RegistryComponent: React.FC<RegistryComponentProps> = () => {
             )}
           </div>
           <div className={styles.registeredPatientsSection}>
-             <div className={styles.registeredPatientsFilters}>
-                  
-             </div>
-              <div className={styles.registeredPatientList}>
-              
-             </div>
+             <RegistrationList />
           </div>
         </div>
       </div>

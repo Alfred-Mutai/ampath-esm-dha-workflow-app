@@ -1,0 +1,32 @@
+.regListLayout{
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    row-gap: 5px;
+    background-color: #FFF;
+    padding: 10px 10px;
+}
+.regListFiltersSection{
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+    width: 60%;
+    padding: 5px 5px;
+}
+.filterInput{
+    display: flex;
+    flex-direction: column;
+    width: 45%;
+}
+.regListHeaderSection{
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+}
+.regListHeaderTitle{
+    display: flex;
+    flex-direction: column;
+    width: 40%;
+    align-items: center;
+    justify-content: center;
+}

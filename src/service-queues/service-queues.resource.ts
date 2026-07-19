@@ -13,7 +13,7 @@ import {
 import dayjs from 'dayjs';
 import useSWR from 'swr';
 import { useMemo } from 'react';
-import { type QueueEntryResult } from '../registry/types';
+import { type QueueEntryResult, type RegistrationQueueList } from '../registry/types';
 import { getEtlBaseUrl } from '../shared/utils/get-base-url';
 import {
   type ServiceQueueDailyPatientListReportResp,
@@ -364,10 +364,10 @@ export async function getRegistrationQueueList(
   locationUuid: string,
   startDate: string,
   endDate: string
-): Promise<ServiceQueueDailyReport[]> {
+): Promise<RegistrationQueueList[]> {
   const etlBaseUrl = await getEtlBaseUrl();
   const reportUrl = `${etlBaseUrl}/queue-entry/registration?locationUuid=${locationUuid}&startDate=${startDate}&endDate=${endDate}`;
   const response = await openmrsFetch(reportUrl);
-  const result = await response.json();
-  return result.result;
+  const result: { data: RegistrationQueueList[] } = await response.json();
+  return result.data ?? [];
 }
