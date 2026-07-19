@@ -10,9 +10,9 @@ import TableToolbar from '../shared/table-toolbar.component';
 import EmptyState from '../shared/empty-state.component';
 import SendToQueueModal from '../../../../registry/modal/send-to-triage/send-to-queue.modal';
 
-const ActiveVisits: React.FC = () => {
+const ActiveVisits: React.FC<{ date?: string }> = ({ date }) => {
     const [searchString, setSearchString] = useState('');
-    const { isLoading, activeVisits } = useActiveVisits();
+    const { isLoading, activeVisits } = useActiveVisits(date);
     const [patientUuid, setPatientUuid] = useState("");
     const [visitUuid, setVisitUuid] = useState("");
     const [visitTypeUuid, setVisitTypeUuid] = useState("");
@@ -47,8 +47,10 @@ const ActiveVisits: React.FC = () => {
     ];
 
     const activeVisitsTableRows = useMemo(() => {
-        if (activeVisits) {
-            return activeVisits.map((visit) => ({
+        const dayFilter = date ? dayjs(date) : null;
+        return (activeVisits ?? [])
+            .filter((visit) => !dayFilter || dayjs(visit.startDatetime).isSame(dayFilter, 'day'))
+            .map((visit) => ({
                 id: visit.uuid,
                 action: visit.patient.uuid,
                 patientName: visit.patient.display,
@@ -57,8 +59,7 @@ const ActiveVisits: React.FC = () => {
                 startTime: dayjs(visit.startDatetime).format("HH:mm A"),
                 visitTypeUuid: visit.visitType.uuid
             }));
-        }
-    }, [activeVisits]);
+    }, [activeVisits, date]);
 
     const searchResults = useMemo(() => {
         if (searchString && searchString.trim() !== '') {
@@ -76,10 +77,7 @@ const ActiveVisits: React.FC = () => {
     const [currentPageSize, setPageSize] = useState(10);
     const { goTo, results: paginatedVisits, currentPage } = usePagination(searchResults, currentPageSize);
 
-    if (isLoading && !activeVisits) {
-        return <DataTableSkeleton role="progressbar" showHeader={false} showToolbar={false} />;
-    }
-
+    const showSkeleton = isLoading && !activeVisits;
 
     function handleRowClick(row: DataTableRow<any[]>): void {
         row.cells.map(cell => {
@@ -99,8 +97,14 @@ const ActiveVisits: React.FC = () => {
     }
 
     return <>
-        {(activeVisitsTableRows?.length ?? 0) === 0 ? (
-            <EmptyState message="No active visits." />
+        {showSkeleton ? (
+            <div className={styles.tableCard}>
+                <DataTableSkeleton role="progressbar" showHeader={false} showToolbar={false} />
+            </div>
+        ) : activeVisitsTableRows.length === 0 ? (
+            <div className={styles.tableCard}>
+                <EmptyState message="No active visits for the selected date." />
+            </div>
         ) : (
         <>
         <TableToolbar
@@ -110,7 +114,9 @@ const ActiveVisits: React.FC = () => {
             searchPlaceholder={t('searchThisList', 'Search this list')}
         />
         {(searchResults?.length ?? 0) === 0 ? (
-            <EmptyState message="No active visits match your filters." />
+            <div className={styles.tableCard}>
+                <EmptyState message="No active visits match your search." />
+            </div>
         ) : (
         <DataTable rows={paginatedVisits} headers={columns}>
             {({

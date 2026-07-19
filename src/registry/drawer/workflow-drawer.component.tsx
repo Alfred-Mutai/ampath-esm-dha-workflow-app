@@ -31,6 +31,8 @@ import { type HieClient, type RequestCustomOtpDto, type Scheme } from '../types'
 import { getClientEligibityStatus } from '../../shared/services/eligibility.resource';
 import { maskCrNumber, maskExceptFirstAndLast } from '../utils/mask-data';
 import OtpVerificationStep from './otp-verification-step.component';
+import EmrCompare from './emr-compare.component';
+import EmrCreatePreview from './emr-create-preview.component';
 import {
   getBiometricCaptureUrl,
   getOtpWhitelistStatus,
@@ -182,6 +184,7 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
   const [hasCashPoint, setHasCashPoint] = useState<boolean | null>(null);
   const [hasCashMode, setHasCashMode] = useState<boolean | null>(null);
   const [shaScheme, setShaScheme] = useState<Scheme | null>(null);
+  const [schemes, setSchemes] = useState<Scheme[]>([]);
   const [loadingEligibility, setLoadingEligibility] = useState(false);
   const [eligibilityChecked, setEligibilityChecked] = useState(false);
   const [roomError, setRoomError] = useState('');
@@ -233,20 +236,23 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
     let active = true;
     setLoadingEligibility(true);
     setShaScheme(null);
+    setSchemes([]);
     setEligibilityChecked(false);
     getClientEligibityStatus({ requestIdNumber: client.id, requestIdType: '3', locationUuid })
       .then((resp) => {
         if (!active) {
           return;
         }
-        const sha =
-          (resp?.schemes ?? []).find((s) => /sha|shif/i.test(s.schemeName) || s.coverageType === 'SHIF') ?? null;
+        const allSchemes = resp?.schemes ?? [];
+        const sha = allSchemes.find((s) => /sha|shif/i.test(s.schemeName) || s.coverageType === 'SHIF') ?? null;
         setShaScheme(sha);
+        setSchemes(allSchemes);
         setEligibilityChecked(true);
       })
       .catch(() => {
         if (active) {
           setShaScheme(null);
+          setSchemes([]);
           setEligibilityChecked(false);
         }
       })
@@ -489,10 +495,13 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
       <div className={styles.emrStatusBody}>
         <span className={styles.emrStatusTitle}>Patient found in the EMR</span>
         <span className={styles.emrStatusText}>
-          CR {maskCrNumber(client.id)} already has a record. Sync to update it with the latest registry details.
+          CR {maskCrNumber(client.id)} already has a record. Review the differences below and update the EMR with the
+          details you choose.
         </span>
+        {amrsPatient.uuid ? (
+          <EmrCompare client={client} patientUuid={amrsPatient.uuid} onUpdated={onSyncPatient} />
+        ) : null}
       </div>
-      {emrActionArea('sync')}
     </div>
   ) : (
     <div className={`${styles.emrStatus} ${styles.emrStatusMissing}`}>
@@ -502,10 +511,11 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
       <div className={styles.emrStatusBody}>
         <span className={styles.emrStatusTitle}>Patient not found in the system</span>
         <span className={styles.emrStatusText}>
-          No EMR record matches CR {maskCrNumber(client.id)}. Create the patient in the EMR to continue.
+          No EMR record matches CR {maskCrNumber(client.id)}. Review the details below and create the record to
+          continue.
         </span>
+        <EmrCreatePreview client={client} onCreate={() => onCreatePatient?.()} />
       </div>
-      {emrActionArea('create')}
     </div>
   );
 
@@ -1013,6 +1023,37 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
                           <dd>{shaEligibilityTag}</dd>
                         </div>
                       </dl>
+
+                      {shaActive && schemes.length > 0 ? (
+                        <div className={styles.schemes}>
+                          <div className={styles.schemesHead}>
+                            Eligible scheme{schemes.length === 1 ? '' : 's'}
+                          </div>
+                          <ul className={styles.schemeList}>
+                            {schemes.map((s, i) => {
+                              const schemeActive = s.coverage?.status === '1';
+                              return (
+                                <li key={`${s.schemeName}-${i}`} className={styles.schemeItem}>
+                                  <div className={styles.schemeTop}>
+                                    <span className={styles.schemeName}>{s.schemeName}</span>
+                                    <Tag size="sm" type={schemeActive ? 'green' : 'gray'}>
+                                      {schemeActive ? 'Active' : 'Inactive'}
+                                    </Tag>
+                                  </div>
+                                  <div className={styles.schemeMeta}>
+                                    {s.memberType ? (
+                                      <span>
+                                        {s.memberType.charAt(0).toUpperCase() + s.memberType.slice(1).toLowerCase()}
+                                      </span>
+                                    ) : null}
+                                    {s.coverage?.endDate ? <span>Valid to {String(s.coverage.endDate).slice(0, 10)}</span> : null}
+                                  </div>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                   {emrStatusCard}

@@ -23,7 +23,12 @@ export const generatePatientIdentifiers = async (identifierLocation: string, cli
     location: identifierLocation,
     preferred: true,
   });
-  return identifiers;
+  // Drop identifiers whose type couldn't be resolved (an unmapped ID type) or
+  // whose value is empty. Sending an identifier with an undefined type makes the
+  // whole patient create fail — which would also lose the Client Registry
+  // identifier. Filtering keeps the valid CR (and universal) identifiers so the
+  // patient is always created with a CR number.
+  return identifiers.filter((i) => i.identifierType && i.identifier);
 };
 
 export function generateAmrsCreatePatientIdentifiersPayload(hieClient: HieClient, identifierLocation: string) {

@@ -1,19 +1,39 @@
-.fhwrSlotLayout{
-    display: flex;
-    flex-direction: column;
-    row-gap: 1px;
-    width: 100%;
+.fhwrSlotLayout {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
 }
 
-.fhwrSlotContent{
-    display: flex;
-    flex-direction: row;
-    column-gap: 5px;
-    width: 100%;
+.fhwrSlotContent {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.75rem;
+  width: 100%;
 }
 
-.fhwrSlot{
-    display: flex;
-    flex-direction: column;
-    width: 50%;
+.fhwrSlot {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 18rem;
+  min-width: 0;
+
+  /* Collapse a slot that has no extension so the other fills the row neatly. */
+  &:empty {
+    display: none;
+  }
+
+  /* Let the extension card fill its column so the two sides stay aligned. */
+  > * {
+    width: 100%;
+  }
+
+  /* Trim the extension card's vertical padding so the facility / worker header
+     is a neat, compact band (keep the horizontal padding for alignment). */
+  :global(.cds--tile) {
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
+    min-height: 0;
+  }
 }

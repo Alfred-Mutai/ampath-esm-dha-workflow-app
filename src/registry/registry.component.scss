@@ -12,6 +12,13 @@
   min-height: calc(100vh - 3rem);
 }
 
+.headerSection {
+  width: 100%;
+  margin-bottom: layout.$spacing-04;
+  padding-bottom: layout.$spacing-04;
+  border-bottom: 1px solid $ui-03;
+}
+
 .mainContent {
   display: flex;
   flex-direction: column;

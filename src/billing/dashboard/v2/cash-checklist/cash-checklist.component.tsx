@@ -36,7 +36,6 @@ import BillDocument from './bill-document.component';
 import PaymentDrawer from './payment-drawer.component';
 
 const money = (n: number) => `KES ${n.toLocaleString('en-KE')}`;
-const today = () => new Date().toLocaleDateString('en-CA');
 
 const BILL_TAG: Record<string, 'gray' | 'blue' | 'teal' | 'green'> = {
   OPEN: 'gray',
@@ -52,13 +51,12 @@ const BILL_LABEL: Record<string, string> = {
 };
 const ITEM_TAG: Record<string, 'gray' | 'blue' | 'green'> = { UNPAID: 'gray', PARTIAL: 'blue', PAID: 'green' };
 
-const CashChecklist: React.FC = () => {
+const CashChecklist: React.FC<{ date?: string }> = ({ date }) => {
   const session = useSession();
   const locationUuid = session?.sessionLocation?.uuid ?? '';
   const [bills, setBills] = useState<CashBill[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [date, setDate] = useState<string>(today());
   const [view, setView] = useState<'open' | 'paid' | 'all'>('open');
   const [reload, setReload] = useState(0);
 
@@ -271,14 +269,15 @@ const CashChecklist: React.FC = () => {
         <EmptyState message="No cash bills." />
       ) : (
         (() => {
-          const term = search.trim().toLowerCase();
-          const filtered = bills.filter((b) => {
-            const matchesSearch = !term || `${b.patientName} ${b.crNumber} ${b.billNo}`.toLowerCase().includes(term);
-            const matchesDate = !date || b.date === date;
+          const base = bills.filter((b) => {
             const closed = billStatus(b) === 'PAID';
             const matchesView = view === 'all' || (view === 'open' ? !closed : closed);
-            return matchesSearch && matchesDate && matchesView;
+            return (!date || b.date === date) && matchesView;
           });
+          const term = search.trim().toLowerCase();
+          const filtered = base.filter(
+            (b) => !term || `${b.patientName} ${b.crNumber} ${b.billNo}`.toLowerCase().includes(term),
+          );
           return (
             <>
               <div className={styles.viewSwitch}>
@@ -292,16 +291,18 @@ const CashChecklist: React.FC = () => {
                   <Switch name="all" text="All payments" />
                 </ContentSwitcher>
               </div>
+              {base.length === 0 ? (
+                <EmptyState message="No cash bills for the selected date." />
+              ) : (
+              <>
               <TableToolbar
                 id="cash-payments"
                 search={search}
                 onSearch={setSearch}
-                date={date}
-                onDate={setDate}
                 searchPlaceholder="Search patient or bill…"
               />
               {filtered.length === 0 ? (
-                <EmptyState message="No cash bills match your filters." />
+                <EmptyState message="No cash bills match your search." />
               ) : (
                 <div className={styles.tableCard}>
                   <Table size="sm" aria-label="cash bills" useZebraStyles>
@@ -346,6 +347,8 @@ const CashChecklist: React.FC = () => {
                     </TableBody>
                   </Table>
                 </div>
+              )}
+              </>
               )}
             </>
           );

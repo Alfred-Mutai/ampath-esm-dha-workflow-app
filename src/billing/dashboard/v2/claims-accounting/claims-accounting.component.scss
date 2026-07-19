@@ -4,7 +4,9 @@
 @use '@openmrs/esm-styleguide/src/vars' as *;
 
 .claimsArea {
-  padding: layout.$spacing-03 0;
+  padding: layout.$spacing-05;
+  border: 1px solid $ui-03;
+  background-color: $ui-01;
 }
 
 .claimsIntro {
@@ -129,7 +131,6 @@
 /* Top card: identity header + status/rejection banner + money tiles. */
 .topCard {
   border: 1px solid $ui-03;
-  border-radius: 8px;
   background-color: colors.$white;
   padding: layout.$spacing-06;
   margin-bottom: layout.$spacing-06;
@@ -203,7 +204,6 @@
   padding: layout.$spacing-04 layout.$spacing-05;
   background-color: colors.$red-10;
   border-left: 3px solid colors.$red-60;
-  border-radius: 4px;
   margin-bottom: layout.$spacing-05;
 }
 
@@ -239,7 +239,6 @@
   padding: layout.$spacing-04 layout.$spacing-05;
   border: 1px solid $ui-03;
   border-left: 3px solid colors.$gray-30;
-  border-radius: 8px;
   background-color: $ui-01;
 }
 
@@ -280,7 +279,6 @@
   gap: layout.$spacing-04;
   padding: layout.$spacing-03 layout.$spacing-04;
   border: 1px solid $ui-03;
-  border-radius: 6px;
 }
 
 .docIcon {
@@ -324,7 +322,6 @@
 .detailMain,
 .detailAside {
   border: 1px solid $ui-03;
-  border-radius: 8px;
   padding: layout.$spacing-06;
   background-color: colors.$white;
 }
@@ -410,7 +407,6 @@
 .tableWrap {
   overflow-x: auto;
   border: 1px solid $ui-03;
-  border-radius: 8px;
 }
 
 .lineTable {
@@ -460,7 +456,6 @@
   padding: layout.$spacing-04 layout.$spacing-05;
   background-color: colors.$green-10;
   border-left: 3px solid colors.$green-50;
-  border-radius: 4px;
   margin-bottom: layout.$spacing-06;
   color: $ui-05;
   @include type.type-style('body-compact-01');
@@ -469,7 +464,6 @@
 /* Companion bill panel (married to the claim) */
 .billPanel {
   border: 1px solid $ui-03;
-  border-radius: 8px;
   overflow: hidden;
 }
 

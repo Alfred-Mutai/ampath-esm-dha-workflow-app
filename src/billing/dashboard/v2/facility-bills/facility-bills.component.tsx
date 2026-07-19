@@ -88,8 +88,6 @@ const FacilityBills: React.FC<facilityBillsProps> = ({ billingDate, locationUuid
             id="facility-bills"
             search={search}
             onSearch={setSearch}
-            date={billingDate}
-            onDate={onDateChange}
             searchPlaceholder="Search patient, status or cash point…"
       />
       {currentView === BillingView.Bills ? (
@@ -98,7 +96,7 @@ const FacilityBills: React.FC<facilityBillsProps> = ({ billingDate, locationUuid
         ) : (
         <>
           {filteredBills.length === 0 ? (
-            <EmptyState message="No bills match your filters." />
+            <EmptyState message="No bills match your search." />
           ) : (
             <Table aria-label="facility bills" size="sm">
               <TableHead>

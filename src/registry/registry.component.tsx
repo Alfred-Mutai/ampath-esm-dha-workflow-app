@@ -119,6 +119,8 @@ const RegistryComponent: React.FC<RegistryComponentProps> = () => {
       const patient = patients[0];
       setPatient(patient);
       setPrincipal(patient);
+      // Auto-select the principal by default so the worker can proceed immediately.
+      setSelectedPatient('principal');
     } catch (err: any) {
       // Communicate the failure on the page (keep the worker's input so they can retry).
       const errorMessage = getReadableErrorMessage(err, 'We couldn’t reach the Client Registry.');

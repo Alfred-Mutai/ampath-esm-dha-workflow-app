@@ -35,13 +35,13 @@ interface ClaimsTableProps {
   statuses: ClaimStatus[];
   reloadKey: number;
   onOpen: (claim: ShaClaim) => void;
+  date?: string;
 }
 
-const ClaimsTable: React.FC<ClaimsTableProps> = ({ statuses, reloadKey, onOpen }) => {
+const ClaimsTable: React.FC<ClaimsTableProps> = ({ statuses, reloadKey, onOpen, date }) => {
   const [claims, setClaims] = useState<ShaClaim[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [date, setDate] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -59,16 +59,15 @@ const ClaimsTable: React.FC<ClaimsTableProps> = ({ statuses, reloadKey, onOpen }
     return <InlineLoading description="Loading claims…" className={styles.tableLoading} />;
   }
 
-  if (claims.length === 0) {
-    return <EmptyState message="No claims in this state." />;
+  const dateMatched = claims.filter((c) => !date || new Date(c.updatedAt).toLocaleDateString('en-CA') === date);
+  if (dateMatched.length === 0) {
+    return <EmptyState message="No claims for the selected date." />;
   }
 
   const term = search.trim().toLowerCase();
-  const filtered = claims.filter((c) => {
-    const matchesSearch = !term || `${c.claimCode} ${c.patientName} ${c.fund}`.toLowerCase().includes(term);
-    const matchesDate = !date || new Date(c.updatedAt).toLocaleDateString('en-CA') === date;
-    return matchesSearch && matchesDate;
-  });
+  const filtered = dateMatched.filter(
+    (c) => !term || `${c.claimCode} ${c.patientName} ${c.fund}`.toLowerCase().includes(term),
+  );
 
   return (
     <>
@@ -76,12 +75,10 @@ const ClaimsTable: React.FC<ClaimsTableProps> = ({ statuses, reloadKey, onOpen }
         id={`claims-${statuses.join('-')}`}
         search={search}
         onSearch={setSearch}
-        date={date}
-        onDate={setDate}
         searchPlaceholder="Search claim, patient or fund…"
       />
       {filtered.length === 0 ? (
-        <EmptyState message="No claims match your filters." />
+        <EmptyState message="No claims match your search." />
       ) : (
         <div className={styles.tableCard}>
           <Table size="sm" aria-label="claims" useZebraStyles>
