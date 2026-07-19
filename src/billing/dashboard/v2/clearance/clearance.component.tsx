@@ -36,12 +36,12 @@ const ClearanceTable: React.FC<{
   locationUuid: string;
   reloadKey: number;
   onCleared: () => void;
-}> = ({ status, locationUuid, reloadKey, onCleared }) => {
+  date?: string;
+}> = ({ status, locationUuid, reloadKey, onCleared, date }) => {
   const [rows, setRows] = useState<ConsultationClearance[]>([]);
   const [loading, setLoading] = useState(true);
   const [clearingId, setClearingId] = useState<string>('');
   const [search, setSearch] = useState('');
-  const [date, setDate] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -68,18 +68,17 @@ const ClearanceTable: React.FC<{
   if (loading) {
     return <InlineLoading description="Loading…" className={styles.loading} />;
   }
-  if (rows.length === 0) {
+  const dateMatched = rows.filter((r) => !date || new Date(r.createdAt).toLocaleDateString('en-CA') === date);
+  if (dateMatched.length === 0) {
     return (
       <EmptyState message={status === 'AWAITING_PAYMENT' ? 'No patients awaiting clearance.' : 'No cleared patients yet.'} />
     );
   }
 
   const term = search.trim().toLowerCase();
-  const filtered = rows.filter((r) => {
-    const matchesSearch = !term || `${r.patientName} ${r.queue} ${r.payer}`.toLowerCase().includes(term);
-    const matchesDate = !date || new Date(r.createdAt).toLocaleDateString('en-CA') === date;
-    return matchesSearch && matchesDate;
-  });
+  const filtered = dateMatched.filter(
+    (r) => !term || `${r.patientName} ${r.queue} ${r.payer}`.toLowerCase().includes(term),
+  );
 
   return (
     <>
@@ -87,12 +86,10 @@ const ClearanceTable: React.FC<{
         id={`clearance-${status}`}
         search={search}
         onSearch={setSearch}
-        date={date}
-        onDate={setDate}
         searchPlaceholder="Search patient, queue or payer…"
       />
       {filtered.length === 0 ? (
-        <EmptyState message="No clearances match your filters." />
+        <EmptyState message="No clearances match your search." />
       ) : (
         <div className={styles.tableCard}>
           <Table size="sm" aria-label="clearance" useZebraStyles>
@@ -146,7 +143,8 @@ const Clearance: React.FC<{
   pendingTab?: React.ReactNode;
   initialTab?: string;
   navNonce?: number;
-}> = ({ onChange, pendingTab, initialTab, navNonce }) => {
+  date?: string;
+}> = ({ onChange, pendingTab, initialTab, navNonce, date }) => {
   const session = useSession();
   const locationUuid = session?.sessionLocation?.uuid ?? '';
   const [reloadKey, setReloadKey] = useState(0);
@@ -195,13 +193,13 @@ const Clearance: React.FC<{
         <TabPanels>
           {pendingTab ? <TabPanel>{pendingTab}</TabPanel> : null}
           <TabPanel>
-            <ClearanceTable status="AWAITING_PAYMENT" locationUuid={locationUuid} reloadKey={reloadKey} onCleared={refresh} />
+            <ClearanceTable status="AWAITING_PAYMENT" locationUuid={locationUuid} reloadKey={reloadKey} onCleared={refresh} date={date} />
           </TabPanel>
           <TabPanel>
-            <ClearanceTable status="CLEARED" locationUuid={locationUuid} reloadKey={reloadKey} onCleared={refresh} />
+            <ClearanceTable status="CLEARED" locationUuid={locationUuid} reloadKey={reloadKey} onCleared={refresh} date={date} />
           </TabPanel>
           <TabPanel>
-            <PrepaidServices locationUuid={locationUuid} onChanged={refresh} />
+            <PrepaidServices locationUuid={locationUuid} onChanged={refresh} date={date} />
           </TabPanel>
         </TabPanels>
       </Tabs>

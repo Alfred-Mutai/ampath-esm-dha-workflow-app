@@ -131,9 +131,9 @@ export function generateAmrsPersonPayload(hieClient: HieClient): CreatePersonDto
       addresses['address2'] = hieClient.sub_county;
       addresses['stateProvince'] = hieClient.sub_county;
     }
-    if (d === 'ward' && hieClient.sub_county.length > 0) {
-      addresses['address7'] = hieClient.sub_county;
-      addresses['address4'] = hieClient.sub_county;
+    if (d === 'ward' && hieClient.ward.length > 0) {
+      addresses['address7'] = hieClient.ward;
+      addresses['address4'] = hieClient.ward;
     }
     if (d === 'village_estate' && hieClient.village_estate.length > 0) {
       addresses['cityVillage'] = hieClient.village_estate;

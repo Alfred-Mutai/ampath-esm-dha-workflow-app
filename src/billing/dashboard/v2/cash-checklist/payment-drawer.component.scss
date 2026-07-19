@@ -92,7 +92,6 @@
   display: flex;
   padding: layout.$spacing-05;
   border: 1px solid $ui-03;
-  border-radius: 8px;
   background-color: $ui-01;
 }
 
@@ -161,7 +160,6 @@
   gap: layout.$spacing-03;
   padding: layout.$spacing-04 layout.$spacing-05;
   border: 1px solid $ui-03;
-  border-radius: 8px;
   background-color: $ui-01;
 }
 
@@ -210,7 +208,6 @@
   gap: layout.$spacing-05;
   padding: layout.$spacing-04 layout.$spacing-05;
   border: 1px solid transparent;
-  border-radius: 8px;
   @include type.type-style('label-01');
   text-transform: uppercase;
   letter-spacing: 0.02em;

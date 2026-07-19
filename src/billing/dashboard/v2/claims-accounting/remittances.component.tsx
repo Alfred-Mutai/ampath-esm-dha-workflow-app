@@ -21,16 +21,16 @@ const money = (n: number) => `KES ${n.toLocaleString('en-KE')}`;
 interface RemittancesViewProps {
   reloadKey: number;
   onOpenClaim: (claim: ShaClaim) => void;
+  date?: string;
 }
 
-const RemittancesView: React.FC<RemittancesViewProps> = ({ reloadKey, onOpenClaim }) => {
+const RemittancesView: React.FC<RemittancesViewProps> = ({ reloadKey, onOpenClaim, date }) => {
   const [remittances, setRemittances] = useState<Remittance[]>([]);
   const [loading, setLoading] = useState(true);
   const [openRef, setOpenRef] = useState<Remittance | null>(null);
   const [claims, setClaims] = useState<ShaClaim[]>([]);
   const [loadingClaims, setLoadingClaims] = useState(false);
   const [search, setSearch] = useState('');
-  const [date, setDate] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -106,25 +106,24 @@ const RemittancesView: React.FC<RemittancesViewProps> = ({ reloadKey, onOpenClai
   }
 
   // Remittance list
+  const dateMatched = remittances.filter((r) => !date || r.date === date);
   const term = search.trim().toLowerCase();
-  const filtered = remittances.filter((r) => {
-    const matchesSearch = !term || `${r.ref} ${r.payer}`.toLowerCase().includes(term);
-    const matchesDate = !date || r.date === date;
-    return matchesSearch && matchesDate;
-  });
+  const filtered = dateMatched.filter((r) => !term || `${r.ref} ${r.payer}`.toLowerCase().includes(term));
 
   return (
     <>
+      {dateMatched.length === 0 ? (
+        <p className={styles.empty}>No remittances for the selected date.</p>
+      ) : (
+      <>
       <TableToolbar
         id="remittances"
         search={search}
         onSearch={setSearch}
-        date={date}
-        onDate={setDate}
         searchPlaceholder="Search remittance ref or payer…"
       />
       {filtered.length === 0 ? (
-        <p className={styles.empty}>No remittances match your filters.</p>
+        <p className={styles.empty}>No remittances match your search.</p>
       ) : (
         <div className={styles.tableCard}>
           <Table size="sm" aria-label="remittances" useZebraStyles>
@@ -160,6 +159,8 @@ const RemittancesView: React.FC<RemittancesViewProps> = ({ reloadKey, onOpenClai
             </TableBody>
           </Table>
         </div>
+      )}
+      </>
       )}
     </>
   );

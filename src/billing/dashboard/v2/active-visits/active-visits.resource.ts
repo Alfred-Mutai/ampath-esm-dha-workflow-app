@@ -2,10 +2,12 @@ import { openmrsFetch, restBaseUrl, useSession, Visit } from "@openmrs/esm-frame
 import dayjs from "dayjs";
 import useSWR from "swr";
 
-export const useActiveVisits = () => {
+export const useActiveVisits = (date?: string) => {
     const sessionLocation = useSession();
 
-    const url = `${restBaseUrl}/visit?location=${sessionLocation?.sessionLocation?.uuid}&includeInactive=false&fromStartDate=${dayjs().startOf('day').toISOString()}&v=full`;
+    // Fetch visits from the start of the selected day (defaults to today).
+    const fromStartDate = (date ? dayjs(date) : dayjs()).startOf('day').toISOString();
+    const url = `${restBaseUrl}/visit?location=${sessionLocation?.sessionLocation?.uuid}&includeInactive=false&fromStartDate=${fromStartDate}&v=full`;
 
     const {
         data,

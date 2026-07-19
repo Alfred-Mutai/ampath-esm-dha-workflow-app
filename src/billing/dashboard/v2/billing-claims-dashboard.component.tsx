@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import styles from './billing-claims-dashboard.component.scss';
-import { Tab, TabList, TabPanel, TabPanels, Tabs } from '@carbon/react';
+import { DatePicker, DatePickerInput, Tab, TabList, TabPanel, TabPanels, Tabs } from '@carbon/react';
 import { Wallet } from '@carbon/react/icons';
 import FacilityBills from './facility-bills/facility-bills.component';
 import ClaimsAccounting from './claims-accounting/claims-accounting.component';

@@ -4,7 +4,9 @@
 @use '@openmrs/esm-styleguide/src/vars' as *;
 
 .clearance {
-  padding: layout.$spacing-03 0;
+  padding: layout.$spacing-05;
+  border: 1px solid $ui-03;
+  background-color: $ui-01;
 }
 
 .intro {

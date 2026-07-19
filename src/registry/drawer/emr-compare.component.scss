@@ -1,0 +1,263 @@
+@use '@carbon/layout';
+@use '@carbon/type';
+@use '@carbon/colors';
+@use '@openmrs/esm-styleguide/src/vars' as *;
+
+.wrap {
+  margin-top: layout.$spacing-04;
+  width: 100%;
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: layout.$spacing-02;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--brand-01);
+  @include type.type-style('heading-compact-01');
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.diffBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.1rem;
+  height: 1.1rem;
+  padding: 0 layout.$spacing-02;
+  border-radius: 999px;
+  background-color: var(--brand-01);
+  color: #ffffff;
+  @include type.type-style('label-01');
+  text-decoration: none;
+}
+
+.panel {
+  margin-top: layout.$spacing-03;
+  border: 1px solid $ui-03;
+  background-color: $ui-background;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.summary {
+  padding: layout.$spacing-03 layout.$spacing-05;
+  margin: 0;
+  background-color: $ui-01;
+  border-bottom: 1px solid $ui-03;
+  @include type.type-style('label-01');
+  color: $text-02;
+}
+
+.tableWrap {
+  display: flex;
+  flex-direction: column;
+  overflow-x: auto;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 6.5rem minmax(6rem, 1fr) minmax(6rem, 1fr) 3rem;
+  align-items: center;
+  gap: layout.$spacing-04;
+  padding: layout.$spacing-03 layout.$spacing-05;
+  border-bottom: 1px solid $ui-03;
+  @include type.type-style('body-compact-01');
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.head {
+  position: sticky;
+  top: 0;
+  background-color: $ui-03;
+  @include type.type-style('label-01');
+  color: $text-02;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+/* Two-column layout (Field | Value) for the "create" preview. */
+.createRow {
+  grid-template-columns: 8rem 1fr;
+}
+
+/* A difference the user has NOT ticked: an unresolved variance. Highlighted in
+   amber with a left accent so it clearly stands out and asks for a decision. */
+.rowUnresolved {
+  background-color: color-mix(in srgb, #f1c21b 22%, #ffffff);
+  box-shadow: inset 3px 0 0 0 #f1c21b;
+
+  .colField,
+  .colVal {
+    color: $ui-05;
+  }
+  .colVal:nth-of-type(2) {
+    font-weight: 600;
+  }
+}
+
+/* A difference ticked for update: calmer brand tint — it's handled. */
+.rowSelected {
+  background-color: color-mix(in srgb, var(--brand-01) 8%, #ffffff);
+  box-shadow: inset 3px 0 0 0 var(--brand-01);
+
+  .colVal:nth-of-type(2) {
+    color: var(--brand-01);
+    font-weight: 600;
+  }
+}
+
+/* Already matching: muted so it recedes. */
+.rowSame {
+  color: $text-03;
+}
+
+.colField {
+  color: $text-02;
+  font-weight: 600;
+}
+
+.colVal {
+  overflow-wrap: anywhere;
+}
+
+.colPick {
+  display: flex;
+  justify-content: center;
+
+  // Neaten Carbon's checkbox: rounded, brand-coloured when checked, with soft
+  // hover/focus feedback.
+  :global {
+    .cds--checkbox-wrapper {
+      margin: 0;
+    }
+    .cds--checkbox-label {
+      min-height: 1.25rem;
+    }
+    .cds--checkbox-label::before {
+      border-radius: 4px;
+      border-width: 1.5px;
+      border-color: $text-03;
+      transition: background-color 110ms ease, border-color 110ms ease, box-shadow 110ms ease;
+    }
+    .cds--checkbox:hover + .cds--checkbox-label::before {
+      border-color: var(--brand-01);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-01) 14%, transparent);
+    }
+    .cds--checkbox:checked + .cds--checkbox-label::before {
+      background-color: var(--brand-01);
+      border-color: var(--brand-01);
+    }
+    .cds--checkbox:focus + .cds--checkbox-label::before {
+      outline: 2px solid var(--brand-01);
+      outline-offset: 1px;
+    }
+  }
+}
+
+.muted {
+  color: $text-03;
+}
+
+.same {
+  display: inline-flex;
+  align-items: center;
+  gap: layout.$spacing-01;
+  @include type.type-style('label-01');
+  color: colors.$green-60;
+  white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: layout.$spacing-03;
+  padding: layout.$spacing-04 layout.$spacing-05;
+  background-color: $ui-01;
+  border-top: 1px solid $ui-03;
+}
+
+.error {
+  display: flex;
+  align-items: center;
+  gap: layout.$spacing-02;
+  padding: layout.$spacing-04 layout.$spacing-05;
+  @include type.type-style('body-01');
+  color: colors.$red-60;
+}
+
+/* Confirmation dialog listing what will change. */
+.confirmText {
+  @include type.type-style('body-01');
+  color: $text-02;
+  margin: 0 0 layout.$spacing-05;
+}
+
+/* A tidy, bordered, striped definition list of the changes. */
+.confirmList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid $ui-03;
+  border-radius: 8px;
+  overflow: hidden auto;
+  max-height: 46vh;
+
+  li {
+    display: grid;
+    grid-template-columns: 8rem 1fr auto 1fr;
+    align-items: center;
+    gap: layout.$spacing-04;
+    padding: layout.$spacing-03 layout.$spacing-05;
+    background-color: $ui-background;
+
+    & + li {
+      border-top: 1px solid $ui-03;
+    }
+    &:nth-child(even) {
+      background-color: $ui-01;
+    }
+  }
+}
+
+/* Create confirm lists only Field | Value. */
+.confirmListCreate li {
+  grid-template-columns: 8.5rem 1fr;
+}
+
+.confirmField {
+  @include type.type-style('label-01');
+  color: $text-02;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.confirmFrom {
+  @include type.type-style('body-compact-01');
+  color: $text-03;
+  text-decoration: line-through;
+  overflow-wrap: anywhere;
+}
+
+.confirmArrow {
+  display: inline-flex;
+  align-items: center;
+  color: var(--brand-01);
+  font-weight: 600;
+}
+
+.confirmTo {
+  @include type.type-style('body-compact-01');
+  color: $ui-05;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}

@@ -94,6 +94,35 @@ $header-height: 3rem;
   }
 }
 
+/* Tint the active (current) and completed steps so their state reads at a glance:
+   completed = light blue, active = dark blue with light text. */
+.stepperCard :global(.cds--progress-step) {
+  padding: layout.$spacing-02 layout.$spacing-02 layout.$spacing-03;
+  transition: background-color 120ms ease;
+}
+.stepperCard :global(.cds--progress-step--complete) {
+  /* Light tint of the primary brand colour used by the navbar; re-themes dynamically. */
+  background-color: color-mix(in srgb, var(--brand-01) 18%, #ffffff);
+}
+.stepperCard :global(.cds--progress-step--current) {
+  /* Primary brand colour (same as the navbar); re-themes dynamically. */
+  background-color: var(--brand-01);
+}
+.stepperCard :global(.cds--progress-step--current .cds--progress-label) {
+  color: #ffffff;
+}
+.stepperCard :global(.cds--progress-step--current svg) {
+  fill: #ffffff;
+}
+/* Connector line + completed check use the dominant brand colour, not Carbon blue. */
+.stepperCard :global(.cds--progress-step--complete .cds--progress-line),
+.stepperCard :global(.cds--progress-step--current .cds--progress-line) {
+  background-color: var(--brand-01);
+}
+.stepperCard :global(.cds--progress-step--complete svg) {
+  fill: var(--brand-01);
+}
+
 .body {
   flex: 1 1 auto;
   overflow-y: auto;
@@ -1060,21 +1089,77 @@ $header-height: 3rem;
 }
 
 .emrStatusFound {
+  align-items: flex-start;
   border-color: colors.$green-30;
   background-color: colors.$green-10;
 
   .emrStatusIcon {
     color: colors.$green-60;
+    margin-top: layout.$spacing-01;
   }
 }
 
 .emrStatusMissing {
+  align-items: flex-start;
   border-color: colors.$yellow-30;
   background-color: colors.$yellow-10;
 
   .emrStatusIcon {
     color: #b28600;
+    margin-top: layout.$spacing-01;
   }
+}
+
+/* SHA schemes shown when the patient is eligible. */
+.schemes {
+  margin-top: layout.$spacing-04;
+  padding-top: layout.$spacing-03;
+  border-top: 1px solid $ui-03;
+}
+
+.schemesHead {
+  @include type.type-style('heading-compact-01');
+  font-weight: 600;
+  color: $ui-05;
+  margin-bottom: layout.$spacing-03;
+}
+
+.schemeList {
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-02;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.schemeItem {
+  padding: layout.$spacing-02 layout.$spacing-03;
+  border: 1px solid $ui-03;
+  border-left: 3px solid colors.$green-50;
+  background-color: $ui-01;
+}
+
+.schemeTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: layout.$spacing-03;
+}
+
+.schemeName {
+  @include type.type-style('heading-compact-01');
+  font-weight: 600;
+  color: $ui-05;
+}
+
+.schemeMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 layout.$spacing-04;
+  margin-top: layout.$spacing-01;
+  @include type.type-style('label-01');
+  color: $text-02;
 }
 
 .emrConfirmText {

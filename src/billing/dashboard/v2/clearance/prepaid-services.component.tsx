@@ -17,11 +17,13 @@ import EmptyState from '../shared/empty-state.component';
 const money = (n: number) => `KES ${n.toLocaleString('en-KE')}`;
 const fmt = (iso: string) => new Date(iso).toLocaleDateString('en-KE');
 
-const PrepaidServices: React.FC<{ locationUuid: string; onChanged?: () => void }> = ({ locationUuid }) => {
+const PrepaidServices: React.FC<{ locationUuid: string; onChanged?: () => void; date?: string }> = ({
+  locationUuid,
+  date,
+}) => {
   const [rows, setRows] = useState<PrepaidService[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [filterDate, setFilterDate] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -49,24 +51,24 @@ const PrepaidServices: React.FC<{ locationUuid: string; onChanged?: () => void }
         <EmptyState message="No prepaid services recorded." />
       ) : (
         (() => {
+          const dateMatched = rows.filter((p) => !date || p.dueDate === date);
+          if (dateMatched.length === 0) {
+            return <EmptyState message="No prepaid services for the selected date." />;
+          }
           const term = search.trim().toLowerCase();
-          const filtered = rows.filter((p) => {
-            const matchesSearch = !term || `${p.patientName} ${p.service}`.toLowerCase().includes(term);
-            const matchesDate = !filterDate || p.dueDate === filterDate;
-            return matchesSearch && matchesDate;
-          });
+          const filtered = dateMatched.filter(
+            (p) => !term || `${p.patientName} ${p.service}`.toLowerCase().includes(term),
+          );
           return (
             <>
               <TableToolbar
                 id="prepaid"
                 search={search}
                 onSearch={setSearch}
-                date={filterDate}
-                onDate={setFilterDate}
                 searchPlaceholder="Search patient or service…"
               />
               {filtered.length === 0 ? (
-                <EmptyState message="No prepaid services match your filters." />
+                <EmptyState message="No prepaid services match your search." />
               ) : (
                 <div className={styles.tableCard}>
                   <Table size="sm" aria-label="prepaid services" useZebraStyles>
