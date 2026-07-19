@@ -9,6 +9,7 @@ import {
   ExtensionSlot,
   Encounter,
   usePatient,
+  useVisit,
 } from '@openmrs/esm-framework';
 import {
   type HieClient,
@@ -61,24 +62,13 @@ interface SendToQueueModalProps {
 
 const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitUuid, visitTypeUuid, onModalClose }) => {
   const { patient } = usePatient(patientUuid);
-
-  const [selectedVisitType, setSelectedVisitType] = useState<string>();
   const [selectedPatientType, setSelectedPatientType] = useState<string>();
-  const [serviceQueues, setServiceQueues] = useState<ServiceQueue[]>();
-  const [selectedServiceQueue, setSelectedServiceQueue] = useState<string>();
-  const [paymentModes, setPaymentModes] = useState<PaymentMode[]>([]);
   const [cashPoints, setCashPoints] = useState<CashPoint[]>([]);
   const [selectedCashPoint, setSelectedCashPoint] = useState<CashPoint>(null);
-  const [selectedPaymentMode, setSelectedPaymentMode] = useState<PaymentMode>(null);
-  const [selectedPriority, setSelectedPriority] = useState<string>('');
-  const [selectedPaymentDetail, setSelectedPaymentDetail] = useState<string>();
   const [servicePrices, setServicePrices] = useState<ServicePrice[]>([]);
   const [filteredBillableServices, setFilteredBillableServices] = useState<ServicePrice[]>(null);
   const [selectedBillableService, setSelectedBillableService] = useState<ServicePrice | null>(null);
-  const [selectedInsuranceScheme, setSelectedInsuranceScheme] = useState<string>('');
-  const [selectedInsurancePolicy, setSelectedInsurancePolicy] = useState<string>('');
   const [selectedPatientCategory, setSelectedPatientCategory] = useState<string>('');
-  const [currentQueueEntry, setCurrentQueueEntry] = useState<QueueEntry>();
   const [patientBills, setPatientBills] = useState<Bill[]>([]);
   const [billCreated, setBillCreated] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
@@ -88,8 +78,9 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
   const session = useSession();
   const locationUuid = session?.sessionLocation?.uuid;
   const [otpVerified, setOtpVerified] = useState(false);
-  const [otp, setOtp] = useState('');
-  const [authGuid, setAuthGuid] = useState('');
+  const [otp, setOtp] = useState("");
+  const [authGuid, setAuthGuid] = useState("");
+  const { activeVisit } = useVisit(patientUuid);
 
   const {
     registrationBillableServices,
@@ -101,13 +92,6 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
   } = useConfig<ConfigObject>();
 
   const facilityCashPoints = useMemo(() => getfacilityCashpoints(), [cashPoints, locationUuid]);
-
-  const paymentDetails = Object.values(PaymentDetail).map((value) => {
-    return {
-      id: value,
-      label: value,
-    };
-  });
 
   const visitType: VisitType = useMemo(() => {
     if (visitTypeUuid) {
@@ -123,10 +107,8 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
   const patientIdentifiers = useMemo(() => {
     if (patient) {
       return {
-        crIdentifierId: patient.identifier.find((i) => i.type.coding[0].code === 'e88dc246-3614-4ee3-8141-1f2a83054e72')
-          .value,
-        nationalId: patient.identifier.find((i) => i.type.coding[0].code === '58a47054-1359-11df-a1f1-0026b9348838')
-          .value,
+        crIdentifierId: patient.identifier.find(i => i.type.coding[0].code === 'e88dc246-3614-4ee3-8141-1f2a83054e72')?.value,
+        nationalId: patient.identifier.find(i => i.type.coding[0].code === '58a47054-1359-11df-a1f1-0026b9348838')?.value,
       };
     }
   }, [patient]);
@@ -142,14 +124,36 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
     }
   }, [patient, patientIdentifiers]);
 
+  const selectedPaymentMode = useMemo(() => {
+    if (activeVisit) {
+      const paymentMode = activeVisit.attributes?.find(atr => atr?.attributeType?.uuid === "8553afa0-bdb9-4d3c-8a98-05fa9350aa85")?.value ?? "";
+      return paymentMode;
+    }
+    return "";
+  }, [activeVisit]);
+
+  const selectedPaymentDetail: PaymentDetail = useMemo(() => {
+    if (activeVisit) {
+      const paymentDetail = activeVisit.attributes?.find(atr => atr?.attributeType?.uuid === "df0362f9-782e-4d92-8bb2-3112e9e9eb3c")?.value ?? "";
+      if (paymentDetail) {
+        return PaymentDetail.NonPaying;
+      }
+    }
+    return PaymentDetail.Paying;
+  }, [activeVisit]);
+
   useEffect(() => {
-    getServiceQueues();
-    getPaymentMethods();
     getBillableServices();
     getCashPoints();
     getPatientBills();
-    getPatientActiveQueue();
   }, []);
+
+  useEffect(() => {
+    if (selectedPaymentMode && servicePrices) {
+      const paymentModeBillableServices = getBillableServiceByPaymentMode(selectedPaymentMode, servicePrices);
+      setFilteredBillableServices(paymentModeBillableServices);
+    }
+  }, [selectedPaymentMode, servicePrices]);
 
   useEffect(() => {
     if (triggerCreateVisit && claimResult) {
@@ -172,17 +176,6 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
 
   function onInterventionChange(selectedIntervention: Intervention) {
     setIntervention(selectedIntervention);
-  }
-
-  async function getPatientActiveQueue() {
-    if (patientUuid) {
-      try {
-        const resp = await getActiveQueueEntryByPatientUuid(patientUuid);
-        setCurrentQueueEntry(resp.length > 0 ? resp[0] : null);
-      } catch (error) {
-        showAlert('error', 'Error getting patient active queue', '');
-      }
-    }
   }
 
   async function getPatientBills() {
@@ -209,12 +202,12 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
     try {
       const newVisit: Visit = await createPatientVisit();
       if (newVisit) {
-        const addToTriageQueueDto: QueueEntryDto = generateAddToTriageDto(newVisit);
-        const queueEntryResp = await createQueueEntry(addToTriageQueueDto);
+        // const addToTriageQueueDto: QueueEntryDto = generateAddToTriageDto(newVisit);
+        // const queueEntryResp = await createQueueEntry(addToTriageQueueDto);
 
-        if (queueEntryResp) {
-          showAlert('success', 'Patient has succesfully been moved to the Triage queue', '');
-        }
+        // if (queueEntryResp) {
+        //   showAlert('success', 'Patient has succesfully been moved to the Triage queue', '');
+        // }
 
         // add bill if it was a paying client
         let createBillResp = null;
@@ -237,8 +230,8 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
         }
 
         if (
-          (queueEntryResp && PaymentDetail.Paying && (createBillResp || billCreated)) ||
-          (queueEntryResp && PaymentDetail.NonPaying)
+          (PaymentDetail.Paying && (createBillResp || billCreated)) ||
+          (PaymentDetail.NonPaying)
         ) {
           onModalClose({ success: true });
         }
@@ -249,50 +242,6 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
       setLoading(false);
     }
   };
-  function validateVisitQueueBill(): boolean {
-    if (!selectedPaymentDetail) {
-      showAlert('error', 'Please select a paying or non paying option', '');
-      return false;
-    }
-
-    if (!isValidServiceQueueSelected()) {
-      return false;
-    }
-
-    if (selectedPaymentDetail === PaymentDetail.Paying) {
-      if (!selectedPaymentMode) {
-        showAlert('error', 'Please select a payment method', '');
-        return false;
-      }
-      if (!selectedBillableService) {
-        showAlert('error', 'Please select a billable service', '');
-        return false;
-      }
-      if (!selectedCashPoint) {
-        showAlert('error', 'Please select a cashpoint', '');
-        return false;
-      }
-    }
-    if (selectedPaymentDetail === PaymentDetail.NonPaying) {
-      if (!selectedPatientCategory) {
-        showAlert('error', 'Please select a patient category', '');
-        return false;
-      }
-    }
-    if (!selectedVisitType) {
-      showAlert('error', 'Please select a visit type', '');
-      return false;
-    }
-    if (!selectedServiceQueue) {
-      showAlert('error', 'Please select a service queue', '');
-      return false;
-    }
-    if (!selectedPriority) {
-      showAlert('error', 'Please select a service queue priority', '');
-      return false;
-    }
-    return true;
-  }
   const generateAddToTriageDto = (newVisit: Visit): QueueEntryDto => {
     const payload: QueueEntryDto = {
       visit: {
@@ -306,7 +255,7 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
           uuid: QUEUE_PRIORITIES_UUIDS.NORMAL_PRIORITY_UUID,
         },
         queue: {
-          uuid: selectedServiceQueue,
+          uuid: ""//selectedServiceQueue,
         },
         patient: {
           uuid: patientUuid,
@@ -318,46 +267,12 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
     return payload;
   };
 
-  const isValidServiceQueueSelected = () => {
-    if (!currentQueueEntry) {
-      return true;
-    }
-    if (currentQueueEntry.queue.uuid) {
-      showAlert(
-        'error',
-        'Patient already in queue',
-        `Patient is already in the ${currentQueueEntry.queue.display} queue, remove them first or contact support`,
-      );
-      return false;
-    }
-    return true;
-  };
-  const serviceChangeHandler = ($event: any) => {
-    if (isValidServiceQueueSelected()) {
-      const sq = $event.target.value as unknown as string;
-      setSelectedServiceQueue(sq);
-    }
-  };
-  const paymentDetailsHandler = (paymentDetailSelected: string) => {
-    setSelectedPaymentDetail(paymentDetailSelected);
-  };
-  const paymentMethodHandler = (selectedPaymentModeUuid: string) => {
-    const selectedPaymentMode = paymentModes.find((pm) => {
-      return pm.uuid === selectedPaymentModeUuid;
-    });
-    setSelectedPaymentMode(selectedPaymentMode);
-    const paymentModeBillableServices = getBillableServiceByPaymentMode(selectedPaymentMode);
-    setFilteredBillableServices(paymentModeBillableServices);
-    setSelectedInsuranceScheme('');
-    setSelectedInsurancePolicy('');
-    setSelectedPriority('');
-  };
-  const getBillableServiceByPaymentMode = (paymentMode: PaymentMode): PayableBillableService[] => {
+  function getBillableServiceByPaymentMode(paymentModeUuid: string, servicePrices: ServicePrice[]): PayableBillableService[] {
     const paymentBillableServices: ServicePrice[] = [];
     servicePrices.forEach((sp) => {
       if (sp.paymentMode) {
         if (
-          sp.paymentMode.uuid === paymentMode.uuid &&
+          sp.paymentMode.uuid === paymentModeUuid &&
           registrationBillableServices.includes(sp.billableService.uuid)
         ) {
           paymentBillableServices.push(sp);
@@ -365,7 +280,7 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
       }
     });
     return paymentBillableServices;
-  };
+  }
   const billableServicesHandler = (selectedBillableServiceUuid: string) => {
     const sB = servicePrices.find((sp) => {
       return sp.uuid === selectedBillableServiceUuid;
@@ -373,7 +288,7 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
     if (isValidBillableService(sB)) {
       setSelectedBillableService(sB);
     } else {
-      setSelectedBillableService(null);
+      setSelectedBillableService(sB);
       showAlert('error', 'Existing bill', 'Patient has a similar bill');
     }
   };
@@ -399,12 +314,6 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
   const patientTypeHandler = (selectedPatientType: { selectedItem: { id: string; text: string } }) => {
     const pt = selectedPatientType.selectedItem.id;
     setSelectedPatientType(pt);
-  };
-  const insuranceSchemeHandler = (selectedInsuranceScheme: string) => {
-    setSelectedInsuranceScheme(selectedInsuranceScheme);
-  };
-  const insurancePolicyHandler = (selectedInsurancePolicy: string) => {
-    setSelectedInsurancePolicy(selectedInsurancePolicy);
   };
   const patientCategoryHandler = (categoryUuid: string) => {
     setSelectedPatientCategory(categoryUuid);
@@ -438,34 +347,10 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
 
   function getVisitAttributes(): VisitAttribute[] {
     const attributes: VisitAttribute[] = [];
-    if (selectedInsuranceScheme) {
-      attributes.push({
-        attributeType: '3a988e33-a6c0-4b76-b924-01abb998944b',
-        value: selectedInsuranceScheme,
-      });
-    }
-    if (selectedInsurancePolicy) {
-      attributes.push({
-        attributeType: 'aac48226-d143-4274-80e0-264db4e368ee',
-        value: selectedInsurancePolicy,
-      });
-    }
-    if (selectedPaymentMode) {
-      attributes.push({
-        attributeType: '8553afa0-bdb9-4d3c-8a98-05fa9350aa85',
-        value: selectedPaymentMode.uuid,
-      });
-    }
     if (selectedPatientType) {
       attributes.push({
         attributeType: 'fbc0702d-b4c9-4968-be63-af8ad3ad6239',
         value: selectedPatientType,
-      });
-    }
-    if (selectedPaymentDetail === PaymentDetail.NonPaying) {
-      attributes.push({
-        attributeType: 'df0362f9-782e-4d92-8bb2-3112e9e9eb3c',
-        value: 'true',
       });
     }
 
@@ -477,31 +362,6 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
       });
     }
     return attributes;
-  }
-  async function getServiceQueues() {
-    try {
-      const sqs = await getFacilityServiceQueues(locationUuid);
-      if (sqs && sqs.length > 0) {
-        const triageServiceQueues = getTriageServiceQueues(sqs);
-        setServiceQueues(triageServiceQueues);
-      }
-    } catch (e) {
-      showSnackbar({
-        kind: 'error',
-        title: 'An error occurred while fetching service queues',
-        subtitle: e.message ?? 'An error occurred while fetching service queues, please try agin',
-      });
-    }
-  }
-  function getTriageServiceQueues(serviceQueues: ServiceQueue[]) {
-    return serviceQueues.filter((sq) => {
-      return registrationServicequeues.includes(sq.uuid ?? '');
-    });
-  }
-
-  async function getPaymentMethods() {
-    const methods = await fetchPaymentModes();
-    setPaymentModes(methods);
   }
 
   async function getBillableServices() {
@@ -577,7 +437,10 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
     if (!selectedPaymentMode) {
       return false;
     }
-    return selectedPaymentMode.name.trim().toLowerCase().includes(paymentMode.trim().toLowerCase());
+    if (paymentMode.trim().toUpperCase() === "SHA") {
+      return selectedPaymentMode === "1be55f87-2931-41e0-89c8-8f5652c7c303";
+    }
+    return false;
   }
 
   function generateOrderEncounterPayload(patientUuid: string, visitUuid: string): CreateOrderEncounterDto {
@@ -595,7 +458,7 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
           careSetting: outPatientCareSettingUuid,
           orderer: session.currentProvider.uuid ?? 'pd25871c-1359-11df-a1f1-0026b9348838',
           encounter: null,
-          concept: getOrderConcept(selectedPaymentMode),
+          concept: getOrderConcept(),
           accessionNumber: null,
           urgency: 'ROUTINE',
           scheduledDate: null,
@@ -603,12 +466,11 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
       ],
     };
   }
-  function getOrderConcept(paymentMode: PaymentMode) {
-    const paymentModeName = paymentMode.name.toLowerCase().trim();
-    if (paymentModeName.includes('cash') || paymentModeName.includes('mpesa')) {
-      return cashConsulationConceptUuid;
+  function getOrderConcept() {
+    if (hasSelectedPaymentMode("SHA")) {
+      return shaConsulationConceptUuid;
     }
-    return shaConsulationConceptUuid;
+    return cashConsulationConceptUuid;
   }
   async function createOrder(patientUuid: string, visitUuid: string) {
     const createOrderPayload = generateOrderEncounterPayload(patientUuid, visitUuid);
@@ -739,7 +601,7 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
           onRequestSubmit={handleprimaryAction}
           primaryButtonText={loading ? 'Sending...please wait' : 'Save'}
           secondaryButtonText={'Cancel'}
-          primaryButtonDisabled={loading || !otpVerified || authGuid !== 'PENDING'}
+          primaryButtonDisabled={loading || (hasSelectedPaymentMode('SHA') && (!otpVerified || authGuid !== 'PENDING'))}
         >
           <ModalBody>
             <div className={styles.clientDetailsLayout}>
@@ -753,29 +615,6 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
                     <div className={styles.formSection}>
                       <div className={styles.formRow}>
                         <div className={styles.formControl}>
-                          <Select id="service" labelText="Select a Queue Service" onChange={serviceChangeHandler}>
-                            <SelectItem value="" text="Select" />
-                            {serviceQueues?.map((sq) => <SelectItem key={sq.uuid} value={sq.uuid} text={sq.display} />)}
-                          </Select>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className={styles.formSection}>
-                      <div className={styles.formRow}>
-                        <div className={styles.formControl}>
-                          <Select
-                            id="payment-details"
-                            labelText="Payment Details"
-                            onChange={($event) => paymentDetailsHandler($event.target.value)}
-                          >
-                            <SelectItem value="" text="Select" />;
-                            {paymentDetails.map((pd) => {
-                              return <SelectItem value={pd.id} text={pd.label} />;
-                            })}
-                          </Select>
-                        </div>
-                        <div className={styles.formControl}>
                           <Select
                             id="cash-point"
                             labelText="Cash Point"
@@ -787,43 +626,21 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
                             ))}
                           </Select>
                         </div>
+                        <div className={styles.formControl}>
+                          <Select
+                            id="billable-service"
+                            labelText="Billable Services"
+                            onChange={($event) => billableServicesHandler($event.target.value)}
+                          >
+                            <SelectItem value="" text="Select" />;
+                            {filteredBillableServices &&
+                              filteredBillableServices.map((sp) => {
+                                return <SelectItem value={sp.uuid} text={`${sp.billableService.display}(${sp.name}:${sp.price})`} />;
+                              })}
+                          </Select>
+                        </div>
                       </div>
                     </div>
-
-                    <>
-                      {selectedPaymentDetail === PaymentDetail.Paying && (
-                        <PaymentMethodComponent
-                          paymentMethodHandler={paymentMethodHandler}
-                          paymentModes={paymentModes}
-                          billableServicesHandler={billableServicesHandler}
-                          filteredBillableServices={filteredBillableServices}
-                        />
-                      )}
-                    </>
-
-                    {selectedPaymentDetail === PaymentDetail.Paying && (
-                      <>
-                        {hasSelectedPaymentMode('insurance') && (
-                          <div className={styles.formRow}>
-                            <div className={styles.formControl}>
-                              <TextInput
-                                id="insurance-scheme"
-                                labelText="Insurance scheme"
-                                onChange={(e) => insuranceSchemeHandler(e.target.value)}
-                              />
-                            </div>
-
-                            <div className={styles.formControl}>
-                              <TextInput
-                                id="policy-number"
-                                labelText="Policy number"
-                                onChange={(e) => insurancePolicyHandler(e.target.value)}
-                              />
-                            </div>
-                          </div>
-                        )}
-                      </>
-                    )}
 
                     {selectedPaymentDetail === PaymentDetail.NonPaying && (
                       <div className={styles.formRow}>

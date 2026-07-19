@@ -5,7 +5,7 @@ import { usePagination } from '@openmrs/esm-framework';
 import { useTranslation } from 'react-i18next';
 import styles from "./active-visits.scss";
 import dayjs from 'dayjs';
-import { Add } from '@carbon/react/icons';
+import { Add, Finance } from '@carbon/react/icons';
 import TableToolbar from '../shared/table-toolbar.component';
 import EmptyState from '../shared/empty-state.component';
 import SendToQueueModal from '../../../../registry/modal/send-to-triage/send-to-queue.modal';
@@ -153,10 +153,10 @@ const ActiveVisits: React.FC<{ date?: string }> = ({ date }) => {
                                                     <Button
                                                         kind="ghost"
                                                         size="sm"
-                                                        renderIcon={Add}
+                                                        // renderIcon={Finance}
                                                         onClick={() => handleRowClick(row)}
                                                     >
-                                                        Send to queue
+                                                        Manage payments
                                                     </Button>
                                                 </TableCell>
                                             );

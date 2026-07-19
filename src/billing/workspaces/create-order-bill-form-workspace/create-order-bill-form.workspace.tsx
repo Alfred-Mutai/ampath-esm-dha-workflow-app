@@ -473,9 +473,20 @@ const CreateOrderBillForm: React.FC<CreateOrderBillFormProps> = ({
                     </Column>
                     {
                         isSHAPaymentMode ?
-                            <Column>
-                                <ExtensionSlot name='billing-claims-slot' state={{ clientRegistryId: crIdentifierId, patientUuid, isNewVisit: false, triggerAddIntervention, onSelectChange: () => { }, onAddIntervention }} />
-                            </Column> :
+                            getConsentToken(activeVisit) ?
+                                <Column>
+                                    <ExtensionSlot name='billing-claims-slot' state={{ clientRegistryId: crIdentifierId, patientUuid, isNewVisit: false, triggerAddIntervention, onSelectChange: () => { }, onAddIntervention }} />
+                                </Column>
+                                :
+                                <InlineNotification
+                                    kind="warning"
+                                    title={t(
+                                        'noActiveClaimVisitAvailable',
+                                        'No active claim visit available.',
+                                    )}
+                                    lowContrast
+                                />
+                            :
                             <></>
                     }
                 </Stack>
