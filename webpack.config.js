@@ -6,7 +6,7 @@ const extendConfig = require('openmrs/default-webpack-config');
 // webpack config excludes all of `node_modules` from the swc-loader, which
 // causes "Module parse failed: The keyword 'interface' is reserved" errors for
 // these packages. We narrow that exclusion so their source is transpiled too.
-const sourceOnlyOpenmrsPackages = ['@openmrs/esm-patient-common-lib'];
+const sourceOnlyOpenmrsPackages = ['@openmrs/esm-patient-common-lib', '@openmrs/esm-styleguide'];
 
 function isExcludedFromTranspilation(modulePath) {
   if (!/[\\/]node_modules[\\/]/.test(modulePath)) {
