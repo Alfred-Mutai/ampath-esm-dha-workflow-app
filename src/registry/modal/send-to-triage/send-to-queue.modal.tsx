@@ -89,6 +89,7 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
     outPatientCareSettingUuid,
     orderEncounterTypeUuid,
     registrationServicequeues,
+    shaPaymentModeUuid
   } = useConfig<ConfigObject>();
 
   const facilityCashPoints = useMemo(() => getfacilityCashpoints(), [cashPoints, locationUuid]);
@@ -441,7 +442,7 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
       return false;
     }
     if (paymentMode.trim().toUpperCase() === 'SHA') {
-      return selectedPaymentMode === '1be55f87-2931-41e0-89c8-8f5652c7c303';
+      return selectedPaymentMode === shaPaymentModeUuid;
     }
     return false;
   }
@@ -604,7 +605,7 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
           onRequestSubmit={handleprimaryAction}
           primaryButtonText={loading ? 'Sending...please wait' : 'Save'}
           secondaryButtonText={'Cancel'}
-          primaryButtonDisabled={loading || (hasSelectedPaymentMode('SHA') && (!otpVerified || !authGuid))}
+          primaryButtonDisabled={loading || (hasSelectedPaymentMode('SHA') && (!otpVerified && !authGuid))}
         >
           <ModalBody>
             <div className={styles.clientDetailsLayout}>

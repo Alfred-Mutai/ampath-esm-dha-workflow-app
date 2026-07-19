@@ -41,7 +41,7 @@ import {
   fulfillPrepaidService,
 } from '../shared/services/consultation-clearance.resource';
 import { fetchClientRegistryData } from './registry.resource';
-import { type Patient, showSnackbar, useSession } from '@openmrs/esm-framework';
+import { type Patient, showSnackbar, useConfig, useSession } from '@openmrs/esm-framework';
 import { maskCrNumber, maskExceptFirstAndLast } from './utils/mask-data';
 import { searchPatientByCrNumber } from '../resources/patient-search.resource';
 import SendToTriageModal from './modal/send-to-triage/send-to-triage.modal';
@@ -53,6 +53,7 @@ import { formatPhoneNumberForOTP } from './utils/phone-number-formatter';
 import { usePatient } from '../context/patient-context';
 import FacilityAndWorkerSlot from '../shared/ui/facility-worker-slot/facility-worker.component-slot.component';
 import RegistrationList from './registration-list/registration-list.component';
+import { ConfigObject } from '../config-schema';
 
 interface RegistryComponentProps {}
 const RegistryComponent: React.FC<RegistryComponentProps> = () => {
@@ -75,6 +76,7 @@ const RegistryComponent: React.FC<RegistryComponentProps> = () => {
   const session = useSession();
   const locationUuid = session?.sessionLocation?.uuid;
   const { setPatient } = usePatient();
+  const { cashPaymentModeUuid, shaPaymentModeUuid } = useConfig<ConfigObject>();
 
   const validateForm = (): string => {
     const value = identifierValue.trim();
@@ -310,6 +312,18 @@ const RegistryComponent: React.FC<RegistryComponentProps> = () => {
   // Create the AMRS visit for the verified client once the workflow drawer is submitted,
   // add them to the selected triage queue, and raise the consultation clearance so they
   // wait "Awaiting clearance" until Accounting settles the fee (exempt patients auto-clear).
+  const getVisitAttributes = (paymentMethod: 'cash' | 'insurance', insurance: string) => {
+    const attributes: VisitAttribute[] = [];
+    if (paymentMethod) {
+      attributes.push({
+        attributeType: '8553afa0-bdb9-4d3c-8a98-05fa9350aa85',
+        value: paymentMethod === "cash"
+          ? cashPaymentModeUuid
+          : shaPaymentModeUuid // /sha|shif/i.test(insurance) ? shaPaymentModeUuid : "",
+      });
+    }
+    return attributes;
+  }
   const startVisitForClient = async (details: {
     patientCategory: string;
     room: string;
@@ -344,6 +358,10 @@ const RegistryComponent: React.FC<RegistryComponentProps> = () => {
       stopDatetime: null,
       patient: amrsPatient.uuid,
     };
+    const visitAttributes = getVisitAttributes(details.method, details.insurance);
+    if (visitAttributes.length > 0) {
+      visitDto['attributes'] = visitAttributes;
+    }
     try {
       const visit = await createVisit(visitDto);
       if (!visit?.uuid) {

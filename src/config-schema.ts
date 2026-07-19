@@ -159,6 +159,14 @@ export const configSchema = {
   maternityDischargeEncounterTypeUuid: {
     _type: Type.ConceptUuid,
     _default: 'e3c2a17f-4d58-4725-b702-a5d75a2231d0'
+  },
+  shaPaymentModeUuid: {
+    _type: Type.ConceptUuid,
+    _default: "1be55f87-2931-41e0-89c8-8f5652c7c303"
+  },
+  cashPaymentModeUuid: {
+    _type: Type.ConceptUuid,
+    _default: "63eff7a4-6f82-43c4-a333-dbcc58fe9f74"
   }
 };
 
@@ -219,6 +227,8 @@ export interface ConfigObject {
   consultationBillableServiceNames: Array<string>;
   maternityDischargeFormUuid: string;
   maternityDischargeEncounterTypeUuid: string;
+  shaPaymentModeUuid: string;
+  cashPaymentModeUuid: string;
 }
 
 const queueEntryActions = ['move', 'call', 'edit', 'transition', 'signOff', 'remove', 'delete', 'undo'] as const;
