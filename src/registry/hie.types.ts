@@ -50,3 +50,8 @@ export interface Authorization {
   status: string;
   authorizationType: ('OTP' | 'SHA')[];
 }
+
+export interface BiometricResult {
+  status: string;
+  token: string;
+}

@@ -1,5 +1,5 @@
 import { ModalBody, ModalHeader } from '@carbon/react';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { type Intervention, type VisitType } from '../../../../claims';
 import ClaimsConsentModal from '../claims-consent';
@@ -16,6 +16,7 @@ interface ClaimsConsentExtensionProps {
   crIdentifierId: string;
   visitType: VisitType;
   onClientConsent: ({ otp, authGuid }: { otp?: string; authGuid?: string }) => void;
+  onAuthGuidReceived?: (authGuid: string) => void;
 }
 
 const ClaimsConsentExtension: React.FC<ClaimsConsentExtensionProps> = ({
@@ -24,13 +25,26 @@ const ClaimsConsentExtension: React.FC<ClaimsConsentExtensionProps> = ({
   crIdentifierId,
   visitType,
   onClientConsent,
+  onAuthGuidReceived,
 }) => {
   const [submitting, setSubmitting] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
   const [whitelistRequest, setWhitelistRequest] = useState(null);
+  const [authGuid, setAuthGuid] = useState<string>();
   const { t } = useTranslation();
   const sessionLocation = useSession();
+
+  useEffect(() => {
+    // eslint-disable-next-line no-console
+    console.log('Grandparent received:', authGuid);
+  }, [authGuid]);
+
+  useEffect(() => {
+    if (authGuid) {
+      onAuthGuidReceived?.(authGuid);
+    }
+  }, [authGuid, onAuthGuidReceived]);
 
   const handleVerifyOtp = async (otp: string) => {
     try {
@@ -88,6 +102,7 @@ const ClaimsConsentExtension: React.FC<ClaimsConsentExtensionProps> = ({
             serviceType={getServiceType(intervention, visitType)}
             interventionCode={intervention?.code ?? ''}
             crId={patient.id}
+            onScanStatusChange={setAuthGuid}
           />
         </ModalBody>
       </>

@@ -15,6 +15,7 @@ interface ClaimsConsentModalProps {
   serviceType: string;
   interventionCode: string;
   crId: string;
+  onScanStatusChange: (status: string) => void;
 }
 const ClaimsConsentModal: React.FC<ClaimsConsentModalProps> = ({
   onSendClaimsOtp,
@@ -26,6 +27,7 @@ const ClaimsConsentModal: React.FC<ClaimsConsentModalProps> = ({
   serviceType,
   interventionCode,
   crId,
+  onScanStatusChange,
 }) => {
   const [selectedTab, setSelectedTab] = useState(0);
   const [whiteListed, setIsWhitelisted] = useState<boolean>();
@@ -45,6 +47,7 @@ const ClaimsConsentModal: React.FC<ClaimsConsentModalProps> = ({
               onClose={() => {}}
               serviceType={serviceType}
               interventionCode={interventionCode}
+              onScanStatusChange={onScanStatusChange}
             />
           </TabPanel>
           <TabPanel>

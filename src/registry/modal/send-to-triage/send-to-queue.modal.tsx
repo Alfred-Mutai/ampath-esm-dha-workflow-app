@@ -1,11 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import {
-  Modal,
-  ModalBody,
-  Select,
-  SelectItem,
-  TextInput,
-} from '@carbon/react';
+import { Modal, ModalBody, Select, SelectItem, TextInput } from '@carbon/react';
 import styles from './send-to-triage.modal.scss';
 import {
   useSession,
@@ -65,12 +59,7 @@ interface SendToQueueModalProps {
   onModalClose?: (modalCloseResp?: { success: boolean }) => void;
 }
 
-const SendToQueueModal: React.FC<SendToQueueModalProps> = ({
-  patientUuid,
-  visitUuid,
-  visitTypeUuid,
-  onModalClose
-}) => {
+const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitUuid, visitTypeUuid, onModalClose }) => {
   const { patient } = usePatient(patientUuid);
 
   const [selectedVisitType, setSelectedVisitType] = useState<string>();
@@ -99,8 +88,8 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({
   const session = useSession();
   const locationUuid = session?.sessionLocation?.uuid;
   const [otpVerified, setOtpVerified] = useState(false);
-  const [otp, setOtp] = useState("");
-  const [authGuid, setAuthGuid] = useState("");
+  const [otp, setOtp] = useState('');
+  const [authGuid, setAuthGuid] = useState('');
 
   const {
     registrationBillableServices,
@@ -131,12 +120,13 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({
     }
   }, [visitTypeUuid, VisitTypeUuids]);
 
-
   const patientIdentifiers = useMemo(() => {
     if (patient) {
       return {
-        crIdentifierId: patient.identifier.find(i => i.type.coding[0].code === 'e88dc246-3614-4ee3-8141-1f2a83054e72').value,
-        nationalId: patient.identifier.find(i => i.type.coding[0].code === '58a47054-1359-11df-a1f1-0026b9348838').value,
+        crIdentifierId: patient.identifier.find((i) => i.type.coding[0].code === 'e88dc246-3614-4ee3-8141-1f2a83054e72')
+          .value,
+        nationalId: patient.identifier.find((i) => i.type.coding[0].code === '58a47054-1359-11df-a1f1-0026b9348838')
+          .value,
       };
     }
   }, [patient]);
@@ -147,7 +137,7 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({
         id: String(patientIdentifiers.crIdentifierId),
         first_name: patient.name[0].text,
         identification_type: HieIdentificationType.NationalID,
-        identification_number: String(patientIdentifiers.nationalId)
+        identification_number: String(patientIdentifiers.nationalId),
       } as unknown as HieClient;
     }
   }, [patient, patientIdentifiers]);
@@ -698,9 +688,8 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({
 
         return payload;
       }
-    } catch (error) { }
+    } catch (error) {}
   }
-
 
   const handleSecondaryAction = () => {
     onModalClose({ success: false });
@@ -722,16 +711,22 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({
     await sendToTriage();
   };
 
-
-  function onClientConsent({ otp, authGuid }: { otp?: string, authGuid?: string }) {
+  function onClientConsent({ otp, authGuid }: { otp?: string; authGuid?: string }) {
+    // eslint-disable-next-line no-console
+    console.log('AUTH GUID: ', authGuid);
     if (otp) {
       setOtp(otp);
       setOtpVerified(true);
     }
     if (authGuid) {
+      // eslint-disable-next-line no-console
+      console.log('AUTH GUID: ', authGuid);
       setAuthGuid(authGuid);
     }
   }
+
+  // eslint-disable-next-line no-console
+  console.log('PARENT PARENT: ', authGuid);
 
   return (
     <>
@@ -744,7 +739,7 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({
           onRequestSubmit={handleprimaryAction}
           primaryButtonText={loading ? 'Sending...please wait' : 'Save'}
           secondaryButtonText={'Cancel'}
-          primaryButtonDisabled={loading || !otpVerified}
+          primaryButtonDisabled={loading || !otpVerified || authGuid !== 'PENDING'}
         >
           <ModalBody>
             <div className={styles.clientDetailsLayout}>
@@ -760,9 +755,7 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({
                         <div className={styles.formControl}>
                           <Select id="service" labelText="Select a Queue Service" onChange={serviceChangeHandler}>
                             <SelectItem value="" text="Select" />
-                            {serviceQueues?.map((sq) => (
-                              <SelectItem key={sq.uuid} value={sq.uuid} text={sq.display} />
-                            ))}
+                            {serviceQueues?.map((sq) => <SelectItem key={sq.uuid} value={sq.uuid} text={sq.display} />)}
                           </Select>
                         </div>
                       </div>
@@ -847,7 +840,6 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({
                         </div>
                       </div>
                     )}
-
                   </>
 
                   {selectedPaymentDetail === PaymentDetail.Paying && (
@@ -862,20 +854,22 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({
                             otp,
                             authGuid,
                             visitType,
-                            onSelectChange: () => { },
+                            onSelectChange: () => {},
                             onClaimsVisitStart,
                             onInterventionChange,
                           }}
                         />
                       )}
-                      {
-                        (consentPatient && intervention) &&
-                        <ClaimsConsentExtension patient={consentPatient}
+                      {consentPatient && intervention && (
+                        <ClaimsConsentExtension
+                          patient={consentPatient}
                           intervention={intervention}
                           crIdentifierId={patientIdentifiers.crIdentifierId}
                           visitType={visitType}
-                          onClientConsent={onClientConsent} />
-                      }
+                          onClientConsent={onClientConsent}
+                          onAuthGuidReceived={setAuthGuid}
+                        />
+                      )}
                     </>
                   )}
                 </div>

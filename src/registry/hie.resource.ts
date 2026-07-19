@@ -9,32 +9,6 @@ import { type HieClient } from './types';
 import { getHieBaseUrl } from '../shared/utils/get-base-url';
 import { openmrsFetch } from '@openmrs/esm-framework';
 
-const BASEURL = 'https://ilm-dev.dha.go.ke/uat-middleware';
-
-export async function getAccessToken(): Promise<HieAccessTokenResponse> {
-  const url = `${BASEURL}/api/v1/tenants/token`;
-  const payload = new URLSearchParams({
-    client_id: '',
-    client_secret: '',
-  });
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: payload,
-  });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    const errorText = data.message || 'Failed to fetch access token';
-    throw new Error(`Request failed with ${response.status}: ${errorText}`);
-  }
-
-  return data.access_token;
-}
-
 export async function getOtpWhitelistingStatus(
   identifier: string,
   identifierType: string,
@@ -267,16 +241,11 @@ export async function sendDischargeOTP(consentToken: string, patientId: string, 
   return data;
 }
 
-export async function getAuthorizations(crId: string): Promise<any> {
-  const url = `${BASEURL}/api/v1/claims/authorizations?beneficiary_code=${crId}`;
-  const token = await getAccessToken();
-  const response = await openmrsFetch(url, {
-    headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-  });
+export async function getAuthorizations(locationUuid: string, crId?: string, token?: string): Promise<any> {
+  const hieBaseUrl = await getHieBaseUrl();
+  const url = `${hieBaseUrl}/claim-authorizations?beneficiaryCode=${crId}&consentToken=${token}&locationUuid=${locationUuid}`;
+
+  const response = await openmrsFetch(url);
 
   const data = await response.json();
 
@@ -288,16 +257,15 @@ export async function getAuthorizations(crId: string): Promise<any> {
   return data;
 }
 
-export async function cancelPendingAuthorizations(consentToken: string): Promise<any> {
-  const url = `${BASEURL}/api/v1/claims/authorizations/${encodeURIComponent(consentToken)}/reject`;
-  const token = await getAccessToken();
+export async function cancelPendingAuthorizations(consentToken: string, locationUuid: string): Promise<any> {
+  const hieBaseUrl = await getHieBaseUrl();
+  const url = `${hieBaseUrl}/claim-authorizations/cancel?consentToken=${consentToken}&locationUuid=${locationUuid}`;
 
   const response = await openmrsFetch(url, {
     method: 'POST',
     headers: {
       Accept: 'application/json',
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
     },
   });
 
@@ -311,13 +279,13 @@ export async function cancelPendingAuthorizations(consentToken: string): Promise
   return data;
 }
 
-export async function cancelAllPendingAuthorizations(crId: string): Promise<void> {
-  const authorizations: Authorization[] = await getAuthorizations(crId);
+export async function cancelAllPendingAuthorizations(locationUuid: string, crId: string): Promise<void> {
+  const authorizations: Authorization[] = await getAuthorizations(locationUuid, crId, undefined);
 
   const pending = authorizations.filter((auth) => auth.status === 'PENDING');
 
   // for (const authorization of pending) {
   //   await cancelPendingAuthorizations(authorization.token);
   // }
-  await Promise.all(pending.map((auth) => cancelPendingAuthorizations(auth.token)));
+  await Promise.all(pending.map((auth) => cancelPendingAuthorizations(auth.token, locationUuid)));
 }

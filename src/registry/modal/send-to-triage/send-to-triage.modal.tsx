@@ -140,6 +140,7 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
   const [selecteddPatient, setSelecteddPatient] = useState<string>('principal');
   const [selectedDependant, setSelectedDependant] = useState<HieClient>();
   const [generatedOtp, setGeneratedOtp] = useState<string | null>(null);
+  const [scanStatus, setScanStatus] = useState<string>();
 
   const next = () => setStep((s) => s + 1);
   const previous = () => setStep((s) => s - 1);
@@ -1210,6 +1211,7 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
                             serviceType={getServiceType(intervention, visitType)}
                             interventionCode={intervention?.code ?? ''}
                             crId={patient!.id}
+                            onScanStatusChange={setScanStatus}
                           />
                         )}
                       </>

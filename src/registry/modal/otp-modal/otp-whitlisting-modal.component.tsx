@@ -65,14 +65,14 @@ const OTPWhitlistingModal: React.FC<OTPWhitlistingModalProps> = ({
 
     const cancelPending = async () => {
       try {
-        await cancelAllPendingAuthorizations(crId);
+        await cancelAllPendingAuthorizations(locationUuid, crId);
       } catch (error) {
         console.error('Failed to cancel pending authorizations:', error);
       }
     };
 
     cancelPending();
-  }, [crId]);
+  }, [crId, locationUuid]);
 
   const checkWhitelistStatus = async () => {
     try {

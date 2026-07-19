@@ -42,9 +42,6 @@
       "name": "registry-dashboard-link",
       "component": "registryDashboardLink",
       "slot": "homepage-dashboard-slot",
-      "privileges": [
-        "O3 View Client Registry Dashboard"
-      ],
       "meta": {
         "name": "registration",
         "slot": "client-registry-dashboard-slot",
