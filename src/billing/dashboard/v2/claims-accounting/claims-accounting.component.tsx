@@ -27,6 +27,7 @@ import ClaimDetail from './claim-detail.component';
 import RemittancesView from './remittances.component';
 import TableToolbar from '../shared/table-toolbar.component';
 import EmptyState from '../shared/empty-state.component';
+import ClaimVisits from '../claim-visits/claim-visits.component';
 
 const money = (n: number) => `KES ${n.toLocaleString('en-KE')}`;
 
@@ -98,34 +99,34 @@ const ClaimsTable: React.FC<ClaimsTableProps> = ({ statuses, reloadKey, onOpen }
             </TableHead>
             <TableBody>
               {filtered.map((c) => {
-            const meta = statusMeta(c.status);
-            return (
-              <TableRow key={c.id}>
-                <TableCell>
-                  <button type="button" className={styles.claimLink} onClick={() => onOpen(c)}>
-                    {c.claimCode}
-                  </button>
-                </TableCell>
-                <TableCell>{c.patientName}</TableCell>
-                <TableCell>{c.fund}</TableCell>
-                <TableCell>{c.serviceType === 'INPATIENT' ? 'IP' : 'OP'}</TableCell>
-                <TableCell className={styles.numCol}>{money(c.bill?.shaCovered ?? c.amount)}</TableCell>
-                <TableCell>
-                  {c.bill && c.bill.copay > 0 ? (
-                    <span>
-                      {money(c.bill.copay)} · {c.bill.copayPayer ?? 'Cash'}
-                    </span>
-                  ) : (
-                    <span className={styles.muted}>SHA-covered</span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <Tag type={meta.tag} size="sm">
-                    {meta.label}
-                  </Tag>
-                </TableCell>
-                <TableCell>{new Date(c.updatedAt).toLocaleDateString('en-KE')}</TableCell>
-              </TableRow>
+                const meta = statusMeta(c.status);
+                return (
+                  <TableRow key={c.id}>
+                    <TableCell>
+                      <button type="button" className={styles.claimLink} onClick={() => onOpen(c)}>
+                        {c.claimCode}
+                      </button>
+                    </TableCell>
+                    <TableCell>{c.patientName}</TableCell>
+                    <TableCell>{c.fund}</TableCell>
+                    <TableCell>{c.serviceType === 'INPATIENT' ? 'IP' : 'OP'}</TableCell>
+                    <TableCell className={styles.numCol}>{money(c.bill?.shaCovered ?? c.amount)}</TableCell>
+                    <TableCell>
+                      {c.bill && c.bill.copay > 0 ? (
+                        <span>
+                          {money(c.bill.copay)} · {c.bill.copayPayer ?? 'Cash'}
+                        </span>
+                      ) : (
+                        <span className={styles.muted}>SHA-covered</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Tag type={meta.tag} size="sm">
+                        {meta.label}
+                      </Tag>
+                    </TableCell>
+                    <TableCell>{new Date(c.updatedAt).toLocaleDateString('en-KE')}</TableCell>
+                  </TableRow>
                 );
               })}
             </TableBody>
@@ -136,7 +137,11 @@ const ClaimsTable: React.FC<ClaimsTableProps> = ({ statuses, reloadKey, onOpen }
   );
 };
 
-const ClaimsAccounting: React.FC<{ initialTabKey?: string; navNonce?: number }> = ({ initialTabKey, navNonce }) => {
+const ClaimsAccounting: React.FC<{
+  initialTabKey?: string; navNonce?: number, billingDate?: string;
+  locationUuid?: string;
+  onDateChange?: (value: string) => void;
+}> = ({ initialTabKey, navNonce, billingDate, locationUuid, onDateChange }) => {
   const [reloadKey, setReloadKey] = useState(0);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [selected, setSelected] = useState<ShaClaim | null>(null);
@@ -188,9 +193,11 @@ const ClaimsAccounting: React.FC<{ initialTabKey?: string; navNonce?: number }> 
             <TabPanel key={tab.key}>
               {tab.key === 'remittances' ? (
                 <RemittancesView reloadKey={reloadKey} onOpenClaim={setSelected} />
-              ) : (
-                <ClaimsTable statuses={tab.statuses} reloadKey={reloadKey} onOpen={setSelected} />
-              )}
+              ) : tab.key === 'draft' ?
+                <ClaimVisits locationUuid={locationUuid} billingDate={billingDate} onDateChange={onDateChange} />
+                : (
+                  <ClaimsTable statuses={tab.statuses} reloadKey={reloadKey} onOpen={setSelected} />
+                )}
             </TabPanel>
           ))}
         </TabPanels>

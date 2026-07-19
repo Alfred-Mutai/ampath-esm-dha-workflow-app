@@ -78,89 +78,91 @@ const BillingClaimsDashboard: React.FC<billingClaimsDashboardProps> = () => {
   };
   return (
     <>
-            <div className={styles.bcLayout}>
-               <div className={styles.hwrSection}>
-                  <FacilityAndWorkerSlot />
-                </div>
-              <div className={styles.bcHeader}>
-                <span className={styles.bcHeaderIcon}>
-                  <Wallet size={24} />
-                </span>
-                <div className={styles.bcHeaderTitle}>
-                  <h3 className={styles.bcTitle}>Billing &amp; Claims</h3>
-                  <p className={styles.bcSubtitle}>Consultation clearance, facility bills and SHA claims.</p>
-                </div>
-              </div>
-              <div className={styles.summaryRow}>
-                {summary.map((s) => (
-                  <button key={s.key} type="button" className={styles.metricButton} onClick={() => handleTileClick(s)}>
-                    <MetricsCard>
-                      <MetricsCardHeader title={s.label} />
-                      <MetricsCardBody>
-                        <MetricsCardItem label={s.unit} value={s.value ? s.value : '--'} color={s.color} />
-                      </MetricsCardBody>
-                    </MetricsCard>
-                  </button>
-                ))}
-              </div>
-              <div className={styles.bcContent}>
-                <div className={styles.bcContentTabs}>
-                  <Tabs selectedIndex={selectedTab} onChange={({ selectedIndex }) => setSelectedTab(selectedIndex)}>
-                    <TabList scrollDebounceWait={200}>
-                      <Tab>Pending clearance</Tab>
-                      <Tab>Bills</Tab>
-                      <Tab>Claims</Tab>
+      <div className={styles.bcLayout}>
+        <div className={styles.hwrSection}>
+          <FacilityAndWorkerSlot />
+        </div>
+        <div className={styles.bcHeader}>
+          <span className={styles.bcHeaderIcon}>
+            <Wallet size={24} />
+          </span>
+          <div className={styles.bcHeaderTitle}>
+            <h3 className={styles.bcTitle}>Billing &amp; Claims</h3>
+            <p className={styles.bcSubtitle}>Consultation clearance, facility bills and SHA claims.</p>
+          </div>
+        </div>
+        <div className={styles.summaryRow}>
+          {summary.map((s) => (
+            <button key={s.key} type="button" className={styles.metricButton} onClick={() => handleTileClick(s)}>
+              <MetricsCard>
+                <MetricsCardHeader title={s.label} />
+                <MetricsCardBody>
+                  <MetricsCardItem label={s.unit} value={s.value ? s.value : '--'} color={s.color} />
+                </MetricsCardBody>
+              </MetricsCard>
+            </button>
+          ))}
+        </div>
+        <div className={styles.bcContent}>
+          <div className={styles.bcContentTabs}>
+            <Tabs selectedIndex={selectedTab} onChange={({ selectedIndex }) => setSelectedTab(selectedIndex)}>
+              <TabList scrollDebounceWait={200}>
+                <Tab>Pending clearance</Tab>
+                <Tab>Bills</Tab>
+                <Tab>Claims</Tab>
+              </TabList>
+              <TabPanels>
+                <TabPanel>
+                  <Clearance
+                    pendingTab={
+                      <>
+                        <p className={styles.pendingHint}>
+                          Active visits that have started but are not yet in a service queue. Send each patient to
+                          triage to begin their consultation clearance.
+                        </p>
+                        <ActiveVisits />
+                      </>
+                    }
+                    initialTab={clearanceNav.key}
+                    navNonce={clearanceNav.nonce}
+                  />
+                </TabPanel>
+                <TabPanel>
+                  <Tabs selectedIndex={billsSub} onChange={({ selectedIndex }) => setBillsSub(selectedIndex)}>
+                    <TabList aria-label="Bills">
+                      <Tab>Facility bills</Tab>
                     </TabList>
                     <TabPanels>
                       <TabPanel>
-                        <Clearance
-                          pendingTab={
-                            <>
-                              <p className={styles.pendingHint}>
-                                Active visits that have started but are not yet in a service queue. Send each patient to
-                                triage to begin their consultation clearance.
-                              </p>
-                              <ActiveVisits />
-                            </>
-                          }
-                          initialTab={clearanceNav.key}
-                          navNonce={clearanceNav.nonce}
+                        <FacilityBills
+                          locationUuid={locationUuid}
+                          billingDate={billingDate}
+                          onDateChange={handleDateChange}
                         />
                       </TabPanel>
-                      <TabPanel>
-                        <Tabs selectedIndex={billsSub} onChange={({ selectedIndex }) => setBillsSub(selectedIndex)}>
-                          <TabList aria-label="Bills">
-                            <Tab>Facility bills</Tab>
-                          </TabList>
-                          <TabPanels>
-                             <TabPanel>
-                              <FacilityBills
-                                locationUuid={locationUuid}
-                                billingDate={billingDate}
-                                onDateChange={handleDateChange}
-                              />
-                            </TabPanel>
-                           
-                              {
-                                 hideCheckList ? (<></>): (<>
-                                   <TabPanel>
-                                    <CashChecklist />
-                                    </TabPanel>
-                                  </>)
-                              }
-                             
-                           
-                          </TabPanels>
-                        </Tabs>
-                      </TabPanel>
-                      <TabPanel>
-                        <ClaimsAccounting initialTabKey={claimsNav.key} navNonce={claimsNav.nonce} />
-                      </TabPanel>
+
+                      {
+                        hideCheckList ? (<></>) : (<>
+                          <TabPanel>
+                            <CashChecklist />
+                          </TabPanel>
+                        </>)
+                      }
+
+
                     </TabPanels>
                   </Tabs>
-                </div>
-              </div>
-            </div>
+                </TabPanel>
+                <TabPanel>
+                  <ClaimsAccounting initialTabKey={claimsNav.key} navNonce={claimsNav.nonce} locationUuid={locationUuid}
+                    billingDate={billingDate}
+                    onDateChange={handleDateChange} />
+                </TabPanel>
+              </TabPanels>
+            </Tabs>
+          </div>
+        </div>
+      </div>
     </>
   );
 };
