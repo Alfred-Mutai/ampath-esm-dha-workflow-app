@@ -694,6 +694,14 @@ const RegistryComponent: React.FC<RegistryComponentProps> = () => {
               <></>
             )}
           </div>
+          <div className={styles.registeredPatientsSection}>
+             <div className={styles.registeredPatientsFilters}>
+                  
+             </div>
+              <div className={styles.registeredPatientList}>
+              
+             </div>
+          </div>
         </div>
       </div>
     </>

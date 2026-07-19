@@ -359,3 +359,15 @@ export async function endQueueEntry(entryQueueUuid: string, endedAt: string): Pr
   const result = await response.json();
   return result.data;
 }
+
+export async function getRegistrationQueueList(
+  locationUuid: string,
+  startDate: string,
+  endDate: string
+): Promise<ServiceQueueDailyReport[]> {
+  const etlBaseUrl = await getEtlBaseUrl();
+  const reportUrl = `${etlBaseUrl}/queue-entry/registration?locationUuid=${locationUuid}&startDate=${startDate}&endDate=${endDate}`;
+  const response = await openmrsFetch(reportUrl);
+  const result = await response.json();
+  return result.result;
+}
