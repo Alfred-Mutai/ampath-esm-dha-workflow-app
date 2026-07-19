@@ -78,8 +78,8 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
   const session = useSession();
   const locationUuid = session?.sessionLocation?.uuid;
   const [otpVerified, setOtpVerified] = useState(false);
-  const [otp, setOtp] = useState("");
-  const [authGuid, setAuthGuid] = useState("");
+  const [otp, setOtp] = useState('');
+  const [authGuid, setAuthGuid] = useState('');
   const { activeVisit } = useVisit(patientUuid);
 
   const {
@@ -107,8 +107,10 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
   const patientIdentifiers = useMemo(() => {
     if (patient) {
       return {
-        crIdentifierId: patient.identifier.find(i => i.type.coding[0].code === 'e88dc246-3614-4ee3-8141-1f2a83054e72')?.value,
-        nationalId: patient.identifier.find(i => i.type.coding[0].code === '58a47054-1359-11df-a1f1-0026b9348838')?.value,
+        crIdentifierId: patient.identifier.find((i) => i.type.coding[0].code === 'e88dc246-3614-4ee3-8141-1f2a83054e72')
+          ?.value,
+        nationalId: patient.identifier.find((i) => i.type.coding[0].code === '58a47054-1359-11df-a1f1-0026b9348838')
+          ?.value,
       };
     }
   }, [patient]);
@@ -126,15 +128,19 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
 
   const selectedPaymentMode = useMemo(() => {
     if (activeVisit) {
-      const paymentMode = activeVisit.attributes?.find(atr => atr?.attributeType?.uuid === "8553afa0-bdb9-4d3c-8a98-05fa9350aa85")?.value ?? "";
+      const paymentMode =
+        activeVisit.attributes?.find((atr) => atr?.attributeType?.uuid === '8553afa0-bdb9-4d3c-8a98-05fa9350aa85')
+          ?.value ?? '';
       return paymentMode;
     }
-    return "";
+    return '';
   }, [activeVisit]);
 
   const selectedPaymentDetail: PaymentDetail = useMemo(() => {
     if (activeVisit) {
-      const paymentDetail = activeVisit.attributes?.find(atr => atr?.attributeType?.uuid === "df0362f9-782e-4d92-8bb2-3112e9e9eb3c")?.value ?? "";
+      const paymentDetail =
+        activeVisit.attributes?.find((atr) => atr?.attributeType?.uuid === 'df0362f9-782e-4d92-8bb2-3112e9e9eb3c')
+          ?.value ?? '';
       if (paymentDetail) {
         return PaymentDetail.NonPaying;
       }
@@ -229,10 +235,7 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
           }
         }
 
-        if (
-          (PaymentDetail.Paying && (createBillResp || billCreated)) ||
-          (PaymentDetail.NonPaying)
-        ) {
+        if ((PaymentDetail.Paying && (createBillResp || billCreated)) || PaymentDetail.NonPaying) {
           onModalClose({ success: true });
         }
       }
@@ -255,7 +258,7 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
           uuid: QUEUE_PRIORITIES_UUIDS.NORMAL_PRIORITY_UUID,
         },
         queue: {
-          uuid: ""//selectedServiceQueue,
+          uuid: '', //selectedServiceQueue,
         },
         patient: {
           uuid: patientUuid,
@@ -267,14 +270,14 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
     return payload;
   };
 
-  function getBillableServiceByPaymentMode(paymentModeUuid: string, servicePrices: ServicePrice[]): PayableBillableService[] {
+  function getBillableServiceByPaymentMode(
+    paymentModeUuid: string,
+    servicePrices: ServicePrice[],
+  ): PayableBillableService[] {
     const paymentBillableServices: ServicePrice[] = [];
     servicePrices.forEach((sp) => {
       if (sp.paymentMode) {
-        if (
-          sp.paymentMode.uuid === paymentModeUuid &&
-          registrationBillableServices.includes(sp.billableService.uuid)
-        ) {
+        if (sp.paymentMode.uuid === paymentModeUuid && registrationBillableServices.includes(sp.billableService.uuid)) {
           paymentBillableServices.push(sp);
         }
       }
@@ -437,8 +440,8 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
     if (!selectedPaymentMode) {
       return false;
     }
-    if (paymentMode.trim().toUpperCase() === "SHA") {
-      return selectedPaymentMode === "1be55f87-2931-41e0-89c8-8f5652c7c303";
+    if (paymentMode.trim().toUpperCase() === 'SHA') {
+      return selectedPaymentMode === '1be55f87-2931-41e0-89c8-8f5652c7c303';
     }
     return false;
   }
@@ -467,7 +470,7 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
     };
   }
   function getOrderConcept() {
-    if (hasSelectedPaymentMode("SHA")) {
+    if (hasSelectedPaymentMode('SHA')) {
       return shaConsulationConceptUuid;
     }
     return cashConsulationConceptUuid;
@@ -601,7 +604,7 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
           onRequestSubmit={handleprimaryAction}
           primaryButtonText={loading ? 'Sending...please wait' : 'Save'}
           secondaryButtonText={'Cancel'}
-          primaryButtonDisabled={loading || (hasSelectedPaymentMode('SHA') && (!otpVerified || authGuid !== 'PENDING'))}
+          primaryButtonDisabled={loading || (hasSelectedPaymentMode('SHA') && (!otpVerified || !authGuid))}
         >
           <ModalBody>
             <div className={styles.clientDetailsLayout}>
@@ -635,7 +638,12 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
                             <SelectItem value="" text="Select" />;
                             {filteredBillableServices &&
                               filteredBillableServices.map((sp) => {
-                                return <SelectItem value={sp.uuid} text={`${sp.billableService.display}(${sp.name}:${sp.price})`} />;
+                                return (
+                                  <SelectItem
+                                    value={sp.uuid}
+                                    text={`${sp.billableService.display}(${sp.name}:${sp.price})`}
+                                  />
+                                );
                               })}
                           </Select>
                         </div>

@@ -6,6 +6,7 @@ import { getWorkstationId, getBiometrictsRequestUrl, getAuthorizations } from '.
 import { usePatient } from '../../../context/patient-context';
 import { useSession } from '@openmrs/esm-framework';
 import { type BiometricsStatus } from '../../hie.types';
+import { Button } from '@carbon/react';
 
 type BiometricsVerificationModalProps = {
   open: boolean;
@@ -32,39 +33,84 @@ const BiometricsVerificationModal: React.FC<BiometricsVerificationModalProps> = 
 
   const { patient } = usePatient();
 
-  useEffect(() => {
-    if (!patient || !locationUuid) return;
+  const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-    const initialize = async () => {
-      try {
-        const workstation: BiometricsStatus = await getWorkstationId();
-        setWorkstationId(workstation.workstationID);
+  const waitForAuthorization = async (token: string) => {
+    const maxAttempts = 10;
+    const interval = 5000;
 
-        const urlData = await getBiometrictsRequestUrl(
-          patient,
-          locationUuid,
-          interventionCode,
-          serviceType,
-          workstation.workstationID,
-        );
-        const token = urlData.token;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      await delay(interval);
 
-        const url = urlData?.shaVerificationRequest?.requestUrl;
+      const pending = await getAuthorizations(locationUuid!, undefined, token);
 
-        setBiometricIframeUrl(url);
-
-        const pending = await getAuthorizations(locationUuid!, undefined, token);
-
-        const authGuid = pending[0].status;
-        setAuthGuid(authGuid);
-        console.log('Child sending:', authGuid);
-        onScanStatusChange?.(authGuid);
-      } catch (err) {
-        console.error(err);
-        setError('Failed to initialize biometric verification.');
+      if (!pending?.length) {
+        continue;
       }
-    };
 
+      const authorization = pending[0];
+      const { status } = authorization;
+
+      console.log(`Authorization status (attempt ${attempt}):`, status);
+
+      switch (status) {
+        case 'AUTHORIZED': {
+          const authGuid = authorization.token;
+
+          setAuthGuid(authGuid);
+          onScanStatusChange?.(authGuid);
+
+          return;
+        }
+
+        case 'REJECTED':
+          setError('Biometric verification was rejected.');
+          return;
+
+        case 'EXPIRED':
+          setError('Biometric verification has expired.');
+          return;
+
+        case 'PENDING':
+          break;
+
+        default:
+          console.warn('Unknown authorization status:', status);
+          break;
+      }
+    }
+
+    setError('Authorization timed out. Please try again.');
+  };
+
+  const initialize = async () => {
+    if (!patient || !locationUuid) return;
+    try {
+      const workstation: BiometricsStatus = await getWorkstationId();
+      setWorkstationId(workstation.workstationID);
+
+      const urlData = await getBiometrictsRequestUrl(
+        patient,
+        locationUuid,
+        interventionCode,
+        serviceType,
+        workstation.workstationID,
+      );
+      const token = urlData.token;
+
+      const url = urlData?.shaVerificationRequest?.requestUrl;
+
+      setBiometricIframeUrl(url);
+
+      await waitForAuthorization(token);
+      console.log('Child sending:', authGuid);
+    } catch (err) {
+      console.error(err);
+      setError('Failed to initialize biometric verification.');
+    }
+  };
+
+  useEffect(() => {
     initialize();
   }, [patient, locationUuid, interventionCode, serviceType, onScanStatusChange]);
 
@@ -99,7 +145,7 @@ const BiometricsVerificationModal: React.FC<BiometricsVerificationModalProps> = 
           <h2 className={styles.centerText}>Biometrics Verification</h2>
           <p className={styles.centerText}>Please verify your identity using biometrics.</p>
 
-          {biometricIframeUrl && (
+          {!error && biometricIframeUrl && (
             <iframe
               ref={iframeRef}
               src={biometricIframeUrl}
@@ -114,7 +160,15 @@ const BiometricsVerificationModal: React.FC<BiometricsVerificationModalProps> = 
             />
           )}
 
-          {error && <p className={styles.error}>{error}</p>}
+          {error && (
+            <>
+              <p className={styles.error}>{error}</p>
+
+              <Button kind="primary" onClick={initialize} className={styles.retryButton}>
+                Retry
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </div>
