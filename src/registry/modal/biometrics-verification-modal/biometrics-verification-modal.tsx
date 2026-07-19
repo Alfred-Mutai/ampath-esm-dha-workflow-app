@@ -113,25 +113,44 @@ const BiometricsVerificationModal: React.FC<BiometricsVerificationModalProps> = 
       console.log('================================');
 
       if (event.origin !== expectedOrigin) {
+        console.log('Blocked message from origin:', event.origin, 'expected:', expectedOrigin);
         return;
       }
 
       const data = event.data;
+      console.log('Message received from iframe:', data);
 
-      if (!data || typeof data !== 'object') {
+      if (!data || typeof data !== 'object') return;
+
+      const isSuccess =
+        data.status === 'SUCCESS' ||
+        data.type === 'BIOMETRIC_RESULT' ||
+        data.type === 'CAPTURE_RESULT' ||
+        data.event === 'fingerprint_captured' ||
+        data.result?.image ||
+        data.payload?.image ||
+        data.image;
+
+      if (isSuccess) {
+        const result = data.payload ?? data.result ?? data;
+        console.log('Capture result:', result);
+        setCaptureResult(result);
         return;
       }
 
-      if (data.status === 'SUCCESS') {
-        setCaptureResult(data);
-      } else if (data.type === 'BIOMETRIC_RESULT') {
-        setCaptureResult(data.payload);
-      } else if (data.status === 'SCANNING') {
+      if (data.status === 'SCANNING' || data.type === 'SCANNING') {
         setScanning(true);
-      } else if (data.status === 'IDLE') {
+        return;
+      }
+
+      if (data.status === 'IDLE' || data.type === 'IDLE') {
         setScanning(false);
-      } else if (data.status === 'ERROR') {
-        setError(data.message || 'An error occurred during biometric verification.');
+        return;
+      }
+
+      if (data.status === 'ERROR' || data.type === 'ERROR') {
+        setError(data.message ?? data.error ?? 'Biometric error occurred');
+        return;
       }
     };
 
@@ -142,6 +161,22 @@ const BiometricsVerificationModal: React.FC<BiometricsVerificationModalProps> = 
 
   // eslint-disable-next-line no-console
   console.log('biometricIframeUrl:', biometricIframeUrl);
+
+  useEffect(() => {
+    if (!open || !biometricIframeUrl) return;
+
+    const handler = (event: MessageEvent) => {
+      // Log EVERYTHING — no origin check, no type check
+      console.log('=== RAW MESSAGE FROM IFRAME ===');
+      console.log('Origin:', event.origin);
+      console.log('Data type:', typeof event.data);
+      console.log('Data:', JSON.stringify(event.data, null, 2));
+      console.log('================================');
+    };
+
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, [open, biometricIframeUrl]);
 
   return (
     <div>
@@ -156,25 +191,22 @@ const BiometricsVerificationModal: React.FC<BiometricsVerificationModalProps> = 
               src={biometricIframeUrl}
               className={styles.iframe}
               onLoad={() => {
-                console.log('Iframe loaded');
+                console.log('Iframe loaded — waiting before sending config...');
 
-                const origin = new URL(biometricIframeUrl).origin;
-
-                iframeRef.current?.contentWindow?.postMessage(config, origin);
+                setTimeout(() => {
+                  const origin = new URL(biometricIframeUrl).origin;
+                  iframeRef.current?.contentWindow?.postMessage(config, origin);
+                  console.log('Config sent to iframe:', config);
+                }, 1000);
               }}
               onError={() => console.log('Iframe failed')}
             />
           )}
 
-          <p className={`${styles.statusLabel} ${scanning ? styles.active : ''}`}>
-            {scanning ? 'acquiring biometric data...' : 'awaiting input'}
-          </p>
-
           {captureResult && (
             <div className={styles.result}>
               <div className={styles.qualityRow}>
                 <span>Quality: {captureResult.quality}%</span>
-
                 <div className={styles.qualityBar}>
                   <div className={styles.qualityBarInner} style={{ width: `${captureResult.quality}%` }} />
                 </div>
@@ -185,6 +217,20 @@ const BiometricsVerificationModal: React.FC<BiometricsVerificationModalProps> = 
                 src={`data:image/bmp;base64,${captureResult.image}`}
                 alt="Fingerprint preview"
               />
+              <div className={styles.actions}>
+                <Button kind="secondary" onClick={() => setCaptureResult(null)}>
+                  Retry
+                </Button>
+                <Button
+                  kind="primary"
+                  onClick={() => {
+                    console.log('Proceeding with result:', captureResult);
+                    onClose();
+                  }}
+                >
+                  Proceed
+                </Button>
+              </div>
             </div>
           )}
 

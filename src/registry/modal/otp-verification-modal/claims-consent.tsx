@@ -14,6 +14,7 @@ interface ClaimsConsentModalProps {
   onOtpVerificationStatusChange: (verified: boolean) => void;
   serviceType: string;
   interventionCode: string;
+  crId: string;
 }
 const ClaimsConsentModal: React.FC<ClaimsConsentModalProps> = ({
   onSendClaimsOtp,
@@ -24,6 +25,7 @@ const ClaimsConsentModal: React.FC<ClaimsConsentModalProps> = ({
   whitelistRequest,
   serviceType,
   interventionCode,
+  crId,
 }) => {
   const [selectedTab, setSelectedTab] = useState(0);
   const [whiteListed, setIsWhitelisted] = useState<boolean>();
@@ -55,6 +57,7 @@ const ClaimsConsentModal: React.FC<ClaimsConsentModalProps> = ({
               onSendClaimsOtp={onSendClaimsOtp}
               onOtpVerified={onOtpVerified}
               onOtpVerificationStatusChange={setOtpVerified}
+              crId={crId}
             />
           </TabPanel>
         </TabPanels>

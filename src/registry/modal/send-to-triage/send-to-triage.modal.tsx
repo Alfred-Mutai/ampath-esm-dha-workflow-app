@@ -1209,6 +1209,7 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
                             onOtpVerificationStatusChange={setOtpVerified}
                             serviceType={getServiceType(intervention, visitType)}
                             interventionCode={intervention?.code ?? ''}
+                            crId={patient!.id}
                           />
                         )}
                       </>

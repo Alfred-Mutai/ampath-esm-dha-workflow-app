@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getOtpWhitelistingStatus, getPatientContacts } from '../../hie.resource';
+import { cancelAllPendingAuthorizations, getOtpWhitelistingStatus, getPatientContacts } from '../../hie.resource';
 import { Button, InlineLoading, Select, SelectItem, TextArea, FileUploader, TextInput } from '@carbon/react';
 import { usePatient } from '../../../context/patient-context';
 import { useSession } from '@openmrs/esm-framework';
@@ -14,6 +14,7 @@ interface OTPWhitlistingModalProps {
   submitting: boolean;
   otpSent: boolean;
   whitelistRequest: any;
+  crId: string;
 }
 
 const OTPWhitlistingModal: React.FC<OTPWhitlistingModalProps> = ({
@@ -25,6 +26,7 @@ const OTPWhitlistingModal: React.FC<OTPWhitlistingModalProps> = ({
   otpSent,
   whitelistRequest,
   onOtpVerificationStatusChange,
+  crId,
 }) => {
   const [whitelisted, setWhitelisted] = useState<boolean | null>(null);
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -57,6 +59,20 @@ const OTPWhitlistingModal: React.FC<OTPWhitlistingModalProps> = ({
       checkWhitelistStatus();
     }
   }, [patient]);
+
+  useEffect(() => {
+    if (!crId) return;
+
+    const cancelPending = async () => {
+      try {
+        await cancelAllPendingAuthorizations(crId);
+      } catch (error) {
+        console.error('Failed to cancel pending authorizations:', error);
+      }
+    };
+
+    cancelPending();
+  }, [crId]);
 
   const checkWhitelistStatus = async () => {
     try {
@@ -187,9 +203,20 @@ const OTPWhitlistingModal: React.FC<OTPWhitlistingModalProps> = ({
               ))}
             </div>
 
-            <div style={{ marginTop: '1rem' }}>
+            <div
+              style={{
+                marginTop: '1rem',
+                display: 'flex',
+                gap: '1rem',
+                alignItems: 'center',
+              }}
+            >
               <Button onClick={handleVerifyClaimsOtp} disabled={otp.join('').length !== 6 || submitting}>
                 {submitting ? 'Verifying...' : 'Verify OTP'}
+              </Button>
+
+              <Button onClick={handleSendClaimsOtp} disabled={submitting}>
+                {submitting ? 'Sending...' : 'Resend OTP'}
               </Button>
             </div>
           </>

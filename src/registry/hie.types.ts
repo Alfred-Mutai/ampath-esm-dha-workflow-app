@@ -44,3 +44,9 @@ export interface BiometricsStatus {
   version: string;
   isAuthed: boolean;
 }
+
+export interface Authorization {
+  token: string;
+  status: string;
+  authorizationType: ('OTP' | 'SHA')[];
+}

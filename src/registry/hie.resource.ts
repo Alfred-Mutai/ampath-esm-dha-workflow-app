@@ -1,7 +1,39 @@
-import { type PatientContactResponse, type OTPWhitelistRequest, type BiometricsStatus } from './hie.types';
+import {
+  type PatientContactResponse,
+  type OTPWhitelistRequest,
+  type BiometricsStatus,
+  type Authorization,
+  type HieAccessTokenResponse,
+} from './hie.types';
 import { type HieClient } from './types';
 import { getHieBaseUrl } from '../shared/utils/get-base-url';
 import { openmrsFetch } from '@openmrs/esm-framework';
+
+const BASEURL = 'https://ilm-dev.dha.go.ke/uat-middleware';
+
+export async function getAccessToken(): Promise<HieAccessTokenResponse> {
+  const url = `${BASEURL}/api/v1/tenants/token`;
+  const payload = new URLSearchParams({
+    client_id: '',
+    client_secret: '',
+  });
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: payload,
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    const errorText = data.message || 'Failed to fetch access token';
+    throw new Error(`Request failed with ${response.status}: ${errorText}`);
+  }
+
+  return data.access_token;
+}
 
 export async function getOtpWhitelistingStatus(
   identifier: string,
@@ -139,7 +171,7 @@ export async function getBiometrictsRequestUrl(
     isBiometricsDischargeAuthorization: false,
     isEmergency: false,
     isIntegration: true,
-    workStationId: workstationId,
+    workStationId: workstationId || '54cf356c-c4f9-4fd2-a9df-9ca1723b98a6-B0A460977E12',
   };
   const url = `${hieBaseUrl}/client/biometrics-authorize`;
   const response = await openmrsFetch(url, {
@@ -205,4 +237,87 @@ export async function sendClaimAttachment(
   }
 
   return data;
+}
+
+export async function sendDischargeOTP(consentToken: string, patientId: string, locationUuid: string): Promise<any> {
+  const hieBaseUrl = await getHieBaseUrl();
+
+  const payload = {
+    consentToken: consentToken,
+    patientId: patientId,
+    locationUuid: locationUuid,
+  };
+  const url = `${hieBaseUrl}/claims-otp/discharge`;
+  const response = await openmrsFetch(url, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    const errorText = data.message || 'Failed to fetch OTP';
+    throw new Error(`Request failed with ${response.status}: ${errorText}`);
+  }
+
+  return data;
+}
+
+export async function getAuthorizations(crId: string): Promise<any> {
+  const url = `${BASEURL}/api/v1/claims/authorizations?beneficiary_code=${crId}`;
+  const token = await getAccessToken();
+  const response = await openmrsFetch(url, {
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    const errorText = data.message || 'Failed to fetch OTP';
+    throw new Error(`Request failed with ${response.status}: ${errorText}`);
+  }
+
+  return data;
+}
+
+export async function cancelPendingAuthorizations(consentToken: string): Promise<any> {
+  const url = `${BASEURL}/api/v1/claims/authorizations/${encodeURIComponent(consentToken)}/reject`;
+  const token = await getAccessToken();
+
+  const response = await openmrsFetch(url, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    const errorText = data.message || 'Failed to cancel pending authorization';
+    throw new Error(`Request failed with ${response.status}: ${errorText}`);
+  }
+
+  return data;
+}
+
+export async function cancelAllPendingAuthorizations(crId: string): Promise<void> {
+  const authorizations: Authorization[] = await getAuthorizations(crId);
+
+  const pending = authorizations.filter((auth) => auth.status === 'PENDING');
+
+  // for (const authorization of pending) {
+  //   await cancelPendingAuthorizations(authorization.token);
+  // }
+  await Promise.all(pending.map((auth) => cancelPendingAuthorizations(auth.token)));
 }
