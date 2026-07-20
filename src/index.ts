@@ -159,7 +159,20 @@ export const claims = getAsyncLifecycle(() => import('./claims/claims.component'
 
 export const preauthsModal = getAsyncLifecycle(() => import('./claims/modals/preauth.component'), options);
 
-export const formEntryWorkspace = getAsyncLifecycle(() => import('./admissions/form-entry-workspace/form-entry-workspace'), {
-  featureName: 'admissions-form-entry',
-  moduleName,
-},);
+export const formEntryWorkspace = getAsyncLifecycle(
+  () => import('./admissions/form-entry-workspace/form-entry-workspace'),
+  {
+    featureName: 'admissions-form-entry',
+    moduleName,
+  },
+);
+
+export const uploadInterventionAttachmentsWorkspace = getAsyncLifecycle(
+  () => import('./billing/dashboard/v2/patient-bill-details/attachments/add-attachments.component'),
+  options,
+);
+
+export const generateInterventionAttachmentsWorkspace = getAsyncLifecycle(
+  () => import('./billing/dashboard/v2/patient-bill-details/attachments/generate-attachments.component'),
+  options,
+);

@@ -86,6 +86,8 @@ const BiometricsVerificationModal: React.FC<BiometricsVerificationModalProps> = 
   const initialize = async () => {
     if (!patient || !locationUuid) return;
     try {
+      setError(null);
+      setBiometricIframeUrl('');
       const workstation: BiometricsStatus = await getWorkstationId();
       setWorkstationId(workstation.workstationID);
 

@@ -285,6 +285,24 @@
       "component": "createOrderBillFormWorkspace",
       "title": "Create order Bill",
       "type": "other-form"
+    },
+        {
+      "name": "upload-intervention-attachments-workspace",
+      "title": "Upload Attachments",
+      "component": "uploadInterventionAttachmentsWorkspace",
+      "type": "upload-intervention-attachments",
+      "canHide": true,
+      "canMaximize": true,
+      "width": "narrow"
+    },
+    {
+      "name": "generate-intervention-attachments-workspace",
+      "title": "GenerateAttachments",
+      "component": "generateInterventionAttachmentsWorkspace",
+      "type": "generate-intervention-attachments",
+      "canHide": true,
+      "canMaximize": true,
+      "width": "narrow"
     }
   ],
   "workspaces2": [
