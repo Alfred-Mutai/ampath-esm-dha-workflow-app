@@ -109,7 +109,7 @@ const BillingClaimsDashboard: React.FC<billingClaimsDashboardProps> = () => {
               <TabList scrollDebounceWait={200}>
                 <Tab>Pending clearance</Tab>
                 <Tab>Bills</Tab>
-                <Tab>Claims</Tab>
+                {/* <Tab>Claims</Tab> */}
               </TabList>
               <TabPanels>
                 <TabPanel>
@@ -153,11 +153,11 @@ const BillingClaimsDashboard: React.FC<billingClaimsDashboardProps> = () => {
                     </TabPanels>
                   </Tabs>
                 </TabPanel>
-                <TabPanel>
+                {/* <TabPanel>
                   <ClaimsAccounting initialTabKey={claimsNav.key} navNonce={claimsNav.nonce} locationUuid={locationUuid}
                     billingDate={billingDate}
                     onDateChange={handleDateChange} />
-                </TabPanel>
+                </TabPanel> */}
               </TabPanels>
             </Tabs>
           </div>

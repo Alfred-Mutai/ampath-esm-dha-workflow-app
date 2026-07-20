@@ -262,7 +262,6 @@ const QueueList: React.FC<QueueListProps> = ({
                 <TableHeader>Coming From</TableHeader>
                 <TableHeader>Ticket</TableHeader>
                 <TableHeader>Status</TableHeader>
-                <TableHeader>Clearance</TableHeader>
                 <TableHeader>Priority</TableHeader>
                 <TableHeader>Wait Time</TableHeader>
                 <TableHeader>Action</TableHeader>
@@ -294,23 +293,6 @@ const QueueList: React.FC<QueueListProps> = ({
                     </Tag>
                   </TableCell>
                   <TableCell>
-                    {(() => {
-                      const clearance = clearanceFor(val);
-                      if (!clearance) {
-                        return '';
-                      }
-                      return clearance.status === 'CLEARED' ? (
-                        <Tag size="md" type="green">
-                          Ready
-                        </Tag>
-                      ) : (
-                        <Tag size="md" type="red">
-                          Awaiting clearance
-                        </Tag>
-                      );
-                    })()}
-                  </TableCell>
-                  <TableCell>
                     <Tag size="md" className={styles[getTagClassByPriority(val.priority)]}>
                       {val.priority}
                     </Tag>
@@ -323,12 +305,7 @@ const QueueList: React.FC<QueueListProps> = ({
                           <>
                             <Button
                               kind="ghost"
-                              disabled={!checkIn || clearanceFor(val)?.status === 'AWAITING_PAYMENT'}
-                              title={
-                                clearanceFor(val)?.status === 'AWAITING_PAYMENT'
-                                  ? 'Consultation fee not yet cleared'
-                                  : undefined
-                              }
+                              disabled={!checkIn}
                               onClick={() => handleServePatient(val)}
                             >
                               Call
