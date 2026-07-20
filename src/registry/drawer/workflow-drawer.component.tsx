@@ -73,17 +73,6 @@ const OTP_EXPIRY_SECONDS = 300; // 5 minutes
 const PATIENT_CATEGORIES = ['Triage', 'Walk-in'];
 const WALK_IN_ROOMS = [];
 
-// Payment: exemption categories (when exempt) or insurance schemes (when insured).
-// User-fee exemption categories recognised in the Kenyan public health system.
-const EXEMPTION_CATEGORIES = [
-  'Children under 5 years',
-  'Maternity services',
-  'Prisoners / persons in custody',
-  'Elderly (65 years and above)',
-  'Persons with disability',
-  'Indigent / waiver (unable to pay)',
-];
-
 // Payment modes that are direct payment (not insurance schemes) — excluded from
 // the insurance-scheme list.
 const NON_INSURANCE_PAYMENT_MODES = /cash|mpesa|m-pesa|waiver/i;
@@ -130,9 +119,7 @@ interface WorkflowDrawerProps {
     room: string;
     roomUuid: string;
     visitType: string;
-    exempted: boolean;
     method?: Method;
-    exemptionCategory?: string;
     insurance?: string;
   }) => void;
 }
@@ -171,8 +158,6 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
   const [method, setMethod] = useState<Method>('cash');
   const [patientCategory, setPatientCategory] = useState<string>(PATIENT_CATEGORIES[0]);
   const [room, setRoom] = useState<string>('');
-  const [exempted, setExempted] = useState<'yes' | 'no'>('no');
-  const [exemptionCategory, setExemptionCategory] = useState<string>('');
   const [insurance, setInsurance] = useState<string>('');
   const [visitType, setVisitType] = useState<string>('');
   const [triageRooms, setTriageRooms] = useState<string[]>([]);
@@ -205,8 +190,6 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
       setMethod('cash');
       setPatientCategory(PATIENT_CATEGORIES[0]);
       setRoom('');
-      setExempted('no');
-      setExemptionCategory('');
       setInsurance('');
       setVisitType('');
       setInsuranceError('');
@@ -585,13 +568,12 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
   };
 
   const handleStartVisit = () => {
-    const isExempt = exempted === 'yes';
-    const usingInsurance = !isExempt && method === 'insurance';
+    const usingInsurance = method === 'insurance';
 
     // The required fields show their red state on landing (see the derived
     // *InvalidText below) and the button is disabled while any is empty — guard
     // here too as a safety net.
-    if (!room || !visitType || (isExempt && !exemptionCategory) || (usingInsurance && !insurance)) {
+    if (!room || !visitType || (usingInsurance && !insurance)) {
       return;
     }
 
@@ -600,9 +582,7 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
       room,
       roomUuid: triageQueueByRoom[room] ?? '',
       visitType,
-      exempted: isExempt,
-      method: isExempt ? undefined : method,
-      exemptionCategory: isExempt ? exemptionCategory : undefined,
+      method,
       insurance: usingInsurance ? insurance : undefined,
     });
   };
@@ -612,11 +592,10 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
   // reactively once its field is filled.
   const roomInvalidText = !room ? `Select a ${patientCategory === 'Walk-in' ? 'walk-in' : 'triage'} room` : '';
   const visitTypeInvalidText = !visitType ? 'Select a visit type' : '';
-  const exemptionInvalidText = exempted === 'yes' && !exemptionCategory ? 'Select an exemption category' : '';
   // The SHA-ineligibility message (set on selecting an ineligible scheme) takes
   // precedence over the "select a scheme" prompt.
   const insuranceInvalidText =
-    insuranceError || (exempted === 'no' && method === 'insurance' && !insurance ? 'Select an insurance scheme' : '');
+    insuranceError || (method === 'insurance' && !insurance ? 'Select an insurance scheme' : '');
 
   // A scheme is active/eligible when its coverage status is '1'.
   const isActiveScheme = (s: Scheme) => s.coverage?.status === '1';
@@ -1123,21 +1102,7 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
 
                   <div className={styles.formSection}>
                     <h6 className={styles.sectionLabel}>Payment</h6>
-                    <RadioButtonGroup
-                      legendText="Is the patient exempted from payment?"
-                      name="exempted-group"
-                      orientation="horizontal"
-                      valueSelected={exempted}
-                      onChange={(v) => {
-                        setExempted(v as 'yes' | 'no');
-                        setInsuranceError('');
-                      }}
-                    >
-                      <RadioButton id="exempt-yes" labelText="Yes" value="yes" />
-                      <RadioButton id="exempt-no" labelText="No" value="no" />
-                    </RadioButtonGroup>
-
-                    {exempted === 'no' && hasCashPoint === false ? (
+                    {hasCashPoint === false ? (
                       <div className={styles.errorNote}>
                         <WarningAltFilled size={20} className={styles.errorNoteIcon} />
                         <p className={styles.errorNoteText}>
@@ -1146,118 +1111,99 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
                       </div>
                     ) : null}
 
-                    {exempted === 'yes' ? (
+                    <RadioButtonGroup
+                      legendText="Payment method"
+                      name="method-group"
+                      orientation="horizontal"
+                      valueSelected={method}
+                      disabled={hasCashPoint === false}
+                      onChange={(v) => {
+                        // Switching payment method clears any preselected
+                        // insurance so it can't carry into the payer mapping —
+                        // insurance→cash and cash→insurance both start fresh.
+                        setMethod(v as Method);
+                        setInsurance('');
+                        setInsuranceError('');
+                      }}
+                    >
+                      <RadioButton id="method-cash" labelText="Cash" value="cash" />
+                      <RadioButton id="method-insurance" labelText="Insurance" value="insurance" />
+                    </RadioButtonGroup>
+
+                    {method === 'cash' && hasCashMode === false ? (
+                      <div className={styles.errorNote}>
+                        <WarningAltFilled size={20} className={styles.errorNoteIcon} />
+                        <p className={styles.errorNoteText}>
+                          Cash payment mode is not set. Contact your system administrator.
+                        </p>
+                      </div>
+                    ) : null}
+
+                    {method === 'insurance' ? (
                       <Dropdown
-                        id="exemption-category"
+                        id="insurance-scheme"
                         titleText={
                           <span>
-                            Exemption category<span className={styles.required}>*</span>
+                            Insurance scheme<span className={styles.required}>*</span>
                           </span>
                         }
-                        label="Select an exemption category"
-                        items={EXEMPTION_CATEGORIES}
-                        selectedItem={exemptionCategory || null}
-                        invalid={!!exemptionInvalidText}
-                        invalidText={exemptionInvalidText}
+                        label={
+                          loadingSchemes
+                            ? 'Loading insurance schemes…'
+                            : insuranceSchemes.length === 0
+                              ? 'No insurance schemes available'
+                              : 'Select insurance scheme'
+                        }
+                        items={insuranceItems}
+                        itemToString={(item) => (item ? item.label : '')}
+                        itemToElement={(item) =>
+                          item ? (
+                            item.isSha ? (
+                              <span
+                                className={`${styles.schemePill} ${
+                                  item.eligible ? styles.schemePillEligible : styles.schemePillIneligible
+                                }`}
+                              >
+                                {item.label}
+                              </span>
+                            ) : (
+                              <span>{item.label}</span>
+                            )
+                          ) : null
+                        }
+                        disabled={loadingSchemes || insuranceSchemes.length === 0}
+                        selectedItem={insuranceItems.find((i) => i.id === insurance) ?? null}
+                        invalid={!!insuranceInvalidText}
+                        invalidText={insuranceInvalidText}
                         onChange={({ selectedItem }) => {
-                          setExemptionCategory((selectedItem as string) ?? '');
+                          if (!selectedItem) {
+                            return;
+                          }
+                          if (selectedItem.disabled) {
+                            // Patient isn't SHA-eligible — block the selection.
+                            setInsurance('');
+                            setInsuranceError('Patient is not eligible for SHA. Choose another scheme.');
+                            return;
+                          }
+                          setInsurance(selectedItem.id);
+                          setInsuranceError('');
                         }}
                       />
                     ) : (
-                      <>
-                        <RadioButtonGroup
-                          legendText="Payment method"
-                          name="method-group"
-                          orientation="horizontal"
-                          valueSelected={method}
-                          disabled={hasCashPoint === false}
-                          onChange={(v) => {
-                            // Switching payment method clears any preselected
-                            // insurance so it can't carry into the payer mapping —
-                            // insurance→cash and cash→insurance both start fresh.
-                            setMethod(v as Method);
-                            setInsurance('');
-                            setInsuranceError('');
-                          }}
-                        >
-                          <RadioButton id="method-cash" labelText="Cash" value="cash" />
-                          <RadioButton id="method-insurance" labelText="Insurance" value="insurance" />
-                        </RadioButtonGroup>
-
-                        {method === 'cash' && hasCashMode === false ? (
-                          <div className={styles.errorNote}>
-                            <WarningAltFilled size={20} className={styles.errorNoteIcon} />
-                            <p className={styles.errorNoteText}>
-                              Cash payment mode is not set. Contact your system administrator.
-                            </p>
-                          </div>
-                        ) : null}
-
-                        {method === 'insurance' ? (
-                          <Dropdown
-                            id="insurance-scheme"
-                            titleText={
-                              <span>
-                                Insurance scheme<span className={styles.required}>*</span>
-                              </span>
-                            }
-                            label={
-                              loadingSchemes
-                                ? 'Loading insurance schemes…'
-                                : insuranceSchemes.length === 0
-                                  ? 'No insurance schemes available'
-                                  : 'Select insurance scheme'
-                            }
-                            items={insuranceItems}
-                            itemToString={(item) => (item ? item.label : '')}
-                            itemToElement={(item) =>
-                              item ? (
-                                item.isSha ? (
-                                  <span
-                                    className={`${styles.schemePill} ${
-                                      item.eligible ? styles.schemePillEligible : styles.schemePillIneligible
-                                    }`}
-                                  >
-                                    {item.label}
-                                  </span>
-                                ) : (
-                                  <span>{item.label}</span>
-                                )
-                              ) : null
-                            }
-                            disabled={loadingSchemes || insuranceSchemes.length === 0}
-                            selectedItem={insuranceItems.find((i) => i.id === insurance) ?? null}
-                            invalid={!!insuranceInvalidText}
-                            invalidText={insuranceInvalidText}
-                            onChange={({ selectedItem }) => {
-                              if (!selectedItem) {
-                                return;
-                              }
-                              if (selectedItem.disabled) {
-                                // Patient isn't SHA-eligible — block the selection.
-                                setInsurance('');
-                                setInsuranceError('Patient is not eligible for SHA. Choose another scheme.');
-                                return;
-                              }
-                              setInsurance(selectedItem.id);
-                              setInsuranceError('');
-                            }}
-                          />
-                        ) : (
-                          <></>
-                        )}
-
-                        {method === 'insurance' && /sha|shif/i.test(insurance) ? (
-                          <>
-                            <div className={styles.eligibilityRow}>
-                              <span className={styles.eligibilityRowLabel}>Eligibility</span>
-                              {shaEligibilityTag}
-                            </div>
-                            {eligibleSchemesList}
-                          </>
-                        ) : null}
-                      </>
+                      <></>
                     )}
+
+                    {method === 'insurance' && /sha|shif/i.test(insurance) ? (
+                      <div className={styles.eligibilityRow}>
+                        <span className={styles.eligibilityRowLabel}>Eligibility</span>
+                        {shaEligibilityTag}
+                        {eligibleSchemes.map((s, i) => (
+                          <Tag key={`${s.schemeName}-${i}`} size="sm" type="green">
+                            {`${s.schemeName} · Active`}
+                          </Tag>
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
               </div>
             </div>
@@ -1302,10 +1248,9 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
                 disabled={
                   !room ||
                   !visitType ||
-                  (exempted === 'yes' && !exemptionCategory) ||
-                  (exempted === 'no' && hasCashPoint === false) ||
-                  (exempted === 'no' && method === 'cash' && hasCashMode === false) ||
-                  (exempted === 'no' && method === 'insurance' && !insurance)
+                  hasCashPoint === false ||
+                  (method === 'cash' && hasCashMode === false) ||
+                  (method === 'insurance' && !insurance)
                 }
                 onClick={handleStartVisit}
               >

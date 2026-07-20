@@ -329,9 +329,7 @@ const RegistryComponent: React.FC<RegistryComponentProps> = () => {
     room: string;
     roomUuid: string;
     visitType: string;
-    exempted: boolean;
     method?: 'cash' | 'insurance';
-    exemptionCategory?: string;
     insurance?: string;
   }) => {
     // Ensure the client exists in AMRS before starting a visit.
@@ -384,13 +382,9 @@ const RegistryComponent: React.FC<RegistryComponentProps> = () => {
       await createQueueEntry(queueEntryDto);
 
       // Raise the consultation clearance. Cash patients sit "Awaiting clearance" in the
-      // Accounting dashboard until settled; exempt patients are cleared immediately.
+      // Accounting dashboard until settled.
       const client = getPatient();
-      const payer = details.exempted
-        ? details.exemptionCategory || 'Exempt'
-        : details.method === 'insurance'
-          ? details.insurance || 'Insurance'
-          : 'Cash';
+      const payer = details.method === 'insurance' ? details.insurance || 'Insurance' : 'Cash';
       // A patient who prepaid on an earlier visit clears without a new fee.
       const prepaid = client?.id ? findOpenPrepaidService(client.id) : undefined;
       createConsultationClearance({
@@ -400,7 +394,7 @@ const RegistryComponent: React.FC<RegistryComponentProps> = () => {
         queue: details.room,
         visitType: details.visitType,
         payer,
-        exempt: details.exempted,
+        exempt: false,
         preCleared: !!prepaid,
         amountOverride: prepaid?.amount,
       });
