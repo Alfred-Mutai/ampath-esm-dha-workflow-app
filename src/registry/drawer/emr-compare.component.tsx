@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Checkbox, InlineLoading, Modal } from '@carbon/react';
 import { CheckmarkFilled, ChevronDown, ChevronUp, Renew, WarningAltFilled } from '@carbon/react/icons';
 import { showSnackbar } from '@openmrs/esm-framework';
@@ -67,34 +67,67 @@ function buildValues(client: HieClient): EmrUpdateValues {
 const differs = (row: Row) => row.cr !== '' && row.cr.toLowerCase() !== row.emr.toLowerCase();
 
 const EmrCompare: React.FC<EmrCompareProps> = ({ client, patientUuid, onUpdated }) => {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const [emr, setEmr] = useState<EmrPersonDetails | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const [selected, setSelected] = useState<Set<EmrFieldKey>>(new Set());
   const [submitting, setSubmitting] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  // Guards the on-load auto-update so it runs once per patient (never in a loop).
+  const autoAppliedFor = useRef<string | null>(null);
+
+  // Push the fields that differ into the EMR straight away, then re-read so the
+  // panel reflects the synced values. On failure, keep the fetched EMR and
+  // pre-select the diffs so the user can retry from the (collapsed) panel.
+  const applyAutoUpdate = async (emrDetails: EmrPersonDetails) => {
+    const diffKeys = buildRows(client, emrDetails).filter(differs).map((r) => r.key);
+    if (diffKeys.length === 0) {
+      setEmr(emrDetails);
+      setSelected(new Set());
+      return;
+    }
+    try {
+      await updateEmrPersonFields(emrDetails, diffKeys, buildValues(client));
+      showSnackbar({
+        kind: 'success',
+        title: 'EMR updated from registry',
+        subtitle: `${diffKeys.length} field${diffKeys.length === 1 ? '' : 's'} auto-updated from the Client Registry.`,
+      });
+      onUpdated?.();
+      const fresh = await fetchEmrPersonDetails(patientUuid);
+      setEmr(fresh);
+      setSelected(new Set());
+    } catch {
+      showSnackbar({
+        kind: 'error',
+        title: 'Auto-update failed',
+        subtitle: 'Could not update the EMR record. Expand to review and retry.',
+      });
+      setEmr(emrDetails);
+      setSelected(new Set(diffKeys));
+    }
+  };
 
   const load = () => {
     setLoading(true);
     setError(false);
     fetchEmrPersonDetails(patientUuid)
-      .then((d) => {
-        setEmr(d);
-        // Pre-select every field that differs so the common case is one click.
-        setSelected(new Set(buildRows(client, d).filter(differs).map((r) => r.key)));
-      })
+      .then((d) => applyAutoUpdate(d))
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   };
 
-  // Fetch the EMR person the first time the panel is opened.
+  // Fetch the EMR person on mount (regardless of the panel being collapsed) and
+  // auto-update the differing fields once per patient.
   useEffect(() => {
-    if (expanded && !emr && !loading && !error) {
-      load();
+    if (!patientUuid || autoAppliedFor.current === patientUuid) {
+      return;
     }
+    autoAppliedFor.current = patientUuid;
+    load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [expanded]);
+  }, [patientUuid]);
 
   const rows = useMemo(() => (emr ? buildRows(client, emr) : []), [client, emr]);
   const diffRows = rows.filter(differs);
