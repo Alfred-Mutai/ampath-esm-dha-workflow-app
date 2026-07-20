@@ -35,6 +35,14 @@ export async function addIntervention(consentToken: string, interventionCode: st
     return result?.data;
 }
 
+export async function checkInterventionExists(consentToken: string, interventionCode: string): Promise<boolean> {
+    const { hieBaseUrl } = await getHieBaseUrl();
+    const url = `${hieBaseUrl}/interventions/check-intervention-exists?consentToken=${consentToken}&interventionCode=${interventionCode}`;
+    const response = await openmrsFetch<boolean>(url);
+    const data = await response.json();
+    return data;
+}
+
 export async function switchIntervention(consentToken: string, existingInterventionCode: string, newInterventionCode: string) {
     const endPoint = `/claims/interventions/switch`;
     const url = getUrl() + endPoint;

@@ -18,7 +18,7 @@ import {
   VisitType,
   type ClaimResult,
 } from './index';
-import { addIntervention } from './interventions.resource';
+import { addIntervention, checkInterventionExists } from './interventions.resource';
 import { showModal, showSnackbar, useSession, useVisit, Visit } from '@openmrs/esm-framework';
 import { useTranslation } from 'react-i18next';
 
@@ -134,14 +134,85 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
     return consentToken;
   };
 
+  const mapIntervention = (intervention: any) => {
+    if (!intervention) return undefined;
+    // ClaimIntervention to Intervention
+    if ('intervention_code' in intervention) {
+      const ci = intervention as any;
+      return {
+        id: Number(ci.id) || 0,
+        accessPoint: ci.access_point ?? '',
+        name: ci.intervention_name,
+        code: ci.intervention_code,
+        paymentMechanism: ci.intervention_payment_mechanism,
+        needsPreauth: !!ci.needs_preauth,
+        needsManualPreauthApproval: false,
+        overallTariff: ci.accrued_per_diem_amount ?? '',
+        kephLevelTarriff: ci.keph_level_tarrif ?? '',
+        fund: ci.intervention_fund ?? '',
+        fallBackOverallTariff: '',
+        tariffPerAdditionalKilometer: '',
+        level2Tariff: '',
+        level3Tariff: '',
+        level4Tariff: '',
+        level5Tariff: '',
+        level6Tariff: '',
+        requiresSurgicalPreauth: !!ci.requires_surgical_preauth,
+        requiresRenalPreauth: !!ci.requires_renal_preauth,
+        requiresOncologyPreauth: !!ci.requires_oncology_preauth,
+        requiresRadiologyPreauth: !!ci.requires_radiology_preauth,
+        requiresOpticalPreauth: !!ci.requires_optical_preauth,
+        applicableSchemes: ci.supported_scheme ? [ci.supported_scheme] : [],
+        requiredPreauthDocumentTypes: ci.required_preauth_document_types ?? [],
+        applicableDocumentTypes: ci.applicable_document_types ?? [],
+      };
+    }
+
+    // Intervention to ClaimIntervention
+    const i = intervention as any;
+    return {
+      id: String(i.id ?? ''),
+      intervention_code: i.code,
+      intervention_name: i.name,
+      intervention_payment_mechanism: i.paymentMechanism,
+      keph_level_tarrif: i.kephLevelTarriff ?? '',
+      accrued_per_diem_amount: i.overallTariff ?? '',
+      accrued_per_diem_days: 0,
+      workflow_state: '',
+      preauth_exist: false,
+      is_switched_intervention: false,
+      supported_scheme: (i.applicableSchemes && i.applicableSchemes[0]) || '',
+      switched_lines_retained: false,
+      sub_benefit_code: '',
+      active_for_uhc: false,
+      intervention_fund: i.fund ?? '',
+      requires_surgical_preauth: !!i.requiresSurgicalPreauth,
+      requires_renal_preauth: !!i.requiresRenalPreauth,
+      requires_oncology_preauth: !!i.requiresOncologyPreauth,
+      requires_radiology_preauth: !!i.requiresRadiologyPreauth,
+      requires_optical_preauth: !!i.requiresOpticalPreauth,
+      optional_document_type: null,
+      required_preauth_document_types: i.requiredPreauthDocumentTypes ?? null,
+      optional_preauth_document_types: null,
+      applicable_document_types: i.applicableDocumentTypes ?? [],
+      needs_preauth: !!i.needsPreauth,
+    };
+  }
+
   const handleAddIntervention = async () => {
     try {
       if (isNewVisit) {
         return;
       }
       const consentToken = getConsentToken();
-      const intervention = await addIntervention(consentToken, selectedIntervention.code, sessionLocation?.uuid);
-      onAddIntervention(intervention);
+      // Check if intervention exists
+      const interventionExists = await checkInterventionExists(consentToken, selectedIntervention.code);
+      if (interventionExists) {
+        onAddIntervention(mapIntervention(selectedIntervention));
+      } else {
+        const intervention = await addIntervention(consentToken, selectedIntervention.code, sessionLocation?.uuid);
+        onAddIntervention(intervention);
+      }
 
       showSnackbar({
         title: t('addInterventionSuccess', 'Intervention added successfully'),
