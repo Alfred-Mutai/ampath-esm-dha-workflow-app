@@ -32,7 +32,7 @@ interface ClaimsComponentProps {
   otp?: string;
   authGuid?: string;
   onSelectChange: (key, value) => void;
-  onClaimsVisitStart?: (payload: ClaimResult) => void;
+  onClaimsVisitStart?: (payload: ClaimResult, intervention: Intervention) => void;
   onAddIntervention?: (intervention: any) => void;
   onInterventionChange?: (intervention: Intervention | undefined) => void;
 }
@@ -111,7 +111,7 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
         sessionLocation?.uuid,
         { otp, auth_guid: authGuid },
       );
-      onClaimsVisitStart(claimVisit);
+      onClaimsVisitStart(claimVisit, selectedIntervention);
 
       showSnackbar({
         title: t('startClaimVisitSuccess', 'Claim visit started successfully'),
