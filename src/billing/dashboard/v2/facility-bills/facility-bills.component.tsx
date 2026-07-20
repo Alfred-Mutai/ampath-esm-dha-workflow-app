@@ -89,6 +89,7 @@ const FacilityBills: React.FC<facilityBillsProps> = ({ billingDate, locationUuid
             search={search}
             onSearch={setSearch}
             searchPlaceholder="Search patient, status or cash point…"
+            onDate={onDateChange}
       />
       {currentView === BillingView.Bills ? (
         (facilityBills ?? []).length === 0 ? (

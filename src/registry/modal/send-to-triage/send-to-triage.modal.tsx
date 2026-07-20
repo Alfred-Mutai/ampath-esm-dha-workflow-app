@@ -736,7 +736,7 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
           priceName: selectedBillableService.name,
           priceUuid: selectedBillableService.uuid,
           lineItemOrder: 0,
-          paymentStatus: 'PENDING',
+          status: 'PENDING',
         },
       ],
       cashPoint: selectedCashPoint.uuid,

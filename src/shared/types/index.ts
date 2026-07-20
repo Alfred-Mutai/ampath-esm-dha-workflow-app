@@ -51,7 +51,7 @@ export type LineItem = {
   priceName: string;
   priceUuid: string;
   lineItemOrder: number;
-  paymentStatus: PaymentStatus;
+  status: PaymentStatus;
   voided?: boolean;
   voidedReason?: string;
 };

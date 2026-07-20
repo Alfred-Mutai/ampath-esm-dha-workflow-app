@@ -71,7 +71,7 @@ export type EditLineItem = {
   priceName: string;
   priceUuid: string;
   lineItemOrder: 0;
-  paymentStatus: PaymentStatus;
+  status: PaymentStatus;
   resourceVersion: string;
 };
 export type EditBillLineItemDto = {

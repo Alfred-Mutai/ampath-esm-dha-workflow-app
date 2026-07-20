@@ -82,7 +82,7 @@ const DeleteBillLineItemModal: React.FC<DeleteBillLineItemProps> = ({
                   <TableBody>
                     <TableRow id={lineItem.uuid}>
                       <TableCell>{lineItem.billableService}</TableCell>
-                      <TableCell>{lineItem.paymentStatus}</TableCell>
+                      <TableCell>{lineItem.status}</TableCell>
                       <TableCell>{lineItem.quantity}</TableCell>
                       <TableCell>KES {lineItem.price}</TableCell>
                       <TableCell>KES {lineItem.price * lineItem.quantity}</TableCell>

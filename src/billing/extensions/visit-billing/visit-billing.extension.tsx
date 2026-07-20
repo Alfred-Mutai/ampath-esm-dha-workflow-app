@@ -327,7 +327,7 @@ const VisitBillingForm: React.FC<VisitBillingFormProps> = ({ patientUuid, setExt
           priceName: selectedBillableService.name,
           priceUuid: selectedBillableService.uuid,
           lineItemOrder: 0,
-          paymentStatus: 'PENDING',
+          status: 'PENDING',
         },
       ],
       cashPoint: selectedCashPoint.uuid,

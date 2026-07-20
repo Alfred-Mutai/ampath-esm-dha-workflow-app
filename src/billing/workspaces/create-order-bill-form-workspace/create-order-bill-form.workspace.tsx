@@ -170,7 +170,7 @@ const CreateOrderBillForm: React.FC<CreateOrderBillFormProps> = ({
                     priceName: item.servicePrices?.find(service => service.uuid === servicePriceUuid)?.name || 'Default',
                     priceUuid: servicePriceUuid || '',
                     lineItemOrder: Number(lineItemOrder) ?? index,
-                    paymentStatus: paymentStatus,
+                    status: paymentStatus,
                 }
             });
         let billPayload = {};

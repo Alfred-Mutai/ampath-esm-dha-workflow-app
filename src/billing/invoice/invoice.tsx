@@ -166,7 +166,7 @@ const BillDetails: React.FC = () => {
             waiverAllowed: li.waiverAllowed || false,
             quantity: li.quantity || 1,
             price: li.price || 0,
-            status: (li.paymentStatus?.toUpperCase() as LineItemStatus) || 'PENDING',
+            status: (li.status?.toUpperCase() as LineItemStatus) || 'PENDING',
           })) || [];
 
         setItems(mappedItems);
@@ -457,7 +457,7 @@ const BillDetails: React.FC = () => {
           waiverAllowed: li.waiverAllowed || false,
           quantity: li.quantity || 1,
           price: li.price || 0,
-          status: (li.paymentStatus && li.paymentStatus.toUpperCase()) || 'CASH',
+          status: (li.status && li.status.toUpperCase()) || 'CASH',
         })) || [];
 
       setItems(mappedItems);
@@ -550,7 +550,7 @@ const BillDetails: React.FC = () => {
         waiverAllowed: li.waiverAllowed || false,
         quantity: li.quantity || 1,
         price: li.price || 0,
-        status: (li.paymentStatus && li.paymentStatus.toUpperCase()) || 'CASH',
+        status: (li.status && li.status.toUpperCase()) || 'CASH',
       })) || [];
 
     setItems(mappedItems);
@@ -633,7 +633,7 @@ const BillDetails: React.FC = () => {
           waiverAllowed: li.waiverAllowed || false,
           quantity: li.quantity || 1,
           price: li.price || 0,
-          status: (li.paymentStatus?.toUpperCase() as LineItemStatus) || 'PENDING',
+          status: (li.status?.toUpperCase() as LineItemStatus) || 'PENDING',
         })) || [];
 
       setItems(mappedItems);
@@ -703,7 +703,7 @@ const BillDetails: React.FC = () => {
               waiverAllowed: li.waiverAllowed || false,
               quantity: li.quantity || 1,
               price: li.price || 0,
-              status: (li.paymentStatus?.toUpperCase() as LineItemStatus) || 'PENDING',
+              status: (li.status?.toUpperCase() as LineItemStatus) || 'PENDING',
             })) || [];
           setItems(mappedItems);
         })

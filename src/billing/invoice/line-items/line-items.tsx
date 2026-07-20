@@ -64,7 +64,7 @@ const LineItems: React.FC<LineItemsProps> = ({ lineItems, refresh, bill }) => {
                   <TableCell>
                     {item.billableService}({item.priceName})
                   </TableCell>
-                  <TableCell>{item.paymentStatus}</TableCell>
+                  <TableCell>{item.status}</TableCell>
                   <TableCell>{item.quantity}</TableCell>
                   <TableCell>KES {item.price}</TableCell>
                   <TableCell>KES {item.price * item.quantity}</TableCell>

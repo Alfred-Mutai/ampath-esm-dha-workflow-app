@@ -407,7 +407,7 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
           priceName: selectedBillableService.name,
           priceUuid: selectedBillableService.uuid,
           lineItemOrder: 0,
-          paymentStatus: 'PENDING',
+          status: 'PENDING',
         },
       ],
       cashPoint: selectedCashPoint.uuid,
