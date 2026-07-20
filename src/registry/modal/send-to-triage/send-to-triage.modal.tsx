@@ -66,7 +66,7 @@ import { type ConfigObject } from '../../../config-schema';
 import { PatientTypes } from '../../../shared/constants/patient-type';
 import ClaimsConsentModal from '../otp-verification-modal/claims-consent';
 import { OtpFormData, type OTPWhitelistRequest } from '../../hie.types';
-import { createOTPWhitelisting, sendClaimsOTP } from '../../hie.resource';
+import { cancelAllPendingAuthorizations, createOTPWhitelisting, sendClaimsOTP } from '../../hie.resource';
 import { usePatient } from '../../../context/patient-context';
 import { type ClaimResult, type Intervention, type VisitType } from '../../../claims';
 import { Order } from '@openmrs/esm-patient-common-lib';
@@ -898,6 +898,8 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
   const handleSendClaimsOtp = async () => {
     try {
       setSubmitting(true);
+
+      await cancelAllPendingAuthorizations(locationUuid!, patient!.id);
 
       const response = await sendClaimsOTP(patient!.id, locationUuid!, intervention?.code);
 

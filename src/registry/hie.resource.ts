@@ -243,14 +243,27 @@ export async function sendDischargeOTP(consentToken: string, patientId: string, 
 
 export async function getAuthorizations(locationUuid: string, crId?: string, token?: string): Promise<any> {
   const hieBaseUrl = await getHieBaseUrl();
-  const url = `${hieBaseUrl}/claim-authorizations?beneficiaryCode=${crId}&consentToken=${token}&locationUuid=${locationUuid}`;
+
+  const params = new URLSearchParams({
+    locationUuid,
+  });
+
+  if (crId) {
+    params.append('beneficiaryCode', crId);
+  }
+
+  if (token) {
+    params.append('consentToken', token);
+  }
+
+  const url = `${hieBaseUrl}/claim-authorizations?${params.toString()}`;
 
   const response = await openmrsFetch(url);
 
   const data = await response.json();
 
   if (!response.ok) {
-    const errorText = data.message || 'Failed to fetch OTP';
+    const errorText = data.message || 'Failed to fetch authorizations';
     throw new Error(`Request failed with ${response.status}: ${errorText}`);
   }
 

@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { type Intervention, type VisitType } from '../../../../claims';
 import ClaimsConsentModal from '../claims-consent';
 import { showSnackbar, useSession } from '@openmrs/esm-framework';
-import { createOTPWhitelisting, sendClaimsOTP } from '../../../hie.resource';
+import { cancelAllPendingAuthorizations, createOTPWhitelisting, sendClaimsOTP } from '../../../hie.resource';
 import { type OTPWhitelistRequest } from '../../../hie.types';
 import { getServiceType } from '../../../../shared/services/claims.resource';
 import { PatientProvider } from '../../../../context/patient-context';
@@ -70,6 +70,8 @@ const ClaimsConsentExtension: React.FC<ClaimsConsentExtensionProps> = ({
   const handleSendClaimsOtp = async () => {
     try {
       setSubmitting(true);
+
+      await cancelAllPendingAuthorizations(sessionLocation?.sessionLocation?.uuid, crIdentifierId);
 
       const response = await sendClaimsOTP(crIdentifierId, sessionLocation?.sessionLocation?.uuid, intervention?.code);
 
