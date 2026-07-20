@@ -476,8 +476,9 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
   // Shows the EMR lookup result for the client and lets the user act on it:
   // create the patient in the EMR (not found) or sync an existing record (found).
   const emrStatusCard = !amrsChecked ? null : amrsPatient ? (
-    <div className={`${styles.emrStatus} ${styles.emrStatusFound}`}>
-      <span className={styles.emrStatusIcon}>
+    <div>
+    {/* <div className={`${styles.emrStatus} ${styles.emrStatusFound}`}> */}
+      {/* <span className={styles.emrStatusIcon}>
         <CheckmarkOutline size={20} />
       </span>
       <div className={styles.emrStatusBody}>
@@ -489,7 +490,7 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
         {amrsPatient.uuid ? (
           <EmrCompare client={client} patientUuid={amrsPatient.uuid} onUpdated={onSyncPatient} />
         ) : null}
-      </div>
+      </div> */}
     </div>
   ) : (
     <div className={`${styles.emrStatus} ${styles.emrStatusMissing}`}>
