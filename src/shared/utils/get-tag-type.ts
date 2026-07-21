@@ -38,7 +38,16 @@ export const getTagClassByPriority = (priority: string): string => {
     case QueueEntryPriority.Emergency:
       className = 'emergencyTag';
       break;
+    case QueueEntryPriority.VeryUrgent:
+      className = 'emergencyTag';
+      break;
     case QueueEntryPriority.Priority:
+      className = 'priorityTag';
+      break;
+    case QueueEntryPriority.Urgent:
+      className = 'priorityTag';
+      break;
+    case QueueEntryPriority.Routine:
       className = 'priorityTag';
       break;
     case QueueEntryPriority.NonUrgent:
