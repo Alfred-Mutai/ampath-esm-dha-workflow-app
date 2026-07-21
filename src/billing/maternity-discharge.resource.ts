@@ -1,11 +1,11 @@
-import { getEtlBaseUrl } from '../shared/utils/get-base-url';
+import { getHieBaseUrl } from '../shared/utils/get-base-url';
 import { openmrsFetch } from '@openmrs/esm-framework';
 
 export async function getDischargeSummary(crId: string, amrsId: string): Promise<any> {
-  const etlBaseUrl = await getEtlBaseUrl();
+  const hieBaseUrl = await getHieBaseUrl();
 
   try {
-    const response = await openmrsFetch(`http://localhost:8002/discharge-summary?crId=${crId}&amrsId=${amrsId}`);
+    const response = await openmrsFetch(`${hieBaseUrl}/discharge-summary?crId=${crId}&amrsId=${amrsId}`);
 
     const data = await response.json();
 
