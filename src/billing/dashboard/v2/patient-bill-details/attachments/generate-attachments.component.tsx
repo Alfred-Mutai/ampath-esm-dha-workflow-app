@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 
 import { useSession, type DefaultWorkspaceProps } from '@openmrs/esm-framework';
 import { type VisitIntervention } from '../../types';
@@ -13,6 +13,7 @@ import DischargeSummaryComponent from './discharge-summary';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { sendClaimAttachment } from '../../../../../registry/hie.resource';
+import FinalBillComponent from './final-bill.component';
 
 interface GenerateAttachmentsProps extends DefaultWorkspaceProps {
   claimInterventions: VisitIntervention[];
@@ -41,12 +42,18 @@ const GenerateAttachments: React.FC<GenerateAttachmentsProps> = ({
       name: 'INVOICE',
       generated: false,
     },
+    {
+      id: crypto.randomUUID(),
+      name: 'FINAL_BILL',
+      generated: false,
+    },
   ]);
   const session = useSession();
   const locationUuid = session.sessionLocation?.uuid;
 
   const invoiceRef = useRef<HTMLDivElement>(null);
   const dischargeRef = useRef<HTMLDivElement>(null);
+  const finalBillRef = useRef<HTMLDivElement>(null);
 
   console.log('BILL: ', bill);
 
@@ -138,6 +145,8 @@ const GenerateAttachments: React.FC<GenerateAttachmentsProps> = ({
 
     if (document.name === 'INVOICE') {
       element = invoiceRef.current;
+    } else if (document.name === 'FINAL_BILL') {
+      element = finalBillRef.current;
     } else {
       element = dischargeRef.current;
     }
@@ -277,6 +286,8 @@ const GenerateAttachments: React.FC<GenerateAttachmentsProps> = ({
         <InvoiceComponent ref={invoiceRef} bill={bill} />
 
         <DischargeSummaryComponent ref={dischargeRef} claimIntervention={claimInterventions} bill={bill} />
+
+        <FinalBillComponent ref={finalBillRef} bill={bill} />
       </div>
     </>
   );
