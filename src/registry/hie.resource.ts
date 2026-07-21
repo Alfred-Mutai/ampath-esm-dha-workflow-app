@@ -272,7 +272,14 @@ export async function getAuthorizations(locationUuid: string, crId?: string, tok
 
 export async function cancelPendingAuthorizations(consentToken: string, locationUuid: string): Promise<any> {
   const hieBaseUrl = await getHieBaseUrl();
-  const url = `${hieBaseUrl}/claim-authorizations/cancel?consentToken=${consentToken}&locationUuid=${locationUuid}`;
+
+  const payload = [
+    {
+      locationUuid: locationUuid,
+      consentToken: consentToken,
+    },
+  ];
+  const url = `${hieBaseUrl}/claim-authorizations/cancel`;
 
   const response = await openmrsFetch(url, {
     method: 'POST',
@@ -280,6 +287,7 @@ export async function cancelPendingAuthorizations(consentToken: string, location
       Accept: 'application/json',
       'Content-Type': 'application/json',
     },
+    body: JSON.stringify(payload),
   });
 
   const data = await response.json();
