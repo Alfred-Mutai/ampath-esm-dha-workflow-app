@@ -136,6 +136,9 @@ export enum QueueEntryPriority {
   Emergency = 'EMERGENCY',
   Priority = 'PRIORITY',
   NonUrgent = 'NON-URGENT',
+  Routine = 'ROUTINE',
+  Urgent = 'URGENT',
+  VeryUrgent = 'VERY URGENT'
 }
 
 export type CreateQueueDto = {

@@ -91,6 +91,22 @@ const QueueList: React.FC<QueueListProps> = ({
     () => sortQueueByPriorityAndWaitTime(queueEntries, QueueEntryPriority.NonUrgent),
     [queueEntries],
   );
+  const routineEntries = useMemo(
+    () => sortQueueByPriorityAndWaitTime(queueEntries, QueueEntryPriority.Routine),
+    [queueEntries],
+  );
+  const urgent2Entries = useMemo(
+    () => sortQueueByPriorityAndWaitTime(queueEntries, QueueEntryPriority.Urgent),
+    [queueEntries],
+  );
+  const veryUrgentEntries = useMemo(
+    () => sortQueueByPriorityAndWaitTime(queueEntries, QueueEntryPriority.VeryUrgent),
+    [queueEntries],
+  );
+  const nullEntries = useMemo(
+    () => sortQueueByPriorityAndWaitTime(queueEntries,null),
+    [queueEntries],
+  );
   const sortedQueueEntries = useMemo(() => generatePatientWaitingList(), [queueEntries, selectedStatus]);
   const filteredQueueEntries = useMemo(() => filterQueueBySearchString(), [queueEntries, searchString, selectedStatus]);
   const canClearQueue = userHasAccess('O3 Clear Triage Queue', {
@@ -112,7 +128,7 @@ const QueueList: React.FC<QueueListProps> = ({
     },
   ];
   function generatePatientWaitingList() {
-    return [...urgentEntries, ...priorityEntries, ...nonUrgentEntries].filter((qe) => {
+    return [...veryUrgentEntries,...urgentEntries,...urgent2Entries, ...priorityEntries, ...nonUrgentEntries,...routineEntries,...nullEntries].filter((qe) => {
       if (!selectedStatus) {
         return true;
       }
@@ -120,7 +136,7 @@ const QueueList: React.FC<QueueListProps> = ({
     });
   }
 
-  function sortQueueByPriorityAndWaitTime(queueEntries: QueueEntryResult[], priority: QueueEntryPriority) {
+  function sortQueueByPriorityAndWaitTime(queueEntries: QueueEntryResult[], priority: QueueEntryPriority | null) {
     return queueEntries
       .filter((q) => {
         return q.priority === priority;
