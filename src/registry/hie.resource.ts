@@ -273,12 +273,10 @@ export async function getAuthorizations(locationUuid: string, crId?: string, tok
 export async function cancelPendingAuthorizations(consentToken: string, locationUuid: string): Promise<any> {
   const hieBaseUrl = await getHieBaseUrl();
 
-  const payload = [
-    {
-      locationUuid: locationUuid,
-      consentToken: consentToken,
-    },
-  ];
+  const payload = {
+    locationUuid: locationUuid,
+    consentToken: consentToken,
+  };
   const url = `${hieBaseUrl}/claim-authorizations/cancel`;
 
   const response = await openmrsFetch(url, {
