@@ -93,7 +93,7 @@ const SubmitClaimModal: React.FC<submitClaimModalProps> = ({ open, onClose, onSu
         setLoading(true);
         try {
             const submitClaimPayload = getSubmitClaimPayload();
-            const resp = await submitClaim(submitClaimPayload);
+            const resp = await submitClaim(submitClaimPayload, claimsVisit.service_type);
             if ('error' in resp) {
                 let message = 'message' in resp ? String(resp?.message) : "An error occurred while submitting the claim. Kindy retry or contact support"
                 showSnackbar({

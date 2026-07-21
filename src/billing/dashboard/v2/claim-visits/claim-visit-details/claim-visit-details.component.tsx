@@ -1,14 +1,14 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import styles from './claim-visit-details.component.scss';
 import { type PatientFacilityBillDetails, type ClaimsVisit, ApplicableDocumentType } from '../../types';
 import ClaimInvoiceDetails from '../claim-invoice-details/claim-invoice-details.component';
 import ClaimInterventionDetails from '../claim-intervention-details/claim-intervention-details.component';
 import ClaimDiagnosisDetails from '../claim-diagnosis-details/claim-diagnosis-details.component';
-import { formatDate, launchWorkspace, parseDate } from '@openmrs/esm-framework';
+import { formatDate, launchWorkspace, parseDate, showSnackbar, useVisit } from '@openmrs/esm-framework';
 import { Button } from '@carbon/react';
 import CloseClaimModal from '../modal/close-claim/close-claim.modal';
 import SubmitClaimModal from '../modal/submit-claim/submit-claim.modal';
-import { useInvalidateProviderClaimPreview } from '../../../../billing-claims.resource';
+import { endVisit, useInvalidateProviderClaimPreview } from '../../../../billing-claims.resource';
 import ClaimDocuments from '../claim-documents/claim-documents';
 import ClaimDoctors from '../claim-doctors/claim-doctors';
 import AddClaimDoctorModal from '../modal/claim-doctors/add-claim-doctor/add-claim-doctor.modal';
@@ -21,6 +21,8 @@ const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({ claimsVisit, loca
   const [showCloseClaimModal, setShowCloseClaimModal] = useState<boolean>();
   const [showSubmitClaimModal, setSubmitCloseClaimModal] = useState<boolean>(false);
   const [showAddDoctorModal, setShowAddDoctorModal] = useState<boolean>(false);
+  const [triggerEndVisit, setTriggerEndVisit] = useState<boolean>(false);
+  const { activeVisit } = useVisit(patientBillDetails?.patient_uuid);
 
   const invoiceNumber = useMemo(() => {
     if (patientBillDetails) {
@@ -31,6 +33,24 @@ const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({ claimsVisit, loca
 
   if (!claimsVisit) {
     return <>No Data</>;
+  }
+
+  useEffect(() => {
+    if (triggerEndVisit && activeVisit) {
+      handleCloseVisit()
+    }
+  }, [triggerEndVisit, activeVisit]);
+
+  function handleCloseVisit() {
+    endVisit(activeVisit?.uuid).then((v) => {
+      showSnackbar({
+        title: 'Success closing claim',
+        kind: 'success',
+        subtitle: 'Claim closed successfully',
+      });
+    }).catch((err) => {
+      console.error(err);
+    });
   }
 
   const invalidateProviderClaimPreview = useInvalidateProviderClaimPreview();
@@ -48,6 +68,7 @@ const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({ claimsVisit, loca
     setSubmitCloseClaimModal(false);
   }
   function onSubmitSuccess() {
+    setTriggerEndVisit(true);
     handleCloseSubmitClaimModal();
     invalidateProviderClaimPreview();
   }

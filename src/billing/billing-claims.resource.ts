@@ -26,7 +26,6 @@ import { getHieBaseUrl } from '../claims/utils';
 import { type AmrsMaternityDiagnosis, type AmrsMaternityDiagnosisDto, type AmrsMaternityDiagnosisResponse, type AmrsVisitDiagnosis, type AmrsVisitDiagnosisDto, type AmrsVisitDiagnosisResponse } from './types';
 import { useCallback } from 'react';
 import useSWR, { mutate } from 'swr';
-import { VisitType } from '../claims';
 
 export async function fetchFacilityBills(facilityBillsDto: FacilityBillsDto): Promise<FacilityBill[]> {
   const etlBaseUrl = await getEtlBaseUrl();
@@ -213,10 +212,10 @@ export async function closeClaim(closeClaimDto: CloseClaimDto) {
   return data ?? null;
 }
 
-export async function submitClaim(submitClaimDto: SubmitClaimDto, visitType: VisitType = "INPATIENT") {
+export async function submitClaim(submitClaimDto: SubmitClaimDto, visitType: string = "INPATIENT") {
   const { hieBaseUrl } = await getHieBaseUrl();
   let claimUrl = `${hieBaseUrl}/claim-submission`;
-  if(visitType === "INPATIENT") {
+  if (visitType === "INPATIENT") {
     submitClaimDto["dischargeDate"] = new Date().toISOString();
     claimUrl = `${hieBaseUrl}/claim-submission/inpatient`;
   }
@@ -264,3 +263,20 @@ export async function addClaimDiagnosis(addClaimDiagnosisDto: AddClaimDiagnosisD
   const data = (await response.json());
   return data ?? null;
 }
+
+export const endVisit = async (visitUuid: string) => {
+  const url = `${restBaseUrl}/visit/${visitUuid}`;
+  const stopDatetime = new Date();
+  const body = {
+    stopDatetime,
+  };
+  const response = await openmrsFetch(url, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  return response.json();
+};
