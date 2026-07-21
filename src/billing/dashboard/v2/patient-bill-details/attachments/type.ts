@@ -1,12 +1,14 @@
 export interface UploadedFile {
   id: string;
   file: File;
+  uploaded?: boolean;
 }
 
 export interface GeneratedDocument {
   id: string;
   name: string;
   generated: boolean;
+  uploaded?: boolean;
   file?: File;
   url?: string;
 }

@@ -33,7 +33,7 @@ const GenerateAttachments: React.FC<GenerateAttachmentsProps> = ({
   const [documents, setDocuments] = useState<GeneratedDocument[]>([
     {
       id: crypto.randomUUID(),
-      name: 'DISCHARGE SUMMARY',
+      name: 'DISCHARGE_SUMMARY',
       generated: false,
     },
     {
@@ -64,6 +64,7 @@ const GenerateAttachments: React.FC<GenerateAttachmentsProps> = ({
       orientation: 'portrait',
       unit: 'mm',
       format: 'a4',
+      compress: true,
     });
 
     const pageWidth = pdf.internal.pageSize.getWidth();
@@ -76,52 +77,33 @@ const GenerateAttachments: React.FC<GenerateAttachmentsProps> = ({
 
     return pdf.output('blob');
   };
-  // useEffect(() => {
-  //   return () => {
-  //     documents.forEach((doc) => {
-  //       if (doc.url) {
-  //         URL.revokeObjectURL(doc.url);
-  //       }
-  //     });
-  //   };
-  // }, [documents]);
 
   const docTypes = claimInterventions[0].applicable_document_types;
 
-  const fileToBase64 = (file: File): Promise<string> =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-
-      reader.onload = () => {
-        const result = reader.result as string;
-        resolve(result.split(',')[1]);
-      };
-
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-
-  const handleSubmit = async () => {
-    if (!documents.some((d) => d.generated)) {
+  const handleSubmit = async (document: GeneratedDocument) => {
+    if (!document.file) {
       return;
     }
 
     try {
-      for (const document of documents) {
-        if (!document.file) continue;
+      await sendClaimAttachment(
+        consentToken,
+        document.name,
+        claimInterventions[0].intervention_code,
+        document.file,
+        locationUuid!,
+      );
 
-        const fileBlob = await fileToBase64(document.file);
-
-        await sendClaimAttachment(
-          consentToken,
-          document.name,
-          claimInterventions[0].intervention_code,
-          [fileBlob],
-          locationUuid!,
-        );
-      }
-
-      closeWorkspace();
+      setDocuments((prev) =>
+        prev.map((d) =>
+          d.id === document.id
+            ? {
+                ...d,
+                uploaded: true,
+              }
+            : d,
+        ),
+      );
     } catch (err) {
       console.error(err);
     }
@@ -143,6 +125,7 @@ const GenerateAttachments: React.FC<GenerateAttachmentsProps> = ({
         return {
           ...d,
           generated: false,
+          uploaded: false,
           file: undefined,
           url: undefined,
         };
@@ -178,6 +161,7 @@ const GenerateAttachments: React.FC<GenerateAttachmentsProps> = ({
           ? {
               ...d,
               generated: true,
+              uploaded: false,
               file,
               url,
             }
@@ -229,6 +213,10 @@ const GenerateAttachments: React.FC<GenerateAttachmentsProps> = ({
                 <Button kind="ghost" size="sm" onClick={() => generateDocument(document)}>
                   Generate
                 </Button>
+              ) : !document.uploaded ? (
+                <Button kind="primary" size="sm" onClick={() => handleSubmit(document)}>
+                  Upload
+                </Button>
               ) : (
                 <>
                   <Button
@@ -253,10 +241,7 @@ const GenerateAttachments: React.FC<GenerateAttachmentsProps> = ({
         </div>
         <ButtonSet className={styles.buttonSet}>
           <Button kind="secondary" onClick={handleDiscard}>
-            {t('discard', 'Discard')}
-          </Button>
-          <Button disabled={generatedCount === 0} kind="primary" onClick={handleSubmit}>
-            {t('upload', `Upload ${generatedCount} Files`)}
+            {t('close', 'Close')}
           </Button>
         </ButtonSet>
       </Form>

@@ -15,6 +15,7 @@ interface AttachmentComponentProps {
   setPreviewOpen: React.Dispatch<React.SetStateAction<boolean>>;
   removeAttachment: (id: string) => void;
   canDelete: boolean;
+  uploadFile: (attachmentId: string, fileId: string) => Promise<void>;
 }
 const AttachmentComponent: React.FC<AttachmentComponentProps> = ({
   attachment,
@@ -26,6 +27,7 @@ const AttachmentComponent: React.FC<AttachmentComponentProps> = ({
   setPreviewOpen,
   removeAttachment,
   canDelete,
+  uploadFile,
 }) => {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -81,7 +83,7 @@ const AttachmentComponent: React.FC<AttachmentComponentProps> = ({
         <h4>Uploaded Files</h4>
 
         <div className={styles.fileList}>
-          {attachment.files.map(({ id, file }) => (
+          {attachment.files.map(({ id, file, uploaded }) => (
             <div key={id} className={styles.fileItem}>
               <span>{file.name}</span>
 
@@ -96,6 +98,14 @@ const AttachmentComponent: React.FC<AttachmentComponentProps> = ({
               >
                 View
               </Button>
+
+              {!uploaded ? (
+                <Button kind="primary" size="sm" onClick={() => uploadFile(attachment.id, id)}>
+                  Upload
+                </Button>
+              ) : (
+                <Tag type="green">Uploaded</Tag>
+              )}
 
               <Button kind="ghost" size="sm" renderIcon={TrashCan} onClick={() => removeFile(attachment.id, id)}>
                 Remove

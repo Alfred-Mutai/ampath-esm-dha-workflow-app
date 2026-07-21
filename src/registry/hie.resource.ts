@@ -181,26 +181,27 @@ export async function sendClaimAttachment(
   consentToken: string,
   documentType: string,
   interventionCode: string,
-  fileBlob: string[],
+  fileBlob: File,
   locationUuid: string,
 ): Promise<any> {
   const hieBaseUrl = await getHieBaseUrl();
 
-  const payload = {
-    consentToken: consentToken,
-    documentType: documentType,
-    interventionCode: interventionCode,
-    fileBlob: fileBlob,
-    locationUuid: locationUuid,
-  };
+  const formData = new FormData();
+
+  formData.append('consentToken', consentToken);
+  formData.append('documentType', documentType);
+  formData.append('interventionCode', interventionCode);
+  formData.append('locationUuid', locationUuid);
+
+  formData.append('fileBlob', fileBlob);
+
   const url = `${hieBaseUrl}/claim-attachment`;
   const response = await openmrsFetch(url, {
     method: 'POST',
     headers: {
       Accept: 'application/json',
-      'Content-Type': 'application/json',
     },
-    body: JSON.stringify(payload),
+    body: formData,
   });
 
   const data = await response.json();

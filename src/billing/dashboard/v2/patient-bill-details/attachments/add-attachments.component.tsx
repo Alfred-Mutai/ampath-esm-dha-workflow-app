@@ -36,54 +36,39 @@ const AddInterventionAttachmentsWorkspace: React.FC<AddInterventionAttachmentWor
 
   const locationUuid = session.sessionLocation?.uuid;
 
-  const fileToBase64 = (file: File): Promise<string> =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
+  const uploadFile = async (attachmentId: string, fileId: string) => {
+    const attachment = attachments.find((a) => a.id === attachmentId);
+    if (!attachment) return;
 
-      reader.onload = () => {
-        const result = reader.result as string;
-
-        // Remove the data:...;base64, prefix if the API expects raw base64
-        resolve(result.split(',')[1]);
-      };
-
-      reader.onerror = reject;
-
-      reader.readAsDataURL(file);
-    });
-
-  const handleSubmit = async () => {
-    if (!attachments.some((a) => a.files.length > 0)) {
-      return;
-    }
+    const uploadedFile = attachment.files.find((f) => f.id === fileId);
+    if (!uploadedFile) return;
 
     try {
-      for (const attachment of attachments) {
-        const fileBlobs = await Promise.all(attachment.files.map(({ file }) => fileToBase64(file)));
-        // for (const attachment of attachments) {
-        //   for (const { file } of attachment.files) {
-        //     const fileBlob = await fileToBase64(file);
+      await sendClaimAttachment(
+        consentToken,
+        attachment.documentType,
+        claimInterventions[0].intervention_code,
+        uploadedFile.file,
+        locationUuid!,
+      );
 
-        //     await sendClaimAttachment(
-        //       consentToken,
-        //       attachment.documentType,
-        //       interventionCode,
-        //       [fileBlob],
-        //       locationUuid,
-        //     );
-        //   }
-        // }
-
-        await sendClaimAttachment(
-          consentToken,
-          attachment.documentType,
-          claimInterventions[0].intervention_code,
-          fileBlobs,
-          'locationUuid',
-        );
-      }
-
-      closeWorkspace();
+      setAttachments((prev) =>
+        prev.map((a) =>
+          a.id !== attachmentId
+            ? a
+            : {
+                ...a,
+                files: a.files.map((f) =>
+                  f.id !== fileId
+                    ? f
+                    : {
+                        ...f,
+                        uploaded: true,
+                      },
+                ),
+              },
+        ),
+      );
     } catch (error) {
       console.error(error);
     }
@@ -93,6 +78,9 @@ const AddInterventionAttachmentsWorkspace: React.FC<AddInterventionAttachmentWor
   const handleDiscard = () => {
     closeWorkspace();
   };
+
+  const allUploaded =
+    attachments.length > 0 && attachments.every((a) => a.files.length > 0 && a.files.every((f) => f.uploaded));
 
   if (!claimInterventions || claimInterventions.length === 0) return null;
 
@@ -188,6 +176,7 @@ const AddInterventionAttachmentsWorkspace: React.FC<AddInterventionAttachmentWor
             setPreviewOpen={setPreviewOpen}
             removeAttachment={removeAttachment}
             canDelete={attachments.length > 1}
+            uploadFile={uploadFile}
           />
         ))}
         <Button
@@ -197,14 +186,6 @@ const AddInterventionAttachmentsWorkspace: React.FC<AddInterventionAttachmentWor
         >
           Add Attachment
         </Button>
-        <ButtonSet className={styles.buttonSet}>
-          <Button kind="secondary" onClick={handleDiscard}>
-            {t('discard', 'Discard')}
-          </Button>
-          <Button disabled={totalFiles === 0} kind="primary" onClick={handleSubmit}>
-            {t('upload', `Upload ${totalFiles} File${totalFiles === 1 ? '' : 's'}`)}
-          </Button>
-        </ButtonSet>
       </Form>
       <Modal
         open={previewOpen}
