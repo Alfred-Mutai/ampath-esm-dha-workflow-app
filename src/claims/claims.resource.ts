@@ -1,226 +1,231 @@
-import useSWR from "swr";
-import dayjs from "dayjs";
-import { ServiceType, type BenefitUtilization, type InterventionResults, type ClaimResult, type Intervention, VisitType, type ClientSubBenefit } from "./index";
-import { fetchUrl, getHieBaseUrl, getUrl, useHie } from "./utils";
-import { openmrsFetch, restBaseUrl, useSession, Visit } from "@openmrs/esm-framework";
+import useSWR from 'swr';
+import dayjs from 'dayjs';
+import {
+  ServiceType,
+  type BenefitUtilization,
+  type InterventionResults,
+  type ClaimResult,
+  type Intervention,
+  VisitType,
+  type ClientSubBenefit,
+} from './index';
+import { fetchUrl, getHieBaseUrl, getUrl, useHie } from './utils';
+import { openmrsFetch, restBaseUrl, useSession, Visit } from '@openmrs/esm-framework';
 
 export const useClientSubBenefits = (clientRegistryId: string) => {
-    const { hieBaseUrl, locationUuid } = useHie();
-    const url = clientRegistryId ? `${hieBaseUrl}/sub-benefits?patient_id=${clientRegistryId}&locationUuid=${locationUuid}` : null;
+  const { hieBaseUrl, locationUuid } = useHie();
+  const url = clientRegistryId
+    ? `${hieBaseUrl}/sub-benefits?patient_id=${clientRegistryId}&locationUuid=${locationUuid}`
+    : null;
 
-    const {
-        data,
-        error,
-        isLoading
-    } = useSWR<{ data: Array<ClientSubBenefit> }>(url, openmrsFetch);
+  const { data, error, isLoading } = useSWR<{ data: Array<ClientSubBenefit> }>(url, openmrsFetch);
 
-    const results = data?.data;
+  const results = data?.data;
 
-    return {
-        clientSubBenefits: results,
-        error,
-        isLoadingClientSubBenefits: isLoading
-    };
+  return {
+    clientSubBenefits: results,
+    error,
+    isLoadingClientSubBenefits: isLoading,
+  };
 };
 
 export const useInterventions = (clientRegistryId: string, subBenefitCode: string) => {
-    const { hieBaseUrl, locationUuid } = useHie();
-    const url = clientRegistryId && subBenefitCode ? `${hieBaseUrl}/interventions?patient_id=${clientRegistryId}&locationUuid=${locationUuid}&sub_benefit_code=${subBenefitCode}` : null;
+  const { hieBaseUrl, locationUuid } = useHie();
+  const url =
+    clientRegistryId && subBenefitCode
+      ? `${hieBaseUrl}/interventions?patient_id=${clientRegistryId}&locationUuid=${locationUuid}&sub_benefit_code=${subBenefitCode}`
+      : null;
 
-    const {
-        data,
-        error,
-        isLoading
-    } = useSWR<{ data: Array<Intervention> }>(url, openmrsFetch);
+  const { data, error, isLoading } = useSWR<{ data: Array<Intervention> }>(url, openmrsFetch);
 
-    const results = data?.data;
+  const results = data?.data;
 
-    return {
-        interventions: results,
-        error,
-        isLoadingInterventions: isLoading
-    };
+  return {
+    interventions: results,
+    error,
+    isLoadingInterventions: isLoading,
+  };
 };
 
 export const useBenefitUtilizations = (clientRegistryId: string, interventionCode: string, isCapitation: boolean) => {
-    const { hieBaseUrl, locationUuid } = useHie();
-    const url = clientRegistryId && interventionCode && !isCapitation ? `${hieBaseUrl}/benefits-utilization?patient_id=${clientRegistryId}&locationUuid=${locationUuid}&intervention_code=${interventionCode}` : null;
+  const { hieBaseUrl, locationUuid } = useHie();
+  const url =
+    clientRegistryId && interventionCode && !isCapitation
+      ? `${hieBaseUrl}/benefits-utilization?patient_id=${clientRegistryId}&locationUuid=${locationUuid}&intervention_code=${interventionCode}`
+      : null;
 
-    const {
-        data,
-        error,
-        isLoading
-    } = useSWR<{ data: Array<BenefitUtilization> }>(url, openmrsFetch);
+  const { data, error, isLoading } = useSWR<{ data: Array<BenefitUtilization> }>(url, openmrsFetch);
 
-    const results = data?.data;
+  const results = data?.data;
 
-    return {
-        benefitUtilizations: results,
-        error,
-        isLoadingBenefitUtilization: isLoading
-    };
+  return {
+    benefitUtilizations: results,
+    error,
+    isLoadingBenefitUtilization: isLoading,
+  };
 };
 
-export async function createClaimsVisit(interventionCode: string, crIdentifier: string, serviceType: ServiceType, locationUuid: string, { auth_guid, otp }: { auth_guid?: string, otp?: string } = {}) {
-    const { hieBaseUrl } = await getHieBaseUrl();
-    const url = `${hieBaseUrl}/claims-visit`;
+export async function createClaimsVisit(
+  interventionCode: string,
+  crIdentifier: string,
+  serviceType: ServiceType,
+  locationUuid: string,
+  { auth_guid, otp }: { auth_guid?: string; otp?: string } = {},
+) {
+  const { hieBaseUrl } = await getHieBaseUrl();
+  const url = `${hieBaseUrl}/claims-visit`;
 
+  let payload = {
+    locationUuid,
+    intervention_codes: [interventionCode],
+    patient_id: crIdentifier,
+    service_type: serviceType, // Type of service Options: CAPITATION, OUTPATIENT, INPATIENT, EMERGENCY
+  };
 
-    let payload = {
-        locationUuid,
-        intervention_codes: [interventionCode],
-        patient_id: crIdentifier,
-        service_type: serviceType // Type of service Options: CAPITATION, OUTPATIENT, INPATIENT, EMERGENCY
+  if (otp) {
+    payload['otp'] = otp;
+  }
+
+  if (auth_guid) {
+    payload['auth_guid'] = auth_guid;
+  }
+
+  const result = await openmrsFetch<ClaimResult>(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    // signal: abortController.signal,
+    body: payload,
+  }).catch((error) => {
+    const message = error?.responseBody?.message ?? '';
+    if (typeof message === 'object') {
+      throw `${message?.join(',')}`;
     }
+    throw message;
+  });
 
-    if (otp) {
-        payload["otp"] = otp;
-    }
+  if (result?.data && 'error' in result.data && 'message' in result.data) {
+    const message = result.data.message ?? '';
+    throw message;
+  }
 
-    if (auth_guid) {
-        payload["auth_guid"] = auth_guid;
-    }
-
-    const result = await openmrsFetch<ClaimResult>(url, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        // signal: abortController.signal,
-        body: payload,
-    }).catch((error) => {
-        const message = error?.responseBody?.message ?? "";
-        if (typeof message === "object") {
-            throw `${message?.join(",")}`;
-        }
-        throw message;
-    });
-
-    if (result?.data && "error" in result.data && "message" in result.data) {
-        const message = result.data.message ?? "";
-        throw message;
-    }
-
-    return result.data;
+  return result.data;
 }
 
 export const usePatientVisit = (patientUuid: string) => {
-    console.log("patientUuid");
-    console.log(patientUuid);
-    console.log("patientUuid");
-    const sessionLocation = useSession();
+  console.log('patientUuid');
+  console.log(patientUuid);
+  console.log('patientUuid');
+  const sessionLocation = useSession();
 
-    const url = patientUuid
-        ? `${restBaseUrl}/visit?patient=${patientUuid}&${sessionLocation?.sessionLocation?.uuid}&includeInactive=false&fromStartDate=${dayjs().startOf('day').toISOString()}&v=full&limit=1`
-        : null;
+  const url = patientUuid
+    ? `${restBaseUrl}/visit?patient=${patientUuid}&${sessionLocation?.sessionLocation?.uuid}&includeInactive=false&fromStartDate=${dayjs().startOf('day').toISOString()}&v=full&limit=1`
+    : null;
 
-    const {
-        data,
-        error,
-        isLoading
-    } = useSWR<{
-        data: {
-            results: Array<Visit>
-        }
-    }>(url, openmrsFetch);
-
-    return {
-        data: data?.data?.results,
-        error,
-        isLoading
+  const { data, error, isLoading } = useSWR<{
+    data: {
+      results: Array<Visit>;
     };
-}
+  }>(url, openmrsFetch);
+
+  return {
+    data: data?.data?.results,
+    error,
+    isLoading,
+  };
+};
 
 // Preauths
-export async function createPreauth() {
-
-}
+export async function createPreauth() {}
 
 const generatePreauthFormData = (payload: any, intervention: Intervention, consentToken: string) => {
-    const formData = new FormData();
+  const formData = new FormData();
 
-    // fileInput.files[0]
+  // fileInput.files[0]
 
-    formData.append("consent_token", consentToken);
-    formData.append("intervention_code", intervention.code);
-    formData.append("service_start", payload.service_start);
-    formData.append("service_end", payload.service_end);
-    formData.append("items", JSON.stringify(payload.items));//items -> [{"unit_price": "500.00"}]
-    formData.append("diagnoses", JSON.stringify(payload.diagnoses));// diagnoses -> [{"consent_token": "{{consent_token}}","icd_code": "ca07.0"}]
-    formData.append("doctors", JSON.stringify(payload.doctors)); //doctors -> [{"identification_number": "{{practitioner_id_number}}","identification_type":"{{practitioner_id_type}}", "regulation_body": "KMPDC", "intervention_code": "{{intervention_code}}", "is_primary":true}]
-    formData.append("attachments", JSON.stringify(payload.attachments)); //attachments -> {"document_title": "Lab Results", "document_type": "LAB_TESTS","file_field_name": "attachments_0_file_blob"}
-    formData.append("provider_notification_email", payload.provider_notification_email);
+  formData.append('consent_token', consentToken);
+  formData.append('intervention_code', intervention.code);
+  formData.append('service_start', payload.service_start);
+  formData.append('service_end', payload.service_end);
+  formData.append('items', JSON.stringify(payload.items)); //items -> [{"unit_price": "500.00"}]
+  formData.append('diagnoses', JSON.stringify(payload.diagnoses)); // diagnoses -> [{"consent_token": "{{consent_token}}","icd_code": "ca07.0"}]
+  formData.append('doctors', JSON.stringify(payload.doctors)); //doctors -> [{"identification_number": "{{practitioner_id_number}}","identification_type":"{{practitioner_id_type}}", "regulation_body": "KMPDC", "intervention_code": "{{intervention_code}}", "is_primary":true}]
+  formData.append('attachments', JSON.stringify(payload.attachments)); //attachments -> {"document_title": "Lab Results", "document_type": "LAB_TESTS","file_field_name": "attachments_0_file_blob"}
+  formData.append('provider_notification_email', payload.provider_notification_email);
 
-    if (intervention.requiresRadiologyPreauth) {
-        formData.append("clinical_indications", payload.clinical_indications);
-    }
+  if (intervention.requiresRadiologyPreauth) {
+    formData.append('clinical_indications', payload.clinical_indications);
+  }
 
-    if (intervention.requiresOncologyPreauth) {
-        formData.append("carcinoma_staging", payload.carcinoma_staging);
-        formData.append("comorbidity", payload.comorbidity);
-        formData.append("metastases", JSON.stringify(payload.metastases));
-        formData.append("treatment_setting", JSON.stringify(payload.treatment_setting));
-        formData.append("number_of_sessions_required", String(payload.number_of_sessions_required));
-        formData.append("cost_per_session", String(payload.cost_per_session));
-        formData.append("is_co_insured", String(payload.is_co_insured));
-    }
+  if (intervention.requiresOncologyPreauth) {
+    formData.append('carcinoma_staging', payload.carcinoma_staging);
+    formData.append('comorbidity', payload.comorbidity);
+    formData.append('metastases', JSON.stringify(payload.metastases));
+    formData.append('treatment_setting', JSON.stringify(payload.treatment_setting));
+    formData.append('number_of_sessions_required', String(payload.number_of_sessions_required));
+    formData.append('cost_per_session', String(payload.cost_per_session));
+    formData.append('is_co_insured', String(payload.is_co_insured));
+  }
 
-    if (intervention.requiresOpticalPreauth) {
-        formData.append("necessity_of_service", payload.necessity_of_service);
-        formData.append("lens_prescription", payload.lens_prescription);
-        formData.append("lens_amount", String(payload.lens_amount));
-        formData.append("eye_examination_amount", String(payload.eye_examination_amount));
-        formData.append("frame_amount", String(payload.frame_amount));
-        formData.append("new_or_replacement", payload.new_or_replacement);
-    }
+  if (intervention.requiresOpticalPreauth) {
+    formData.append('necessity_of_service', payload.necessity_of_service);
+    formData.append('lens_prescription', payload.lens_prescription);
+    formData.append('lens_amount', String(payload.lens_amount));
+    formData.append('eye_examination_amount', String(payload.eye_examination_amount));
+    formData.append('frame_amount', String(payload.frame_amount));
+    formData.append('new_or_replacement', payload.new_or_replacement);
+  }
 
-    if (intervention.requiresRenalPreauth) {
-        formData.append("number_of_sessions_required", String(payload.number_of_sessions_required));
-        formData.append("cost_per_session", String(payload.cost_per_session));
-        formData.append("frequency_of_sessions", payload.frequency_of_sessions);
-        formData.append("clinical_indications", payload.clinical_indications);
-        formData.append("start_date", payload.start_date);
-        formData.append("is_co_insured", String(payload.is_co_insured));
-    }
+  if (intervention.requiresRenalPreauth) {
+    formData.append('number_of_sessions_required', String(payload.number_of_sessions_required));
+    formData.append('cost_per_session', String(payload.cost_per_session));
+    formData.append('frequency_of_sessions', payload.frequency_of_sessions);
+    formData.append('clinical_indications', payload.clinical_indications);
+    formData.append('start_date', payload.start_date);
+    formData.append('is_co_insured', String(payload.is_co_insured));
+  }
 
-    if (intervention.requiresSurgicalPreauth) {
-        formData.append("chief_complaint", payload.chief_complaint);
-        formData.append("vital_signs", payload.vital_signs);
-        formData.append("history_of_present_illness", payload.history_of_present_illness);
-        formData.append("physical_examination", payload.physical_examination);
-        formData.append("investigation_report_details", payload.investigation_report_details);
-        formData.append("type_of_anaesthesia", payload.type_of_anaesthesia);
-        formData.append("surgery_date", payload.surgery_date);
-    }
+  if (intervention.requiresSurgicalPreauth) {
+    formData.append('chief_complaint', payload.chief_complaint);
+    formData.append('vital_signs', payload.vital_signs);
+    formData.append('history_of_present_illness', payload.history_of_present_illness);
+    formData.append('physical_examination', payload.physical_examination);
+    formData.append('investigation_report_details', payload.investigation_report_details);
+    formData.append('type_of_anaesthesia', payload.type_of_anaesthesia);
+    formData.append('surgery_date', payload.surgery_date);
+  }
 
-    // Dynamic Attachments
+  // Dynamic Attachments
 
-
-    return formData;
-}
+  return formData;
+};
 
 export const getServiceType = (selectedIntervention: Intervention, visitType?: VisitType): ServiceType => {
-    const paymentMechanism = selectedIntervention.paymentMechanism;
-    const accessPoint = selectedIntervention.accessPoint;
+  const paymentMechanism = selectedIntervention.paymentMechanism;
+  const accessPoint = selectedIntervention.accessPoint;
 
-    if (paymentMechanism.trim().toUpperCase() === "CAPITATION") {
-        return "CAPITATION";
-    }
-    if (paymentMechanism.trim().toUpperCase() === "PER_DIEM") {
-        return "PER_DIEM";
-    }
-    if (accessPoint.trim().toUpperCase() === "IP") {
-        return "INPATIENT";
-    }
-    if (accessPoint.trim().toUpperCase() === "OP") {
-        return "OUTPATIENT";
-    }
-    if (accessPoint.trim().toUpperCase() === "OP AND IP") {
-        return visitType;
-    }
-    throw Error(`Undefined payment mechanism`);
-}
+  if (paymentMechanism.trim().toUpperCase() === 'CAPITATION') {
+    return 'CAPITATION';
+  }
+  if (paymentMechanism.trim().toUpperCase() === 'PER_DIEM') {
+    return 'PER_DIEM';
+  }
+  if (accessPoint.trim().toUpperCase() === 'IP') {
+    return 'INPATIENT';
+  }
+  if (accessPoint.trim().toUpperCase() === 'OP') {
+    return 'OUTPATIENT';
+  }
+  if (paymentMechanism.trim().toUpperCase() === 'CASE BASED') {
+    return 'INPATIENT';
+  }
+  if (accessPoint.trim().toUpperCase() === 'OP AND IP') {
+    return visitType;
+  }
+  throw Error(`Undefined payment mechanism`);
+};
 
 export const fetchConsentToken = async () => {
-    return "";
-}
+  return '';
+};
