@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 
-import { type DefaultWorkspaceProps } from '@openmrs/esm-framework';
+import { useSession, type DefaultWorkspaceProps } from '@openmrs/esm-framework';
 import { type VisitIntervention } from '../../types';
 
 import styles from './attachments.scss';
@@ -12,10 +12,12 @@ import InvoiceComponent from './invoice.component';
 import DischargeSummaryComponent from './discharge-summary';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { sendClaimAttachment } from '../../../../../registry/hie.resource';
 
 interface GenerateAttachmentsProps extends DefaultWorkspaceProps {
   claimInterventions: VisitIntervention[];
   bill: any;
+  consentToken: string;
 }
 
 const GenerateAttachments: React.FC<GenerateAttachmentsProps> = ({
@@ -23,6 +25,7 @@ const GenerateAttachments: React.FC<GenerateAttachmentsProps> = ({
   promptBeforeClosing,
   claimInterventions,
   bill,
+  consentToken,
 }) => {
   const { t } = useTranslation();
   const [previewUrl, setPreviewUrl] = useState<string>();
@@ -39,6 +42,8 @@ const GenerateAttachments: React.FC<GenerateAttachmentsProps> = ({
       generated: false,
     },
   ]);
+  const session = useSession();
+  const locationUuid = session.sessionLocation?.uuid;
 
   const invoiceRef = useRef<HTMLDivElement>(null);
   const dischargeRef = useRef<HTMLDivElement>(null);
@@ -83,9 +88,43 @@ const GenerateAttachments: React.FC<GenerateAttachmentsProps> = ({
 
   const docTypes = claimInterventions[0].applicable_document_types;
 
-  const handleSubmit = () => {
-    if (!documents.some((d) => d.generated)) return;
-    closeWorkspace();
+  const fileToBase64 = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onload = () => {
+        const result = reader.result as string;
+        resolve(result.split(',')[1]);
+      };
+
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+  const handleSubmit = async () => {
+    if (!documents.some((d) => d.generated)) {
+      return;
+    }
+
+    try {
+      for (const document of documents) {
+        if (!document.file) continue;
+
+        const fileBlob = await fileToBase64(document.file);
+
+        await sendClaimAttachment(
+          consentToken,
+          document.name,
+          claimInterventions[0].intervention_code,
+          [fileBlob],
+          locationUuid!,
+        );
+      }
+
+      closeWorkspace();
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const handleDiscard = () => {

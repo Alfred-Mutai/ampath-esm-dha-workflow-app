@@ -3,33 +3,34 @@ import { Button, Select, SelectItem, Tag, TextInput } from '@carbon/react';
 
 import styles from './attachments.scss';
 import { TrashCan, View } from '@carbon/react/icons';
-import { type UploadedFile } from './type';
+import { type Attachment, type UploadedFile } from './type';
 
 interface AttachmentComponentProps {
-  docTypes: any[];
-  files: UploadedFile[];
-  removeFile: (id: string) => void;
-  addFiles: (selectedFiles: FileList | null) => void;
+  attachment: Attachment;
+  docTypes: string[];
+  addFiles: (attachmentId: string, selectedFiles: FileList | null) => void;
+  removeFile: (attachmentId: string, fileId: string) => void;
+  updateAttachment: (attachmentId: string, field: 'documentType' | 'title', value: string) => void;
   setPreviewUrl: React.Dispatch<React.SetStateAction<string | undefined>>;
   setPreviewOpen: React.Dispatch<React.SetStateAction<boolean>>;
   removeAttachment: (id: string) => void;
   canDelete: boolean;
-  attachmentId: string;
 }
 const AttachmentComponent: React.FC<AttachmentComponentProps> = ({
+  attachment,
   docTypes,
-  files,
-  removeFile,
   addFiles,
+  removeFile,
+  updateAttachment,
   setPreviewUrl,
   setPreviewOpen,
   removeAttachment,
   canDelete,
-  attachmentId,
 }) => {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const MAX_FILE_SIZE = 10 * 1024 * 1024;
   return (
-    <>
+    <div className={styles.attachment}>
       <div
         style={{
           display: 'flex',
@@ -39,13 +40,24 @@ const AttachmentComponent: React.FC<AttachmentComponentProps> = ({
         }}
       >
         {canDelete && (
-          <Button kind="danger--ghost" size="sm" renderIcon={TrashCan} onClick={() => removeAttachment(attachmentId)} />
+          <Button
+            kind="danger--ghost"
+            size="sm"
+            renderIcon={TrashCan}
+            onClick={() => removeAttachment(attachment.id)}
+          />
         )}
       </div>
       <div className={styles.formContent}>
         <div className={styles.subSection}>
-          <Select id="doc" labelText="Select Document Type">
+          <Select
+            id={`doc-${attachment.id}`}
+            labelText="Document Type"
+            value={attachment.documentType}
+            onChange={(e) => updateAttachment(attachment.id, 'documentType', e.target.value)}
+          >
             <SelectItem value="" text="Select" />
+
             {docTypes.map((document) => (
               <SelectItem key={document} value={document} text={document} />
             ))}
@@ -58,16 +70,10 @@ const AttachmentComponent: React.FC<AttachmentComponentProps> = ({
           }}
         >
           <TextInput
-            defaultValue=""
-            id="document-title"
+            id={`title-${attachment.id}`}
             labelText="Document Title"
-            maxCount={10}
-            onChange={function Kbe() {}}
-            onClick={function Kbe() {}}
-            placeholder="Placeholder text"
-            size="md"
-            type="text"
-            warnText="Warning message that is really long can wrap to more lines but should not be excessively long."
+            value={attachment.title}
+            onChange={(e) => updateAttachment(attachment.id, 'title', e.target.value)}
           />
         </div>
       </div>
@@ -75,7 +81,7 @@ const AttachmentComponent: React.FC<AttachmentComponentProps> = ({
         <h4>Uploaded Files</h4>
 
         <div className={styles.fileList}>
-          {files.map(({ id, file }) => (
+          {attachment.files.map(({ id, file }) => (
             <div key={id} className={styles.fileItem}>
               <span>{file.name}</span>
 
@@ -91,7 +97,7 @@ const AttachmentComponent: React.FC<AttachmentComponentProps> = ({
                 View
               </Button>
 
-              <Button kind="ghost" size="sm" renderIcon={TrashCan} onClick={() => removeFile(id)}>
+              <Button kind="ghost" size="sm" renderIcon={TrashCan} onClick={() => removeFile(attachment.id, id)}>
                 Remove
               </Button>
             </div>
@@ -102,7 +108,7 @@ const AttachmentComponent: React.FC<AttachmentComponentProps> = ({
           Add File
         </Button>
         <div className={styles.applicableFiles}>
-          Allowed file types: <strong>PNG, JPG, PDF</strong>
+          Allowed file types: <strong>PNG, JPG, PDF - max 10MB</strong>
         </div>
 
         <input
@@ -112,12 +118,29 @@ const AttachmentComponent: React.FC<AttachmentComponentProps> = ({
           hidden
           accept=".png,.jpg,.jpeg,.pdf,image/png,image/jpeg,application/pdf"
           onChange={(e) => {
-            addFiles(e.target.files);
+            const selectedFiles = e.target.files;
+
+            if (!selectedFiles) return;
+
+            const oversizedFiles = Array.from(selectedFiles).filter((file) => file.size > MAX_FILE_SIZE);
+
+            if (oversizedFiles.length > 0) {
+              alert(
+                `The following file(s) exceed the maximum size of 10 MB:\n\n${oversizedFiles
+                  .map((f) => f.name)
+                  .join('\n')}`,
+              );
+
+              e.target.value = '';
+              return;
+            }
+
+            addFiles(attachment.id, selectedFiles);
             e.target.value = '';
           }}
         />
       </div>
-    </>
+    </div>
   );
 };
 

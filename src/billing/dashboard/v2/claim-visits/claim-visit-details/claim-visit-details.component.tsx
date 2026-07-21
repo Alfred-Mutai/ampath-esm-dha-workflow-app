@@ -64,6 +64,7 @@ const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({ claimsVisit, loca
 
   const handleAddAttachment = () => {
     launchWorkspace('upload-intervention-attachments-workspace', {
+      consentToken: claimsVisit.authorization_code,
       patientUuid: '10',
       claimInterventions: claimsVisit.interventions,
       bill: patientBillDetails,
@@ -72,6 +73,7 @@ const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({ claimsVisit, loca
 
   const handleGenerateAttachment = () => {
     launchWorkspace('generate-intervention-attachments-workspace', {
+      consentToken: claimsVisit.authorization_code,
       patientUuid: '10',
       claimInterventions: claimsVisit.interventions,
       bill: patientBillDetails,

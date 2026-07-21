@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { Button, ButtonSet, Form, Modal, Select, SelectItem, Tag, TextInput } from '@carbon/react';
-import { type DefaultWorkspaceProps } from '@openmrs/esm-framework';
+import { useSession, type DefaultWorkspaceProps } from '@openmrs/esm-framework';
 import { useTranslation } from 'react-i18next';
 import styles from './attachments.scss';
 import { type VisitIntervention } from '../../types';
 import { type UploadedFile } from './type';
 import AttachmentComponent from './attachment.component';
+import { sendClaimAttachment } from '../../../../../registry/hie.resource';
 
 interface AddInterventionAttachmentWorkspaceProps extends DefaultWorkspaceProps {
+  consentToken: string;
   patientUuid?: string;
   claimInterventions: VisitIntervention[];
 }
@@ -16,9 +18,9 @@ const AddInterventionAttachmentsWorkspace: React.FC<AddInterventionAttachmentWor
   closeWorkspace,
   promptBeforeClosing,
   claimInterventions,
+  consentToken,
 }) => {
   const { t } = useTranslation();
-  const [files, setFiles] = useState<UploadedFile[]>([]);
   const [previewUrl, setPreviewUrl] = useState<string>();
   const [previewOpen, setPreviewOpen] = useState(false);
 
@@ -26,16 +28,66 @@ const AddInterventionAttachmentsWorkspace: React.FC<AddInterventionAttachmentWor
     id: crypto.randomUUID(),
     documentType: '',
     title: '',
-    files: [],
+    files: [] as UploadedFile[],
   });
 
   const [attachments, setAttachments] = useState([createAttachment()]);
+  const session = useSession();
 
-  const handleSubmit = () => {
-    if (files.length === 0) return;
-    closeWorkspace();
+  const locationUuid = session.sessionLocation?.uuid;
+
+  const fileToBase64 = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onload = () => {
+        const result = reader.result as string;
+
+        // Remove the data:...;base64, prefix if the API expects raw base64
+        resolve(result.split(',')[1]);
+      };
+
+      reader.onerror = reject;
+
+      reader.readAsDataURL(file);
+    });
+
+  const handleSubmit = async () => {
+    if (!attachments.some((a) => a.files.length > 0)) {
+      return;
+    }
+
+    try {
+      for (const attachment of attachments) {
+        const fileBlobs = await Promise.all(attachment.files.map(({ file }) => fileToBase64(file)));
+        // for (const attachment of attachments) {
+        //   for (const { file } of attachment.files) {
+        //     const fileBlob = await fileToBase64(file);
+
+        //     await sendClaimAttachment(
+        //       consentToken,
+        //       attachment.documentType,
+        //       interventionCode,
+        //       [fileBlob],
+        //       locationUuid,
+        //     );
+        //   }
+        // }
+
+        await sendClaimAttachment(
+          consentToken,
+          attachment.documentType,
+          claimInterventions[0].intervention_code,
+          fileBlobs,
+          'locationUuid',
+        );
+      }
+
+      closeWorkspace();
+    } catch (error) {
+      console.error(error);
+    }
   };
-
   const allowedTypes = ['image/png', 'image/jpeg', 'application/pdf'];
 
   const handleDiscard = () => {
@@ -46,7 +98,7 @@ const AddInterventionAttachmentsWorkspace: React.FC<AddInterventionAttachmentWor
 
   const docTypes = claimInterventions[0].applicable_document_types;
 
-  const addFiles = (selectedFiles: FileList | null) => {
+  const addFiles = (attachmentId: string, selectedFiles: FileList | null) => {
     if (!selectedFiles) return;
 
     const uploaded: UploadedFile[] = Array.from(selectedFiles)
@@ -56,11 +108,42 @@ const AddInterventionAttachmentsWorkspace: React.FC<AddInterventionAttachmentWor
         file,
       }));
 
-    setFiles((prev) => [...prev, ...uploaded]);
+    setAttachments((prev) =>
+      prev.map((attachment) =>
+        attachment.id === attachmentId
+          ? {
+              ...attachment,
+              files: [...attachment.files, ...uploaded],
+            }
+          : attachment,
+      ),
+    );
   };
 
-  const removeFile = (id: string) => {
-    setFiles((prev) => prev.filter((file) => file.id !== id));
+  const removeFile = (attachmentId: string, fileId: string) => {
+    setAttachments((prev) =>
+      prev.map((attachment) =>
+        attachment.id === attachmentId
+          ? {
+              ...attachment,
+              files: attachment.files.filter((f) => f.id !== fileId),
+            }
+          : attachment,
+      ),
+    );
+  };
+
+  const updateAttachment = (attachmentId: string, field: 'title' | 'documentType', value: string) => {
+    setAttachments((prev) =>
+      prev.map((attachment) =>
+        attachment.id === attachmentId
+          ? {
+              ...attachment,
+              [field]: value,
+            }
+          : attachment,
+      ),
+    );
   };
 
   const removeAttachment = (id: string) => {
@@ -69,6 +152,8 @@ const AddInterventionAttachmentsWorkspace: React.FC<AddInterventionAttachmentWor
       return prev.filter((attachment) => attachment.id !== id);
     });
   };
+
+  const totalFiles = attachments.reduce((count, attachment) => count + attachment.files.length, 0);
 
   return (
     <>
@@ -94,11 +179,11 @@ const AddInterventionAttachmentsWorkspace: React.FC<AddInterventionAttachmentWor
         {attachments.map((attachment) => (
           <AttachmentComponent
             key={attachment.id}
-            attachmentId={attachment.id}
+            attachment={attachment}
             docTypes={docTypes}
-            files={files}
-            removeFile={removeFile}
             addFiles={addFiles}
+            removeFile={removeFile}
+            updateAttachment={updateAttachment}
             setPreviewUrl={setPreviewUrl}
             setPreviewOpen={setPreviewOpen}
             removeAttachment={removeAttachment}
@@ -116,8 +201,8 @@ const AddInterventionAttachmentsWorkspace: React.FC<AddInterventionAttachmentWor
           <Button kind="secondary" onClick={handleDiscard}>
             {t('discard', 'Discard')}
           </Button>
-          <Button disabled={files.length === 0} kind="primary" onClick={handleSubmit}>
-            {t('upload', `Upload ${files.length} Files`)}
+          <Button disabled={totalFiles === 0} kind="primary" onClick={handleSubmit}>
+            {t('upload', `Upload ${totalFiles} File${totalFiles === 1 ? '' : 's'}`)}
           </Button>
         </ButtonSet>
       </Form>

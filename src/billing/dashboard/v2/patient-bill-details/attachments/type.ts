@@ -33,3 +33,10 @@ export interface DischargeSummary {
   dischargeDate: string;
   clinician: string;
 }
+
+export type Attachment = {
+  id: string;
+  documentType: string;
+  title: string;
+  files: UploadedFile[];
+};

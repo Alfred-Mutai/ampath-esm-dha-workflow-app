@@ -16,7 +16,7 @@
 .formContent {
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
+  // overflow-y: auto;
 }
 
 .uploadSection {
@@ -73,4 +73,14 @@
 
 .addAttachment {
   margin: 1rem,
+}
+
+.attachment {
+  display: flex;
+  flex-direction: column;
+  margin: 2rem 0;
+  padding: 1.5rem;
+  background-color: #f4f4f4; 
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
 }
