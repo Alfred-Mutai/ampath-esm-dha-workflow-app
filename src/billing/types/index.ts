@@ -112,3 +112,30 @@ export type AmrsVisitDiagnosisDto = {
 export type AmrsVisitDiagnosisResponse = {
   results: AmrsVisitDiagnosis[];
 }
+
+
+export type AmrsMaternityDiagnosis = {
+  uuid: string;
+  encounter_id: number;
+  encounter_datetime: string;
+  encounter_type: string;
+  icd11_code: string;
+  hl7_code: string;
+  concept_source_name: string;
+  practioner_nat_id: string;
+  practitioner_speciality: string;
+  practitioner_body: string;
+  practitioner_identifier_type: string;
+  patient_id: string; 
+  facility: string;
+  concept_id: string; 
+  value_coded: string;
+};
+
+export type AmrsMaternityDiagnosisDto = {
+  billingDate: string;
+  patientUuid: string;
+};
+export type AmrsMaternityDiagnosisResponse = {
+  results: AmrsMaternityDiagnosis[];
+}

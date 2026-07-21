@@ -7,6 +7,7 @@ import {
   type PatientPayment,
 } from '../types';
 import {
+  fetchMaternityDiagnosis,
   fetchPatientBillPayments,
   fetchPatientDiagnosis,
   fetchPatientFacilityBillDetails,
@@ -15,7 +16,7 @@ import { showSnackbar } from '@openmrs/esm-styleguide';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from '@carbon/react';
 import BillDetails from './bill-details/bill-details';
 import PatientClaimDetails from './claim-details/patient-claim-details.component';
-import { type AmrsVisitDiagnosisDto, type AmrsVisitDiagnosis } from '../../../types';
+import { type AmrsVisitDiagnosisDto, type AmrsVisitDiagnosis, AmrsMaternityDiagnosisDto } from '../../../types';
 interface patientBillDetailsProps {
   patientUuid: string;
   locationUuid: string;
@@ -28,14 +29,15 @@ const PatientBillDetails: React.FC<patientBillDetailsProps> = ({ patientUuid, lo
   const facilityPatientDetail = useMemo(() => {
     return patientBillDetails[0] ?? null;
   }, [patientBillDetails]);
-  const billStatus = useMemo(()=>getBillStatus(patientBillDetails),[patientBillDetails]);
-  const [patientAmrsVisitDiagnosis,setPatientAmrsVisitDiagnosis] = useState<AmrsVisitDiagnosis[]>([]);
+  const billStatus = useMemo(() => getBillStatus(patientBillDetails), [patientBillDetails]);
+  const [patientAmrsVisitDiagnosis, setPatientAmrsVisitDiagnosis] = useState<AmrsVisitDiagnosis[]>([]);
 
   useEffect(() => {
     if (locationUuid && patientUuid && billingDate) {
       getPatientBillDetails();
       getPatientPayments();
       getPatientAmrsVisitDiagnosis();
+      getPatientAmrsMaternityDiagnosis();
     }
   }, [locationUuid, patientUuid, billingDate]);
   async function getPatientBillDetails() {
@@ -86,10 +88,10 @@ const PatientBillDetails: React.FC<patientBillDetailsProps> = ({ patientUuid, lo
   }
   function getBillStatus(patientBillDetails: PatientFacilityBillDetails[]) {
     if (patientBillDetails.length > 0) {
-       const hasPostedBill = patientBillDetails.some((s) => {
+      const hasPostedBill = patientBillDetails.some((s) => {
         return s.paid_status === 'POSTED';
       });
-      if(hasPostedBill){
+      if (hasPostedBill) {
         return 'PARTIALLY PAID'
       }
       const hasPendingBill = patientBillDetails.some((s) => {
@@ -120,11 +122,33 @@ const PatientBillDetails: React.FC<patientBillDetailsProps> = ({ patientUuid, lo
       });
     }
   }
+  async function getPatientAmrsMaternityDiagnosis() {
+    const amrsMaternityDiagnosisPayload = getPatientAmrsMaternityDiagnosisPayload();
+    try {
+      const resp: any = await fetchMaternityDiagnosis(amrsMaternityDiagnosisPayload);
+      if (resp && resp.length > 0) {
+        const results = resp.filter((r) => r?.uuid != null).map(v => ({ ...v, practitioner_identifier_type: "National ID" }));
+        setPatientAmrsVisitDiagnosis((prev) => ([...prev, ...results]));
+      }
+    } catch (error) {
+      showSnackbar({
+        title: 'Error fetching patient maternity diagnosis',
+        kind: 'error',
+        subtitle: 'An error occurred while fetching the patient maternity diagnosis',
+      });
+    }
+  }
   function getPatientAmrsVisitDiagnosisPayload(): AmrsVisitDiagnosisDto {
     return {
       patientUuid: patientUuid,
       visitDate: billingDate,
       locationUuid: locationUuid
+    };
+  }
+  function getPatientAmrsMaternityDiagnosisPayload(): AmrsMaternityDiagnosisDto {
+    return {
+      patientUuid: patientUuid,
+      billingDate: billingDate
     };
   }
   return (
@@ -148,8 +172,8 @@ const PatientBillDetails: React.FC<patientBillDetailsProps> = ({ patientUuid, lo
               <div className={styles.pdCol}>
                 <strong>AMRS Universl ID:</strong> {facilityPatientDetail.amrs_universal_id}
               </div>
-               <div className={styles.pdCol}>
-                <strong>Bill Status:</strong> { billStatus ?? ''}
+              <div className={styles.pdCol}>
+                <strong>Bill Status:</strong> {billStatus ?? ''}
               </div>
             </>
           ) : (
@@ -165,12 +189,12 @@ const PatientBillDetails: React.FC<patientBillDetailsProps> = ({ patientUuid, lo
             <TabPanels>
               <TabPanel>
                 {patientBillDetails && (
-                  <BillDetails 
-                  patientBillDetails={patientBillDetails} 
-                  patientPayments={patientBillPayments} 
-                  amrsVisitDiagnosis={patientAmrsVisitDiagnosis}
-                  locationUuid = {locationUuid}
-                  consentToken={consentToken}
+                  <BillDetails
+                    patientBillDetails={patientBillDetails}
+                    patientPayments={patientBillPayments}
+                    amrsVisitDiagnosis={patientAmrsVisitDiagnosis}
+                    locationUuid={locationUuid}
+                    consentToken={consentToken}
                   />
                 )}
               </TabPanel>

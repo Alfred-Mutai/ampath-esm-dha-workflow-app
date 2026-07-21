@@ -23,7 +23,7 @@ import {
   type RemoveClaimLineDto,
 } from './dashboard/v2/types';
 import { getHieBaseUrl } from '../claims/utils';
-import { type AmrsVisitDiagnosis, type AmrsVisitDiagnosisDto, type AmrsVisitDiagnosisResponse } from './types';
+import { type AmrsMaternityDiagnosis, type AmrsMaternityDiagnosisDto, type AmrsMaternityDiagnosisResponse, type AmrsVisitDiagnosis, type AmrsVisitDiagnosisDto, type AmrsVisitDiagnosisResponse } from './types';
 import { useCallback } from 'react';
 import useSWR, { mutate } from 'swr';
 
@@ -233,6 +233,16 @@ export async function fetchPatientDiagnosis(
   const patientDiagnosisUrl = `${etlBaseUrl}/patient/diagnosis?visitDate=${amrsVisitDiagnosisDto.visitDate}&patientUuid=${amrsVisitDiagnosisDto.patientUuid}&locationUuid=${amrsVisitDiagnosisDto.locationUuid}`;
   const response = await openmrsFetch(patientDiagnosisUrl);
   const data = (await response.json()) as AmrsVisitDiagnosisResponse;
+  return data.results ?? [];
+}
+
+export async function fetchMaternityDiagnosis(
+  amrsMaternityDiagnosisDto: AmrsMaternityDiagnosisDto,
+): Promise<AmrsMaternityDiagnosis[]> {
+  const etlBaseUrl = await getEtlBaseUrl();
+  const patientDiagnosisUrl = `${etlBaseUrl}/maternity-diagnosis-doctor?patientUuid=${amrsMaternityDiagnosisDto.patientUuid}&billingDate=${amrsMaternityDiagnosisDto.billingDate}`;
+  const response = await openmrsFetch(patientDiagnosisUrl);
+  const data = (await response.json()) as AmrsMaternityDiagnosisResponse;
   return data.results ?? [];
 }
 
