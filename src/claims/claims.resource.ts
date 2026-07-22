@@ -58,6 +58,14 @@ export const useBenefitUtilizations = (clientRegistryId: string, interventionCod
 
   const results = data?.data;
 
+   if (results && 'error' in results && 'message' in results) {
+    return {
+      benefitUtilizations: null,
+      error,
+      isLoadingClientSubBenefits: isLoading,
+    }
+  }
+
   return {
     benefitUtilizations: results,
     error,

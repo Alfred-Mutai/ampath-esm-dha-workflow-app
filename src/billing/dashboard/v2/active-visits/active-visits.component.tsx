@@ -10,7 +10,7 @@ import TableToolbar from '../shared/table-toolbar.component';
 import EmptyState from '../shared/empty-state.component';
 import SendToQueueModal from '../../../../registry/modal/send-to-triage/send-to-queue.modal';
 
-const ActiveVisits: React.FC<{ date?: string }> = ({ date }) => {
+const ActiveVisits: React.FC<{ date?: string, onDateChange?: (value: string) => void }> = ({ date, onDateChange }) => {
     const [searchString, setSearchString] = useState('');
     const { isLoading, activeVisits } = useActiveVisits(date);
     const [patientUuid, setPatientUuid] = useState("");
@@ -112,6 +112,7 @@ const ActiveVisits: React.FC<{ date?: string }> = ({ date }) => {
             search={searchString}
             onSearch={setSearchString}
             searchPlaceholder={t('searchThisList', 'Search this list')}
+            onDate={onDateChange}
         />
         {(searchResults?.length ?? 0) === 0 ? (
             <div className={styles.tableCard}>
