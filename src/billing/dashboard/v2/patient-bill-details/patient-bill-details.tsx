@@ -110,9 +110,7 @@ const PatientBillDetails: React.FC<patientBillDetailsProps> = ({ patientUuid, lo
     try {
       const resp = await fetchPatientDiagnosis(amrsVisitDiagnosisPayload);
       if (resp && resp.length > 0) {
-        setPatientAmrsVisitDiagnosis(resp);
-      } else {
-        setPatientAmrsVisitDiagnosis([]);
+        setPatientAmrsVisitDiagnosis((prev) => ([...prev, ...resp]));
       }
     } catch (error) {
       showSnackbar({
