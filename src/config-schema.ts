@@ -167,6 +167,10 @@ export const configSchema = {
   cashPaymentModeUuid: {
     _type: Type.ConceptUuid,
     _default: "63eff7a4-6f82-43c4-a333-dbcc58fe9f74"
+  },
+  subBenefitCodesWithHiddenClaimWidget: {
+    _type: Type.String,
+    _default: ["SHA-08-SC-02"]
   }
 };
 
@@ -229,6 +233,7 @@ export interface ConfigObject {
   maternityDischargeEncounterTypeUuid: string;
   shaPaymentModeUuid: string;
   cashPaymentModeUuid: string;
+  subBenefitCodesWithHiddenClaimWidget: Array<string>;
 }
 
 const queueEntryActions = ['move', 'call', 'edit', 'transition', 'signOff', 'remove', 'delete', 'undo'] as const;

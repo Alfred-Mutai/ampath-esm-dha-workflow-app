@@ -1,9 +1,9 @@
 import { Order } from "@openmrs/esm-patient-common-lib";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { act, useEffect, useMemo, useRef, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { validationSchema, type CreateOrderBillFormSchema } from "./schema";
-import { ExtensionSlot, FetchResponse, OpenmrsResource, ResponsiveWrapper, showSnackbar, useConfig, useDebounce, useLayoutType, useVisit } from "@openmrs/esm-framework";
+import { ExtensionSlot, FetchResponse, OpenmrsResource, ResponsiveWrapper, showSnackbar, useConfig, useDebounce, useLayoutType, useSession, useVisit } from "@openmrs/esm-framework";
 import { useTranslation } from "react-i18next";
 import { Column, FilterableMultiSelect, Select, SelectItem, Form, FormGroup, Stack, TextInput, InlineNotification, ButtonSet, Button, InlineLoading, Search, Layer, Tile, FormLabel } from "@carbon/react";
 import styles from './create-order-bill-form.scss';
@@ -14,7 +14,8 @@ import { generateUpdateBillLineItems } from "../../utils";
 import { IdentifierTypesUuids } from "../../../resources/identifier-types";
 import { type ConfigObject } from "../../../config-schema";
 import { type ClaimIntervention } from "../../../claims";
-import { getConsentToken, getServiceType } from "../../../shared/services/claims.resource";
+import { getConsentToken, getPaymentMode, getServiceType } from "../../../shared/services/claims.resource";
+import { useProviderClaimPreview } from "../../billing-claims.resource";
 
 interface CreateOrderBillFormProps {
     closeWorkspace: () => void;
@@ -34,9 +35,11 @@ const CreateOrderBillForm: React.FC<CreateOrderBillFormProps> = ({
     const { currentDayBills } = usePatientBills(order?.patient?.uuid);
     const { identifiers } = usePatientIdentifiers(order?.patient?.uuid);
     const { cashPoints } = useCashPoint();
+    const sessionLocation = useSession();
+    const { claimVisit, isLoading: isLoadingClaimVisits } = useProviderClaimPreview(getConsentToken(activeVisit), sessionLocation?.sessionLocation?.uuid);
     const patientUuid = order?.patient?.uuid;
     const conceptUuid = order?.concept?.uuid;
-    const { nonSHAPaymentModes, consultationBillableServiceNames } = useConfig<ConfigObject>();
+    const { nonSHAPaymentModes, consultationBillableServiceNames, subBenefitCodesWithHiddenClaimWidget } = useConfig<ConfigObject>();
     const [searchTerm, setSearchTerm] = useState('');
     const [triggerAddIntervention, setTriggerAddIntervention] = useState<boolean>(false);
     const [interventionResult, setInterventionResult] = useState<ClaimIntervention>();
@@ -131,16 +134,37 @@ const CreateOrderBillForm: React.FC<CreateOrderBillFormProps> = ({
     }, [servicePrices, selectedServicePriceUuid]);
 
     const initialUnitPriceUuid = useMemo(() => {
-        if (billableItem && billableItem.length && initialPriceName) {
+        if (billableItem && billableItem.length) {
             const serviceUuid = billableItem[0]?.uuid ?? "";
 
-            const initialServicePriceUuid = servicePrices?.find(sP => sP?.paymentMode?.name?.toUpperCase() === initialPriceName.toUpperCase())?.uuid;
+            let initialServicePriceUuid = "";
+            if (initialPriceName) {
+                initialServicePriceUuid = servicePrices?.find(sP => sP?.paymentMode?.name?.toUpperCase() === initialPriceName.toUpperCase())?.uuid;
+            }
+
+            if (activeVisit && !initialPriceName) {
+                const paymentModeUuid = getPaymentMode(activeVisit);
+                if (paymentModeUuid) {
+                    initialServicePriceUuid = servicePrices?.find(sP => sP?.paymentMode?.uuid === paymentModeUuid)?.uuid;
+                }
+            }
+
             const value = serviceUuid + "#" + initialServicePriceUuid;
             setValue("unitPrice", value);
             return value;
         }
         return null;
-    }, [billableItem, initialPriceName]);
+    }, [billableItem, initialPriceName, activeVisit]);
+
+    const showClaimWidget = useMemo(() => {
+        if (!isLoadingClaimVisits && claimVisit) {
+            if ("error" in claimVisit) {
+                return false;
+            }
+            return claimVisit.interventions.some((i) => !subBenefitCodesWithHiddenClaimWidget.includes(i.sub_benefit_code));
+        }
+        return false;
+    }, [claimVisit, isLoadingClaimVisits])
 
     const onAddIntervention = (result: ClaimIntervention) => {
         if (result) {
@@ -285,7 +309,7 @@ const CreateOrderBillForm: React.FC<CreateOrderBillFormProps> = ({
 
             setIsSubmitPending(true);
 
-            if (isSHAPaymentMode) {
+            if (isSHAPaymentMode && showClaimWidget) {
                 setPendingSubmitData(data);
                 setTriggerAddIntervention(true);
                 if (interventionResult) {
@@ -472,7 +496,7 @@ const CreateOrderBillForm: React.FC<CreateOrderBillFormProps> = ({
                         />
                     </Column>
                     {
-                        isSHAPaymentMode ?
+                        isSHAPaymentMode && showClaimWidget ?
                             getConsentToken(activeVisit) ?
                                 <Column>
                                     <ExtensionSlot name='billing-claims-slot' state={{ clientRegistryId: crIdentifierId, patientUuid, isNewVisit: false, triggerAddIntervention, onSelectChange: () => { }, onAddIntervention }} />
