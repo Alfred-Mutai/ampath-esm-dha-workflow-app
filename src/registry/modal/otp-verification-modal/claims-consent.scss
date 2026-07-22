@@ -1,0 +1,72 @@
+.consent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #161616;
+}
+
+.attempts {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.dots {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: #e0e0e0;
+}
+
+// A used (failed) attempt
+.dotUsed {
+  background: #da1e28;
+}
+
+// The current, in-progress attempt
+.dotCurrent {
+  background: #0f62fe;
+}
+
+.attemptsLabel {
+  font-size: 0.75rem;
+  color: #6f6f6f;
+  white-space: nowrap;
+}
+
+.otpFallback {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.25rem;
+  padding-top: 0.625rem;
+  border-top: 1px solid #f0f0f0;
+}
+
+.otpFallbackHint {
+  font-size: 0.8125rem;
+  color: #6f6f6f;
+}
+
+.useOtp {
+  // Sit the link-style action snug against its hint.
+  padding-left: 0.5rem;
+  padding-right: 0.75rem;
+}

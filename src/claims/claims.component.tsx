@@ -1,4 +1,5 @@
-import { Button, InlineLoading, Row, Select, SelectItem, Tag, TextInput } from '@carbon/react';
+import { Button, ComboBox, InlineLoading, Loading, Tag, TextInput } from '@carbon/react';
+import styles from './claims.component.scss';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   createClaimsVisit,
@@ -67,10 +68,9 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
   const { t } = useTranslation();
 
   useEffect(() => {
-    if (benefitUtilizations) {
-      const benefitUtilization = benefitUtilizations[0];
-      setIsBenefitEligible(benefitUtilization.computationalDetail.eligibility);
-    }
+    // The endpoint returns an empty list for clients with no utilization record,
+    // so neither the first entry nor its computational detail is guaranteed.
+    setIsBenefitEligible(benefitUtilizations?.[0]?.computationalDetail?.eligibility ?? false);
   }, [benefitUtilizations]);
 
   useEffect(() => {
@@ -228,70 +228,133 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
     }
   };
 
-  return (
-    <>
-      {/* Benefits */}
-      {isLoadingClientSubBenefits ? (
-        <InlineLoading description="Loading client sub-benefits" />
-      ) : (
-        <Select
-          id="client-sub-benefits"
-          labelText="Client sub benefits"
-          onChange={($event) => {
-            const value = $event.target.value;
-            setSelectedSubBenefitCode(clientSubBenefits.find((sB) => sB.code === value));
-            return onSelectChange('client-sub-benefits', value);
-          }}
-        >
-          <SelectItem value="" text="--Select Sub Benefit--" />
-          {clientSubBenefits &&
-            clientSubBenefits.map((subBenefit) => {
-              return <SelectItem value={subBenefit.code} text={`${subBenefit.name} (${subBenefit.code})`} />;
-            })}
-        </Select>
-      )}
-      {/* Interventions */}
-      <Row>
-        {isLoadingInterventions ? (
-          <InlineLoading description="Loading interventions" />
-        ) : (
-          <Select
-            id="interventions"
-            labelText="Interventions"
-            onChange={($event) => {
-              const value = $event.target.value;
-              const intervention = interventions?.find((i) => i.code === value);
+  // A ComboBox is an editable text input, so a chosen value can be partially
+  // deleted/typed over. Once an item is selected we lock the field: block typing
+  // and partial edits; Backspace/Delete (or the ✕) clears the whole selection so
+  // the user can search again from scratch.
+  const lockSelection =
+    (selected: unknown, onClear: () => void) => (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (!selected || e.ctrlKey || e.metaKey || e.altKey) {
+        return;
+      }
+      if (e.key === 'Backspace' || e.key === 'Delete') {
+        e.preventDefault();
+        e.stopPropagation();
+        onClear();
+      } else if (e.key.length === 1) {
+        // Any single printable character would edit the locked label — block it.
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
 
-              setSelectedIntervention(intervention);
-              onInterventionChange?.(intervention);
-              return onSelectChange('interventions', value);
+  const clearSubBenefit = () => {
+    setSelectedSubBenefitCode(undefined);
+    setSelectedIntervention(undefined);
+    onInterventionChange?.(undefined);
+    onSelectChange('client-sub-benefits', '');
+  };
+
+  const clearIntervention = () => {
+    setSelectedIntervention(undefined);
+    onInterventionChange?.(undefined);
+    onSelectChange('interventions', '');
+  };
+
+  return (
+    <div className={styles.claimFields}>
+      {/* Benefits — searchable */}
+      <div className={styles.field} onKeyDownCapture={lockSelection(selectedSubBenefitCode, clearSubBenefit)}>
+        <ComboBox
+          id="client-sub-benefits"
+          titleText="Client sub benefits"
+          placeholder={isLoadingClientSubBenefits ? 'Loading sub-benefits…' : 'Search sub-benefit'}
+          disabled={isLoadingClientSubBenefits}
+          items={clientSubBenefits ?? []}
+          itemToString={(item) => (item ? `${item.name} (${item.code})` : '')}
+          shouldFilterItem={({ item, inputValue }) => {
+            const selectedLabel = selectedSubBenefitCode
+              ? `${selectedSubBenefitCode.name} (${selectedSubBenefitCode.code})`
+              : '';
+            // Reopening on a selection (input still equals the label) lists all
+            // options again; only a fresh typed query narrows the list.
+            if (!inputValue || inputValue === selectedLabel) {
+              return true;
+            }
+            return `${item?.name ?? ''} ${item?.code ?? ''}`.toLowerCase().includes(inputValue.toLowerCase());
+          }}
+          selectedItem={selectedSubBenefitCode ?? null}
+          onChange={({ selectedItem }) => {
+            setSelectedSubBenefitCode(selectedItem ?? undefined);
+            // Reset the dependent intervention whenever the sub-benefit changes.
+            setSelectedIntervention(undefined);
+            onInterventionChange?.(undefined);
+            return onSelectChange('client-sub-benefits', selectedItem?.code ?? '');
+          }}
+        />
+        {isLoadingClientSubBenefits ? (
+          <Loading small withOverlay={false} className={styles.fieldSpinner} description="Loading sub-benefits" />
+        ) : null}
+      </div>
+      {/* Interventions — searchable, disabled until a sub-benefit is picked, and
+          loads inline within the field while its options are fetched. */}
+      <div className={styles.interventionRow}>
+        <div className={styles.field} onKeyDownCapture={lockSelection(selectedIntervention, clearIntervention)}>
+          <ComboBox
+            id="interventions"
+            titleText="Interventions"
+            placeholder={
+              !selectedSubBenefitCode
+                ? 'Select a sub-benefit first'
+                : isLoadingInterventions
+                  ? 'Loading interventions…'
+                  : 'Search intervention'
+            }
+            disabled={!selectedSubBenefitCode || isLoadingInterventions}
+            items={interventions ?? []}
+            itemToString={(item) => (item ? `${item.name} (${item.code})` : '')}
+            shouldFilterItem={({ item, inputValue }) => {
+              const selectedLabel = selectedIntervention
+                ? `${selectedIntervention.name} (${selectedIntervention.code})`
+                : '';
+              if (!inputValue || inputValue === selectedLabel) {
+                return true;
+              }
+              return `${item?.name ?? ''} ${item?.code ?? ''}`.toLowerCase().includes(inputValue.toLowerCase());
             }}
-          >
-            <SelectItem value="" text="--Select Intervention--" />
-            {interventions &&
-              interventions.map((intervention) => {
-                return <SelectItem value={intervention.code} text={`${intervention.name} (${intervention.code})`} />;
-              })}
-          </Select>
-        )}
+            selectedItem={selectedIntervention ?? null}
+            onChange={({ selectedItem }) => {
+              setSelectedIntervention(selectedItem ?? undefined);
+              onInterventionChange?.(selectedItem ?? undefined);
+              return onSelectChange('interventions', selectedItem?.code ?? '');
+            }}
+          />
+          {isLoadingInterventions ? (
+            <Loading small withOverlay={false} className={styles.fieldSpinner} description="Loading interventions" />
+          ) : null}
+        </div>
         {isLoadingBenefitUtilization ? (
-          <InlineLoading description="Checking eligibility" />
-        ) : benefitUtilizations ? (
+          <InlineLoading className={styles.checkingEligibility} description="Checking eligibility" />
+        ) : benefitUtilizations?.length ? (
           isBenefitEligible ? (
-            <Tag type="green">Eligible</Tag>
+            <Tag size="sm" type="green">
+              Eligible
+            </Tag>
           ) : (
-            <Tag type="red">Not Eligible</Tag>
+            <Tag size="sm" type="red">
+              Not Eligible
+            </Tag>
           )
         ) : (
           <></>
         )}
         {selectedIntervention ? (
           selectedIntervention.needsPreauth && !selectedIntervention.needsManualPreauthApproval ? (
-            <Tag type="blue" onClick={launchPreauthsModal}>
+            <Tag size="sm" type="blue" onClick={launchPreauthsModal}>
               Needs Preauth
             </Tag>
           ) : selectedIntervention.needsPreauth && selectedIntervention.needsManualPreauthApproval ? (
-            <Tag type="blue" onClick={launchPreauthsModal}>
+            <Tag size="sm" type="blue" onClick={launchPreauthsModal}>
               Needs Elective Preauth
             </Tag>
           ) : (
@@ -300,8 +363,8 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
         ) : (
           <></>
         )}
-      </Row>
-    </>
+      </div>
+    </div>
   );
 };
 

@@ -105,6 +105,18 @@ const BillingClaimsDashboard: React.FC<billingClaimsDashboardProps> = () => {
         </div>
         <div className={styles.bcContent}>
           <div className={styles.bcContentTabs}>
+            <DatePicker
+              className={styles.tabRowDate}
+              datePickerType="single"
+              dateFormat="Y-m-d"
+              value={billingDate}
+              maxDate={new Date().toLocaleDateString('en-CA')}
+              onChange={(dates) =>
+                handleDateChange(dates?.[0] ? (dates[0] as Date).toLocaleDateString('en-CA') : '')
+              }
+            >
+              <DatePickerInput id="billing-date" labelText="" placeholder="yyyy-mm-dd" size="sm" />
+            </DatePicker>
             <Tabs selectedIndex={selectedTab} onChange={({ selectedIndex }) => setSelectedTab(selectedIndex)}>
               <TabList scrollDebounceWait={200}>
                 <Tab>Pending clearance</Tab>
@@ -120,11 +132,12 @@ const BillingClaimsDashboard: React.FC<billingClaimsDashboardProps> = () => {
                           Active visits that have started but are not yet in a service queue. Send each patient to
                           triage to begin their consultation clearance.
                         </p>
-                        <ActiveVisits onDateChange={handleDateChange} date={billingDate} />
+                        <ActiveVisits date={billingDate} />
                       </>
                     }
                     initialTab={clearanceNav.key}
                     navNonce={clearanceNav.nonce}
+                    date={billingDate}
                   />
                 </TabPanel>
                 <TabPanel>
