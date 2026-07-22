@@ -60,7 +60,7 @@ export const useBenefitUtilizations = (clientRegistryId: string, interventionCod
 
    if (results && 'error' in results && 'message' in results) {
     return {
-      clientSubBenefits: [],
+      benefitUtilizations: null,
       error,
       isLoadingClientSubBenefits: isLoading,
     }

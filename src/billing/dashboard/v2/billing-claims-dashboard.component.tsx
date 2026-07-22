@@ -120,7 +120,7 @@ const BillingClaimsDashboard: React.FC<billingClaimsDashboardProps> = () => {
                           Active visits that have started but are not yet in a service queue. Send each patient to
                           triage to begin their consultation clearance.
                         </p>
-                        <ActiveVisits />
+                        <ActiveVisits onDateChange={handleDateChange} date={billingDate} />
                       </>
                     }
                     initialTab={clearanceNav.key}
