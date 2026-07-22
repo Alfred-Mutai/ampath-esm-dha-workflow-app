@@ -7,7 +7,7 @@ import styles from './discharge-summary.scss';
 
 interface DischargeSummaryComponentProps {
   bill: any;
-  claimIntervention: VisitIntervention[];
+  claimIntervention: VisitIntervention;
 }
 
 const DischargeSummaryComponent = forwardRef<HTMLDivElement, DischargeSummaryComponentProps>(

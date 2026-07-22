@@ -15,7 +15,7 @@ export async function getOtpWhitelistingStatus(
   locationUuid: string,
 ): Promise<any> {
   const hieBaseUrl = await getHieBaseUrl();
-  const url = `${hieBaseUrl}eligibility/claims-eligibility?identificationNumber=${identifier}&identificationType=${identifierType}&locationUuid=${locationUuid}`;
+  const url = `${hieBaseUrl}/eligibility/claims-eligibility?identificationNumber=${identifier}&identificationType=${identifierType}&locationUuid=${locationUuid}`;
   const response = await openmrsFetch(url);
 
   const data = await response.json();

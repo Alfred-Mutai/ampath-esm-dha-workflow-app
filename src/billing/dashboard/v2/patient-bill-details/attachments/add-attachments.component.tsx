@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Button, ButtonSet, Form, Modal, Select, SelectItem, Tag, TextInput } from '@carbon/react';
-import { useSession, type DefaultWorkspaceProps } from '@openmrs/esm-framework';
+import { showSnackbar, useSession, type DefaultWorkspaceProps } from '@openmrs/esm-framework';
 import { useTranslation } from 'react-i18next';
 import styles from './attachments.scss';
 import { type VisitIntervention } from '../../types';
@@ -10,8 +10,7 @@ import { sendClaimAttachment } from '../../../../../registry/hie.resource';
 
 interface AddInterventionAttachmentWorkspaceProps extends DefaultWorkspaceProps {
   consentToken: string;
-  patientUuid?: string;
-  claimInterventions: VisitIntervention[];
+  claimInterventions: VisitIntervention;
 }
 
 const AddInterventionAttachmentsWorkspace: React.FC<AddInterventionAttachmentWorkspaceProps> = ({
@@ -44,13 +43,23 @@ const AddInterventionAttachmentsWorkspace: React.FC<AddInterventionAttachmentWor
     if (!uploadedFile) return;
 
     try {
-      await sendClaimAttachment(
+      const response = await sendClaimAttachment(
         consentToken,
         attachment.documentType,
-        claimInterventions[0].intervention_code,
+        claimInterventions.intervention_code,
         uploadedFile.file,
         locationUuid!,
       );
+
+      if (response.error) {
+        showSnackbar({
+          kind: 'error',
+          title: 'Error Uploading Attachment',
+          subtitle: response.message,
+        });
+
+        return;
+      }
 
       setAttachments((prev) =>
         prev.map((a) =>
@@ -82,9 +91,9 @@ const AddInterventionAttachmentsWorkspace: React.FC<AddInterventionAttachmentWor
   const allUploaded =
     attachments.length > 0 && attachments.every((a) => a.files.length > 0 && a.files.every((f) => f.uploaded));
 
-  if (!claimInterventions || claimInterventions.length === 0) return null;
+  if (!claimInterventions) return null;
 
-  const docTypes = claimInterventions[0].applicable_document_types;
+  const docTypes = claimInterventions.applicable_document_types;
 
   const addFiles = (attachmentId: string, selectedFiles: FileList | null) => {
     if (!selectedFiles) return;
@@ -157,11 +166,11 @@ const AddInterventionAttachmentsWorkspace: React.FC<AddInterventionAttachmentWor
         >
           <div className={styles.interventionSection}>
             <span>Intervention name</span>
-            <Tag type="blue">{claimInterventions[0].intervention_name}</Tag>
+            <Tag type="blue">{claimInterventions.intervention_name}</Tag>
           </div>
           <div className={styles.interventionSection}>
             <span>Intervention code</span>
-            <Tag type="blue">{claimInterventions[0].intervention_code}</Tag>
+            <Tag type="blue">{claimInterventions.intervention_code}</Tag>
           </div>
         </div>
         {attachments.map((attachment) => (

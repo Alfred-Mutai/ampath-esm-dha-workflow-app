@@ -33,21 +33,23 @@ const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({ claimsVisit, loca
 
   useEffect(() => {
     if (triggerEndVisit && activeVisit) {
-      handleCloseVisit()
+      handleCloseVisit();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [triggerEndVisit, activeVisit]);
 
   function handleCloseVisit() {
-    endVisit(activeVisit?.uuid).then((v) => {
-      showSnackbar({
-        title: 'Success closing claim',
-        kind: 'success',
-        subtitle: 'Claim closed successfully',
+    endVisit(activeVisit?.uuid)
+      .then((v) => {
+        showSnackbar({
+          title: 'Success closing claim',
+          kind: 'success',
+          subtitle: 'Claim closed successfully',
+        });
+      })
+      .catch((err) => {
+        console.error(err);
       });
-    }).catch((err) => {
-      console.error(err);
-    });
   }
 
   const invalidateProviderClaimPreview = useInvalidateProviderClaimPreview();
@@ -102,7 +104,7 @@ const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({ claimsVisit, loca
     });
   };
 
-  const handleSwitchIntervention = () => {
+    const handleSwitchIntervention = () => {
     launchWorkspace('switch-intervention-workspace', {
       consentToken: claimsVisit.authorization_code,
       currentInterventions: claimsVisit.interventions,
@@ -199,7 +201,13 @@ const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({ claimsVisit, loca
               <h6>Interventions</h6>
             </div>
             <div className={styles.cvRow}>
-              {claimsVisit.interventions && <ClaimInterventionDetails claimInterventions={claimsVisit.interventions} />}
+              {claimsVisit.interventions && (
+                <ClaimInterventionDetails
+                  patientBillDetails={patientBillDetails}
+                  claimInterventions={claimsVisit.interventions}
+                  consentToken={claimsVisit.authorization_code}
+                />
+              )}
             </div>
           </div>
           <div className={styles.cvRow}>
@@ -215,14 +223,6 @@ const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({ claimsVisit, loca
               <h6>Doctors</h6>
             </div>
             <div className={styles.cvRow}>{<ClaimDoctors claimDoctors={claimsVisit.claim_doctors ?? []} />}</div>
-          </div>
-          <div className={styles.cvRow}>
-            <div className={styles.cvRow}>
-              <div className={styles.generateButtonSection}>
-                <Button onClick={handleAddAttachment}>Add Attachments</Button>
-                <Button onClick={handleGenerateAttachment}>Generate Attachments</Button>
-              </div>
-            </div>
           </div>
           <div className={styles.cvRow}>
             <div className={styles.cvRow}>
