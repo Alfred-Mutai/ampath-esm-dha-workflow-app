@@ -303,6 +303,15 @@
       "canHide": true,
       "canMaximize": true,
       "width": "narrow"
+    },
+    {
+      "name": "switch-intervention-workspace",
+      "title": "Switch Intervention",
+      "component": "switchInterventionWorkspace",
+      "type": "switch-intervention",
+      "canHide": true,
+      "canMaximize": true,
+      "width": "narrow"
     }
   ],
   "workspaces2": [

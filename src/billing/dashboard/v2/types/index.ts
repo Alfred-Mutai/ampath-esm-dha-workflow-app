@@ -338,3 +338,18 @@ export type AddClaimDiagnosisDto = {
   practitionerIdentificationType: string;
   practitionerRegulationBody: string;
 };
+
+// Switch the claim's current intervention to another eligible one (not
+// restricted to the same sub-benefit). `retainBillItems` aligns with
+// VisitIntervention.switched_lines_retained; `billFrom` / `billTo` are the
+// bill-period date range (ISO `YYYY-MM-DD`) used only when bill items are
+// retained (empty strings otherwise).
+export type SwitchInterventionDto = {
+  consentToken: string;
+  existingInterventionCode: string;
+  newInterventionCode: string;
+  retainBillItems: boolean;
+  billFrom: string;
+  billTo: string;
+  locationUuid: string;
+};

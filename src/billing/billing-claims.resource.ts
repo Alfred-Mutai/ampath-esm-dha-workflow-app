@@ -21,6 +21,7 @@ import {
   type SubmitClaimDto,
   type AddClaimDiagnosisDto,
   type RemoveClaimLineDto,
+  type SwitchInterventionDto,
 } from './dashboard/v2/types';
 import { getHieBaseUrl } from '../claims/utils';
 import { type AmrsMaternityDiagnosis, type AmrsMaternityDiagnosisDto, type AmrsMaternityDiagnosisResponse, type AmrsVisitDiagnosis, type AmrsVisitDiagnosisDto, type AmrsVisitDiagnosisResponse } from './types';
@@ -183,6 +184,36 @@ export async function removeClaimItem(removeClaimLineDto: RemoveClaimLineDto) {
       'content-type': 'application/json'
     },
     body: JSON.stringify(removeClaimLineDto)
+  }).catch((error) => {
+    const message = error?.responseBody?.message ?? "";
+    if (typeof message === "object") {
+      throw `${message?.join(",")}`;
+    }
+    throw message;
+  });
+
+  if (result?.data && "error" in result.data && "message" in result.data) {
+    const message = result.data.message ?? "";
+    throw message;
+  }
+  return result?.data;
+}
+
+// TODO(backend): the `${hieBaseUrl}/interventions/switch` route is not yet
+// exposed by the HIE proxy. An equivalent switch lives on the DHA middleware
+// (`/claims/interventions/switch`, see src/claims/interventions.resource.ts),
+// but this posts the camelCase SwitchInterventionDto through the same OpenMRS
+// proxy the other claim-line mutations use. Wire the backend route before this
+// ships.
+export async function switchClaimIntervention(switchInterventionDto: SwitchInterventionDto) {
+  const { hieBaseUrl } = await getHieBaseUrl();
+  const url = `${hieBaseUrl}/interventions/switch`;
+  const result = await openmrsFetch(url, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json'
+    },
+    body: JSON.stringify(switchInterventionDto)
   }).catch((error) => {
     const message = error?.responseBody?.message ?? "";
     if (typeof message === "object") {

@@ -1,0 +1,191 @@
+@use '@carbon/layout';
+@use '@carbon/type';
+@use '@carbon/colors';
+@use '@openmrs/esm-styleguide/src/vars' as *;
+
+.form {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-06;
+  padding: layout.$spacing-05;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-04;
+  min-width: 0;
+}
+
+.sectionTitle {
+  @include type.type-style('heading-compact-02');
+  color: $ui-05;
+  margin: 0;
+}
+
+.sectionSub {
+  @include type.type-style('label-01');
+  color: $text-02;
+  margin: 0;
+  max-width: 56ch;
+}
+
+.emptyState {
+  padding: layout.$spacing-06;
+  color: $text-02;
+  @include type.type-style('body-01');
+}
+
+/* current intervention summary */
+.currentCard {
+  border: 1px solid $ui-03;
+  background-color: colors.$blue-10;
+  padding: layout.$spacing-04;
+  min-width: 0;
+}
+
+/* alternatives grid — collapses to a single column on narrow widths */
+.ivGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  gap: layout.$spacing-04;
+}
+
+@media (max-width: 42rem) {
+  .ivGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ivTile {
+  text-align: left;
+  background-color: $ui-01;
+  border: 1px solid $ui-03;
+  padding: layout.$spacing-04;
+  cursor: pointer;
+  min-width: 0;
+  transition: border-color 70ms, background-color 70ms;
+
+  &:hover {
+    border-color: colors.$blue-40;
+  }
+}
+
+.ivTileActive {
+  border-color: colors.$blue-60;
+  background-color: colors.$blue-10;
+  box-shadow: inset 0 0 0 1px colors.$blue-60;
+}
+
+.ivHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: layout.$spacing-03;
+  min-width: 0;
+}
+
+.ivCode {
+  @include type.type-style('label-01');
+  font-family: 'IBM Plex Mono', monospace;
+  color: colors.$blue-70;
+  overflow-wrap: anywhere;
+}
+
+.ivName {
+  @include type.type-style('heading-compact-01');
+  color: $ui-05;
+  margin: layout.$spacing-02 0;
+  overflow-wrap: anywhere;
+}
+
+.ivFlags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: layout.$spacing-02;
+  @include type.type-style('label-01');
+  color: $text-02;
+  text-transform: capitalize;
+}
+
+/* retain bill items date range */
+.dateRange {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: layout.$spacing-04;
+}
+
+.tagRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: layout.$spacing-02;
+}
+
+.hintBad {
+  @include type.type-style('label-01');
+  color: colors.$red-60;
+  margin: 0;
+}
+
+/* confirmation prompt — mirrors the claim-workspace switch prompt */
+.switchPrompt {
+  display: flex;
+  align-items: flex-start;
+  gap: layout.$spacing-03;
+  padding: layout.$spacing-04 layout.$spacing-05;
+  background-color: colors.$yellow-10;
+  border-left: 3px solid colors.$yellow-30;
+  min-width: 0;
+}
+
+.switchPrompt svg {
+  color: #b28600;
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.switchBody {
+  min-width: 0;
+}
+
+.switchBody p {
+  @include type.type-style('body-compact-01');
+  color: $ui-05;
+  margin: 0 0 layout.$spacing-03;
+  overflow-wrap: anywhere;
+}
+
+.warn {
+  display: flex;
+  align-items: center;
+  gap: layout.$spacing-02;
+  color: colors.$red-60;
+}
+
+.switchActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: layout.$spacing-03;
+}
+
+/* footer */
+.buttonSet {
+  display: flex;
+  gap: layout.$spacing-03;
+  padding: layout.$spacing-04 layout.$spacing-05;
+  border-top: 1px solid $ui-03;
+}
+
+@media (max-width: 42rem) {
+  .buttonSet {
+    flex-direction: column;
+  }
+}

@@ -176,3 +176,8 @@ export const generateInterventionAttachmentsWorkspace = getAsyncLifecycle(
   () => import('./billing/dashboard/v2/patient-bill-details/attachments/generate-attachments.component'),
   options,
 );
+
+export const switchInterventionWorkspace = getAsyncLifecycle(
+  () => import('./billing/dashboard/v2/claim-visits/switch-intervention/switch-intervention.workspace'),
+  options,
+);

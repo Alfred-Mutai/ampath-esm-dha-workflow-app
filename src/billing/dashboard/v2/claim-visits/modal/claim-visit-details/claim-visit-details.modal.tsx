@@ -23,7 +23,7 @@ const ClaimVisitDetailsModal: React.FC<claimVisitDetailsModalProps> = ({ open, c
       >
         <ModalBody>
           <div className={styles.cvModalLayout}>
-            <ClaimVisitDetails claimsVisit={claimsVisit} locationUuid={locationUuid}/>
+            <ClaimVisitDetails claimsVisit={claimsVisit} locationUuid={locationUuid} />
           </div>
         </ModalBody>
       </Modal>
