@@ -28,6 +28,40 @@ export async function getOtpWhitelistingStatus(
   return data;
 }
 
+export interface OtpWhitelistRecord {
+  guid?: string;
+  created?: string;
+  beneficiaryCrId?: string;
+  beneficiaryName?: string;
+  facilityName?: string;
+  facilityFrCode?: string;
+  reasonType?: string;
+  reason?: string;
+  reviewedByUser?: string;
+  status?: string;
+  biometricsAttempt?: number;
+}
+
+/** List a beneficiary's OTP whitelist requests (pending/approved/rejected). */
+export async function getOtpWhitelistRequests(
+  beneficiaryCrId: string,
+  locationUuid: string,
+): Promise<{ results: OtpWhitelistRecord[] }> {
+  const hieBaseUrl = await getHieBaseUrl();
+  const params = new URLSearchParams({ beneficiaryCrId, locationUuid });
+  const url = `${hieBaseUrl}/client/otp-whitelists?${params.toString()}`;
+  const response = await openmrsFetch(url);
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    const errorText = data.message || 'Failed to fetch OTP whitelist requests';
+    throw new Error(`Request failed with ${response.status}: ${errorText}`);
+  }
+
+  return data;
+}
+
 export async function getPatientContacts(crId: string, locationUuid: string): Promise<PatientContactResponse> {
   const hieBaseUrl = await getHieBaseUrl();
 
@@ -167,14 +201,39 @@ export async function getBiometrictsRequestUrl(
   return data;
 }
 
+// The fingerprint agent (SecuGen/SladeID) runs ON the clinic workstation and
+// exposes a local HTTP endpoint. Because this fetch runs in the browser,
+// `localhost` resolves to the machine the user is on — so a successful response
+// means the agent is installed and running on THAT workstation. A short timeout
+// keeps a filtered/blocked port from hanging the check.
+const BIOMETRIC_AGENT_URL = 'http://localhost:18065/status/';
+
 export async function getWorkstationId(): Promise<BiometricsStatus> {
-  const response = await fetch('http://localhost:18065/status/');
-
-  if (!response.ok) {
-    throw new Error('Unable to connect to biometric service');
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 3000);
+  try {
+    const response = await fetch(BIOMETRIC_AGENT_URL, { signal: controller.signal });
+    if (!response.ok) {
+      throw new Error('Unable to connect to biometric service');
+    }
+    return await response.json();
+  } finally {
+    clearTimeout(timeout);
   }
+}
 
-  return response.json();
+/**
+ * Probe whether the biometric workstation agent is set up on this machine.
+ * Returns true only if the local agent (localhost:18065) responds in time.
+ * Never throws — safe to call to decide whether to offer biometric capture.
+ */
+export async function isBiometricWorkstationAvailable(): Promise<boolean> {
+  try {
+    const workstation = await getWorkstationId();
+    return Boolean(workstation?.workstationID);
+  } catch {
+    return false;
+  }
 }
 
 export async function sendClaimAttachment(

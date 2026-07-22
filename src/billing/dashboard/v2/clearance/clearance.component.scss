@@ -40,6 +40,27 @@
   vertical-align: middle;
 }
 
+.pillSkeleton {
+  display: inline-block;
+  margin-left: layout.$spacing-03;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 999px;
+  vertical-align: middle;
+  background: colors.$gray-20;
+  animation: pillPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pillPulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
 .loading,
 .empty {
   padding: layout.$spacing-06 layout.$spacing-05;

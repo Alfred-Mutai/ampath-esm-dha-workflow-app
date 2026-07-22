@@ -2,3 +2,14 @@
 .tableCard {
   overflow-x: auto;
 }
+
+/* Keep the (bordered) action button tidy and sized to its label on one line. */
+.actionCell {
+  white-space: nowrap;
+}
+.actionCell :global(.cds--btn) {
+  min-height: 2rem;
+  width: max-content;
+  white-space: nowrap;
+  padding-inline: 0.75rem;
+}

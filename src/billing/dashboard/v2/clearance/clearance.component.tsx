@@ -28,6 +28,7 @@ import {
 import PrepaidServices from './prepaid-services.component';
 import TableToolbar from '../shared/table-toolbar.component';
 import EmptyState from '../shared/empty-state.component';
+import { usePendingClearanceVisits } from '../active-visits/active-visits.resource';
 
 const money = (n: number) => (n > 0 ? `KES ${n.toLocaleString('en-KE')}` : 'Waived');
 
@@ -68,7 +69,11 @@ const ClearanceTable: React.FC<{
   if (loading) {
     return <InlineLoading description="Loading…" className={styles.loading} />;
   }
-  const dateMatched = rows.filter((r) => !date || new Date(r.createdAt).toLocaleDateString('en-CA') === date);
+  const dateMatched = rows
+    .filter((r) => !date || new Date(r.createdAt).toLocaleDateString('en-CA') === date)
+    // Awaiting payment is the CASH queue — SHA patients are cleared via their SHA
+    // claim under "Pending clearance", never here. Defensive net for any legacy record.
+    .filter((r) => status !== 'AWAITING_PAYMENT' || !/sha|shif/i.test(r.payer));
   if (dateMatched.length === 0) {
     return (
       <EmptyState message={status === 'AWAITING_PAYMENT' ? 'No patients awaiting clearance.' : 'No cleared patients yet.'} />
@@ -148,8 +153,15 @@ const Clearance: React.FC<{
   const session = useSession();
   const locationUuid = session?.sessionLocation?.uuid ?? '';
   const [reloadKey, setReloadKey] = useState(0);
-  const [counts, setCounts] = useState<{ awaiting: number; cleared: number }>({ awaiting: 0, cleared: 0 });
+  const [counts, setCounts] = useState<{ awaiting: number; cleared: number; prepaid: number }>({
+    awaiting: 0,
+    cleared: 0,
+    prepaid: 0,
+  });
+  const [loadingCounts, setLoadingCounts] = useState(true);
   const [tabIndex, setTabIndex] = useState(0);
+  // SHA visits awaiting clearance — drives the Pending clearance tab count.
+  const { count: pendingCount, isLoading: pendingLoading } = usePendingClearanceVisits(date);
 
   // Order of the sub-tabs (the "pending" tab only exists when pendingTab is passed).
   const tabKeys = [...(pendingTab ? ['pending'] : []), 'awaiting', 'cleared', 'prepaid'];
@@ -160,8 +172,24 @@ const Clearance: React.FC<{
   };
 
   useEffect(() => {
-    getClearanceCounts(locationUuid).then(setCounts);
-  }, [locationUuid, reloadKey]);
+    let active = true;
+    setLoadingCounts(true);
+    getClearanceCounts(locationUuid, date)
+      .then((c) => active && setCounts(c))
+      .finally(() => active && setLoadingCounts(false));
+    return () => {
+      active = false;
+    };
+  }, [locationUuid, reloadKey, date]);
+
+  // A count pill that shows a small skeleton while loading, then the count
+  // (defaulting to 0 when there are none).
+  const countPill = (loading: boolean, value: number) => {
+    if (loading) {
+      return <span className={styles.pillSkeleton} aria-label="Loading count" />;
+    }
+    return <span className={styles.pill}>{value ?? 0}</span>;
+  };
 
   // Jump to the sub-tab requested from the dashboard summary tiles.
   useEffect(() => {
@@ -183,12 +211,10 @@ const Clearance: React.FC<{
       </div>
       <Tabs selectedIndex={tabIndex} onChange={({ selectedIndex }) => setTabIndex(selectedIndex)}>
         <TabList aria-label="Clearance">
-          {pendingTab ? <Tab>Pending clearance</Tab> : null}
-          <Tab>
-            Awaiting payment{counts.awaiting ? <span className={styles.pill}>{counts.awaiting}</span> : null}
-          </Tab>
-          <Tab>Cleared{counts.cleared ? <span className={styles.pill}>{counts.cleared}</span> : null}</Tab>
-          <Tab>Scheduled (prepaid)</Tab>
+          {pendingTab ? <Tab>Pending clearance (SHA){countPill(pendingLoading, pendingCount)}</Tab> : null}
+          <Tab>Awaiting payment (CASH){countPill(loadingCounts, counts.awaiting)}</Tab>
+          <Tab>Cleared{countPill(loadingCounts, counts.cleared)}</Tab>
+          <Tab>Scheduled (prepaid){countPill(loadingCounts, counts.prepaid)}</Tab>
         </TabList>
         <TabPanels>
           {pendingTab ? <TabPanel>{pendingTab}</TabPanel> : null}

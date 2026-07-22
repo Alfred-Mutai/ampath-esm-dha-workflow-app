@@ -1,65 +1,99 @@
 import React, { useMemo, useState } from 'react';
-import { useActiveVisits } from './active-visits.resource';
-import { Button, DataTable, type DataTableRow, DataTableSkeleton, Pagination, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@carbon/react';
-import { usePagination } from '@openmrs/esm-framework';
+import { usePendingClearanceVisits } from './active-visits.resource';
+import { Button, DataTable, type DataTableRow, DataTableSkeleton, Pagination, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tag } from '@carbon/react';
+import { usePagination, type Visit } from '@openmrs/esm-framework';
 import { useTranslation } from 'react-i18next';
 import styles from "./active-visits.scss";
 import dayjs from 'dayjs';
-import { Add, Finance } from '@carbon/react/icons';
 import TableToolbar from '../shared/table-toolbar.component';
 import EmptyState from '../shared/empty-state.component';
 import SendToQueueModal from '../../../../registry/modal/send-to-triage/send-to-queue.modal';
+import { IdentifierTypesUuids } from '../../../../resources/identifier-types';
+
+// OpenMRS renders patient.display as "IDENTIFIER - Full name"; split so the CR
+// number and the name can be shown in their own columns.
+const splitPatientDisplay = (display: string): { crNumber: string; name: string } => {
+    const value = display ?? '';
+    const sep = value.indexOf(' - ');
+    return sep > -1 ? { crNumber: value.slice(0, sep).trim(), name: value.slice(sep + 3).trim() } : { crNumber: '', name: value };
+};
+
+// The Client Registry (CR) number from the patient's identifier list. Returns
+// isCr=true only when the actual CR identifier is found, so a fallback (e.g. a
+// National ID) is never mislabelled with a "CR" prefix.
+const getCrNumber = (visit: Visit): { value: string; isCr: boolean } => {
+    const cr = visit.patient?.identifiers?.find(
+        (i) =>
+            i.identifierType?.uuid === IdentifierTypesUuids.CLIENT_REGISTRY_NO_UUID ||
+            (i.identifierType?.display ?? '').toLowerCase().includes('registry'),
+    )?.identifier;
+    if (cr) {
+        return { value: cr.trim(), isCr: true };
+    }
+    return { value: splitPatientDisplay(visit.patient?.display ?? '').crNumber.trim(), isCr: false };
+};
+
+// Format a CR value for display — prefix "CR" only when it's genuinely the CR.
+const formatCr = (value: string, isCr: boolean): string => {
+    if (!value) return '—';
+    if (!isCr) return value;
+    return /^cr/i.test(value) ? value : `CR${value}`;
+};
+
+// Human "how long they've been waiting" label from the visit start.
+const waitingSince = (startDatetime: string): string => {
+    const mins = dayjs().diff(dayjs(startDatetime), 'minute');
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m`;
+    const hrs = Math.floor(mins / 60);
+    const rem = mins % 60;
+    return rem ? `${hrs}h ${rem}m` : `${hrs}h`;
+};
+
+// Colour the wait so long waits stand out: fresh (green) → 1h+ (magenta) → 2h+ (red).
+const waitingTagType = (mins: number): 'green' | 'magenta' | 'red' =>
+    mins >= 120 ? 'red' : mins >= 60 ? 'magenta' : 'green';
 
 const ActiveVisits: React.FC<{ date?: string, onDateChange?: (value: string) => void }> = ({ date, onDateChange }) => {
     const [searchString, setSearchString] = useState('');
-    const { isLoading, activeVisits } = useActiveVisits(date);
+    const { isLoading, visits: pendingVisits } = usePendingClearanceVisits(date);
     const [patientUuid, setPatientUuid] = useState("");
     const [visitUuid, setVisitUuid] = useState("");
     const [visitTypeUuid, setVisitTypeUuid] = useState("");
     const { t } = useTranslation();
 
     const columns = [
-        {
-            id: "patientName",
-            header: "Patient name",
-            key: "patientName"
-        },
-        {
-            id: "visitType",
-            header: "Visit type",
-            key: "visitType"
-        },
-        {
-            id: "startTime",
-            header: "Start time",
-            key: "startTime"
-        },
-        {
-            id: "action",
-            header: "Action",
-            key: "action"
-        },
-        {
-            id: "visitTypeUuid",
-            header: "",
-            key: "visitTypeUuid"
-        }
+        { id: "patientName", header: "Patient", key: "patientName" },
+        { id: "crNumber", header: "CR number", key: "crNumber" },
+        { id: "visitType", header: "Visit type", key: "visitType" },
+        { id: "payer", header: "Payer", key: "payer" },
+        { id: "startTime", header: "Started", key: "startTime" },
+        { id: "waiting", header: "Waiting", key: "waiting" },
+        { id: "action", header: "Action", key: "action" },
+        { id: "visitTypeUuid", header: "", key: "visitTypeUuid" }
     ];
 
     const activeVisitsTableRows = useMemo(() => {
-        const dayFilter = date ? dayjs(date) : null;
-        return (activeVisits ?? [])
-            .filter((visit) => !dayFilter || dayjs(visit.startDatetime).isSame(dayFilter, 'day'))
-            .map((visit) => ({
+        return (pendingVisits ?? []).map((visit) => {
+            const { name } = splitPatientDisplay(visit.patient.display);
+            const cr = getCrNumber(visit);
+            // Display the CR with its "CR" prefix, e.g. CR7138388758297-0.
+            const crDisplay = formatCr(cr.value, cr.isCr);
+            return {
                 id: visit.uuid,
                 action: visit.patient.uuid,
-                patientName: visit.patient.display,
-                patientIdentifiers: "",//visit.patient.identifiers.map((i) => i.identifier).join(",")
+                patientName: name,
+                crNumber: crDisplay,
+                patientIdentifiers: crDisplay,
                 visitType: visit.visitType.display,
-                startTime: dayjs(visit.startDatetime).format("HH:mm A"),
+                payer: 'SHA',
+                startTime: dayjs(visit.startDatetime).format("DD MMM, HH:mm"),
+                waiting: waitingSince(visit.startDatetime),
+                waitingMinutes: dayjs().diff(dayjs(visit.startDatetime), 'minute'),
                 visitTypeUuid: visit.visitType.uuid
-            }));
-    }, [activeVisits, date]);
+            };
+        });
+    }, [pendingVisits]);
 
     const searchResults = useMemo(() => {
         if (searchString && searchString.trim() !== '') {
@@ -77,7 +111,13 @@ const ActiveVisits: React.FC<{ date?: string, onDateChange?: (value: string) => 
     const [currentPageSize, setPageSize] = useState(10);
     const { goTo, results: paginatedVisits, currentPage } = usePagination(searchResults, currentPageSize);
 
-    const showSkeleton = isLoading && !activeVisits;
+    const showSkeleton = isLoading && pendingVisits.length === 0;
+
+    // Wait minutes keyed by visit id, so the Waiting cell can colour by urgency.
+    const waitingMinutesById = useMemo(
+        () => new Map(activeVisitsTableRows.map((r) => [r.id, r.waitingMinutes])),
+        [activeVisitsTableRows],
+    );
 
     function handleRowClick(row: DataTableRow<any[]>): void {
         row.cells.map(cell => {
@@ -103,7 +143,7 @@ const ActiveVisits: React.FC<{ date?: string, onDateChange?: (value: string) => 
             </div>
         ) : activeVisitsTableRows.length === 0 ? (
             <div className={styles.tableCard}>
-                <EmptyState message="No active visits for the selected date." />
+                <EmptyState message="No SHA patients awaiting clearance for the selected date." />
             </div>
         ) : (
         <>
@@ -116,7 +156,7 @@ const ActiveVisits: React.FC<{ date?: string, onDateChange?: (value: string) => 
         />
         {(searchResults?.length ?? 0) === 0 ? (
             <div className={styles.tableCard}>
-                <EmptyState message="No active visits match your search." />
+                <EmptyState message="No patients match your search." />
             </div>
         ) : (
         <DataTable rows={paginatedVisits} headers={columns}>
@@ -148,16 +188,31 @@ const ActiveVisits: React.FC<{ date?: string, onDateChange?: (value: string) => 
                                         if (cell.info.header === "visitTypeUuid") {
                                             return null;
                                         }
-                                        if (cell.info.header === "action") {
+                                        if (cell.info.header === "payer") {
                                             return (
                                                 <TableCell key={cell.id}>
+                                                    <Tag size="sm" type="teal">{cell.value}</Tag>
+                                                </TableCell>
+                                            );
+                                        }
+                                        if (cell.info.header === "waiting") {
+                                            return (
+                                                <TableCell key={cell.id}>
+                                                    <Tag size="sm" type={waitingTagType(waitingMinutesById.get(row.id) ?? 0)}>
+                                                        {cell.value}
+                                                    </Tag>
+                                                </TableCell>
+                                            );
+                                        }
+                                        if (cell.info.header === "action") {
+                                            return (
+                                                <TableCell key={cell.id} className={styles.actionCell}>
                                                     <Button
-                                                        kind="ghost"
+                                                        kind="tertiary"
                                                         size="sm"
-                                                        // renderIcon={Finance}
                                                         onClick={() => handleRowClick(row)}
                                                     >
-                                                        Manage payments
+                                                        Initiate SHA claim
                                                     </Button>
                                                 </TableCell>
                                             );

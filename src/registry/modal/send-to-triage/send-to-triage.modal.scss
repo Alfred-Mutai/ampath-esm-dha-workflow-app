@@ -1,3 +1,10 @@
+@use '@carbon/layout';
+@use '@carbon/type';
+@use '@carbon/colors';
+@use '@openmrs/esm-styleguide/src/vars' as *;
+
+$header-height: 3rem;
+
 .formSection{
     display: flex;
     flex-direction: column;
@@ -9,12 +16,12 @@
    display: flex;
    flex-direction: row;
    width: 100%;
-   column-gap: 5px;
+   column-gap: layout.$spacing-05;
 }
 .formControl{
    display: flex;
    flex-direction: column;
-   width: 45%;
+   width: 100%;
    row-gap: 5px;
 }
 .actionSection{
@@ -36,4 +43,143 @@
     display: flex;
     flex-direction: column;
     width: 100%;
+}
+
+/* ---- Side drawer shell ---- */
+.overlay {
+  position: fixed;
+  inset: $header-height 0 0 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 7999;
+  animation: fadeIn 160ms ease-out;
+}
+.drawer {
+  position: fixed;
+  top: $header-height;
+  right: 0;
+  bottom: 0;
+  width: 38rem;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: $ui-01;
+  box-shadow: -2px 0 12px rgba(0, 0, 0, 0.18);
+  z-index: 8000;
+  animation: slideIn 200ms ease-out;
+}
+.drawerHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: layout.$spacing-04;
+  padding: layout.$spacing-05;
+  border-bottom: 1px solid $ui-03;
+  background-color: $ui-02;
+}
+.drawerHeaderText {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.drawerTitle {
+  @include type.type-style('heading-compact-02');
+  color: $ui-05;
+  margin: 0;
+}
+.drawerSubtitle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: layout.$spacing-02 layout.$spacing-03;
+  margin: layout.$spacing-02 0 0;
+}
+.drawerPatient {
+  @include type.type-style('body-compact-01');
+  font-weight: 600;
+  color: $ui-05;
+}
+.drawerCr {
+  @include type.type-style('label-01');
+  color: $text-02;
+  padding: 1px layout.$spacing-02;
+  border-radius: 4px;
+  background-color: $ui-03;
+}
+.drawerBody {
+  flex: 1 1 auto;
+  // min-height:0 lets this flex child shrink below its content so the tall
+  // biometric iframe scrolls inside the drawer instead of overflowing it.
+  min-height: 0;
+  overflow-y: auto;
+  padding: layout.$spacing-05;
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-05;
+}
+.drawerSection {
+  border: 1px solid $ui-03;
+  border-radius: 4px;
+  background-color: $ui-02;
+  padding: layout.$spacing-05;
+}
+.drawerSectionTitle {
+  @include type.type-style('heading-compact-01');
+  font-weight: 600;
+  color: $ui-05;
+  margin: 0 0 layout.$spacing-03;
+  display: flex;
+  align-items: center;
+  gap: layout.$spacing-03;
+}
+.drawerSectionHint {
+  @include type.type-style('label-01');
+  color: $text-02;
+  margin: 0 0 layout.$spacing-04;
+}
+// Same card treatment as the other drawer sections; the "Client consent" title
+// is rendered as a uniform drawerSectionTitle, so the extension's own Carbon
+// ModalHeader is hidden.
+.consentSection {
+  border: 1px solid $ui-03;
+  border-radius: 4px;
+  background-color: $ui-02;
+  padding: layout.$spacing-05;
+
+  // Cap the (700px) biometric capture iframe in this drawer context only.
+  iframe {
+    height: 480px !important;
+    max-height: 480px;
+  }
+
+  // ClaimsConsentExtension renders Carbon ModalHeader/ModalBody. Outside a real
+  // Modal these impose their own height/scroll, which clips the consent content.
+  // Let them flow (the section already provides the padding).
+  :global(.cds--modal-content) {
+    max-height: none;
+    overflow: visible;
+    padding: 0;
+    margin-bottom: 0;
+  }
+
+  // Hide the extension's own header (and its close X) — we show a uniform h5.
+  :global(.cds--modal-header) {
+    display: none;
+  }
+}
+.drawerFooter {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: layout.$spacing-04;
+  padding: layout.$spacing-05;
+  border-top: 1px solid $ui-03;
+  background-color: $ui-02;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slideIn {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
 }

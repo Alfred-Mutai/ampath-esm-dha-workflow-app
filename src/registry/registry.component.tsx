@@ -381,25 +381,30 @@ const RegistryComponent: React.FC<RegistryComponentProps> = () => {
       };
       await createQueueEntry(queueEntryDto);
 
-      // Raise the consultation clearance. Cash patients sit "Awaiting clearance" in the
-      // Accounting dashboard until settled.
+      // Raise the consultation clearance for CASH patients only — they sit
+      // "Awaiting payment" in the Accounting dashboard until the fee is settled.
+      // SHA/insurance patients are cleared through the SHA claim (their real
+      // active visit is the source of truth under "Pending clearance"), so we
+      // don't raise a cash clearance record for them.
       const client = getPatient();
-      const payer = details.method === 'insurance' ? details.insurance || 'Insurance' : 'Cash';
-      // A patient who prepaid on an earlier visit clears without a new fee.
-      const prepaid = client?.id ? findOpenPrepaidService(client.id) : undefined;
-      createConsultationClearance({
-        patientName: [client?.first_name, client?.middle_name, client?.last_name].filter(Boolean).join(' '),
-        crNumber: client?.id ?? '',
-        locationUuid: locationUuid ?? '',
-        queue: details.room,
-        visitType: details.visitType,
-        payer,
-        exempt: false,
-        preCleared: !!prepaid,
-        amountOverride: prepaid?.amount,
-      });
-      if (prepaid) {
-        fulfillPrepaidService(prepaid.id);
+      const isCash = details.method !== 'insurance';
+      if (isCash) {
+        // A patient who prepaid on an earlier visit clears without a new fee.
+        const prepaid = client?.id ? findOpenPrepaidService(client.id) : undefined;
+        createConsultationClearance({
+          patientName: [client?.first_name, client?.middle_name, client?.last_name].filter(Boolean).join(' '),
+          crNumber: client?.id ?? '',
+          locationUuid: locationUuid ?? '',
+          queue: details.room,
+          visitType: details.visitType,
+          payer: 'Cash',
+          exempt: false,
+          preCleared: !!prepaid,
+          amountOverride: prepaid?.amount,
+        });
+        if (prepaid) {
+          fulfillPrepaidService(prepaid.id);
+        }
       }
 
       showAlert('success', 'Patient sent to the triage queue, awaiting clearance', '');
