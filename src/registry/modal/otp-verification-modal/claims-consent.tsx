@@ -22,6 +22,7 @@ interface ClaimsConsentModalProps {
   serviceType: string;
   interventionCode: string;
   crId: string;
+  isDischarge?: boolean;
   onScanStatusChange: (status: string) => void;
 }
 const ClaimsConsentModal: React.FC<ClaimsConsentModalProps> = ({
@@ -34,6 +35,7 @@ const ClaimsConsentModal: React.FC<ClaimsConsentModalProps> = ({
   serviceType,
   interventionCode,
   crId,
+  isDischarge = false,
   onScanStatusChange,
 }) => {
   // Verify biometric-first; after MAX_BIOMETRIC_ATTEMPTS failures we default to OTP.
@@ -107,9 +109,10 @@ const ClaimsConsentModal: React.FC<ClaimsConsentModalProps> = ({
       <BiometricsVerificationModal
         key={attempts}
         open
-        onClose={() => {}}
+        onClose={() => { }}
         serviceType={serviceType}
         interventionCode={interventionCode}
+        isDischarge={isDischarge}
         onScanStatusChange={onScanStatusChange}
         onFailure={handleBiometricFailure}
         onStatusChange={setBioStatus}

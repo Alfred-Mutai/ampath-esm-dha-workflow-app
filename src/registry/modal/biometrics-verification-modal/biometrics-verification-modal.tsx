@@ -14,6 +14,7 @@ type BiometricsVerificationModalProps = {
   onClose: () => void;
   serviceType: string;
   interventionCode: string;
+  isDischarge?: boolean;
   onScanStatusChange?: (status: string) => void;
   /** Fired when this biometric attempt fails (rejected/expired/timeout/error). */
   onFailure?: (reason: string) => void;
@@ -26,6 +27,7 @@ const BiometricsVerificationModal: React.FC<BiometricsVerificationModalProps> = 
   onClose,
   serviceType,
   interventionCode,
+  isDischarge,
   onScanStatusChange,
   onFailure,
   onStatusChange,
@@ -105,6 +107,9 @@ const BiometricsVerificationModal: React.FC<BiometricsVerificationModalProps> = 
         interventionCode,
         serviceType,
         workstation.workstationID,
+        {
+          isDischarge
+        }
       );
       const token = urlData.token;
 

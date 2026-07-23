@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { type Intervention, type VisitType } from '../../../../claims';
 import ClaimsConsentModal from '../claims-consent';
 import { showSnackbar, useSession } from '@openmrs/esm-framework';
-import { cancelAllPendingAuthorizations, createOTPWhitelisting, sendClaimsOTP } from '../../../hie.resource';
+import { cancelAllPendingAuthorizations, createOTPWhitelisting, sendClaimsOTP, sendDischargeOTP } from '../../../hie.resource';
 import { type OTPWhitelistRequest } from '../../../hie.types';
 import { getServiceType } from '../../../../shared/services/claims.resource';
 import { PatientProvider } from '../../../../context/patient-context';
@@ -15,6 +15,8 @@ interface ClaimsConsentExtensionProps {
   intervention: Intervention;
   crIdentifierId: string;
   visitType: VisitType;
+  consentToken?: string;
+  isDischarge?: boolean;
   onClientConsent: ({ otp, authGuid }: { otp?: string; authGuid?: string }) => void;
   onAuthGuidReceived?: (authGuid: string) => void;
 }
@@ -24,6 +26,8 @@ const ClaimsConsentExtension: React.FC<ClaimsConsentExtensionProps> = ({
   intervention,
   crIdentifierId,
   visitType,
+  consentToken,
+  isDischarge,
   onClientConsent,
   onAuthGuidReceived,
 }) => {
@@ -73,7 +77,13 @@ const ClaimsConsentExtension: React.FC<ClaimsConsentExtensionProps> = ({
 
       await cancelAllPendingAuthorizations(sessionLocation?.sessionLocation?.uuid, crIdentifierId);
 
-      const response = await sendClaimsOTP(crIdentifierId, sessionLocation?.sessionLocation?.uuid, intervention?.code);
+      let response = null;
+
+      if(isDischarge) {
+        response = await sendDischargeOTP(consentToken, crIdentifierId, sessionLocation?.sessionLocation?.uuid);
+      } else {
+        response = await sendClaimsOTP(crIdentifierId, sessionLocation?.sessionLocation?.uuid, intervention?.code);
+      }
 
       if (response?.message?.includes('OTP')) {
         setOtpSent(true);
@@ -104,6 +114,7 @@ const ClaimsConsentExtension: React.FC<ClaimsConsentExtensionProps> = ({
             serviceType={getServiceType(intervention, visitType)}
             interventionCode={intervention?.code ?? ''}
             crId={patient.id}
+            isDischarge={isDischarge}
             onScanStatusChange={setAuthGuid}
           />
         </ModalBody>

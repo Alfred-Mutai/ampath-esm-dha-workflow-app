@@ -162,6 +162,7 @@ export async function getBiometrictsRequestUrl(
   interventionCode: string,
   serviceType?: string,
   workstationId?: string,
+  { isDischarge }: { isDischarge?: boolean } = { isDischarge: false }
 ): Promise<any> {
   const hieBaseUrl = await getHieBaseUrl();
 
@@ -176,7 +177,7 @@ export async function getBiometrictsRequestUrl(
     agentId: patient.identification_number,
     authorizingDeviceOs: 'windows',
     factors: ['SHA'],
-    isBiometricsDischargeAuthorization: false,
+    isBiometricsDischargeAuthorization: isDischarge,
     isEmergency: false,
     isIntegration: true,
     workStationId: workstationId || '54cf356c-c4f9-4fd2-a9df-9ca1723b98a6-B0A460977E12',

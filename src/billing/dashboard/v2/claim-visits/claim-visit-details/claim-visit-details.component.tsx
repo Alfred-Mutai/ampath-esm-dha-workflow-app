@@ -12,6 +12,8 @@ import { endVisit, useInvalidateProviderClaimPreview } from '../../../../billing
 import ClaimDocuments from '../claim-documents/claim-documents';
 import ClaimDoctors from '../claim-doctors/claim-doctors';
 import AddClaimDoctorModal from '../modal/claim-doctors/add-claim-doctor/add-claim-doctor.modal';
+import { VisitTypeUuids } from '../../../../../shared/constants/visit-types';
+import { VisitType } from '../../../../../claims';
 interface claimVisitDetailsProps {
   claimsVisit: ClaimsVisit;
   locationUuid: string;
@@ -51,6 +53,21 @@ const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({ claimsVisit, loca
         console.error(err);
       });
   }
+
+  const visitType: VisitType = useMemo(() => {
+    if (activeVisit) {
+      const visitTypeUuid = activeVisit?.visitType?.uuid;
+      if (visitTypeUuid) {
+        if (visitTypeUuid === VisitTypeUuids.OPD_VISIT_TYPE_UUID) {
+          return 'OUTPATIENT';
+        }
+        if (visitTypeUuid === VisitTypeUuids.INPATIENT_VISIT_TYPE_UUID) {
+          return 'INPATIENT';
+        }
+      }
+    }
+    return 'OUTPATIENT';
+  }, [activeVisit, VisitTypeUuids]);
 
   const invalidateProviderClaimPreview = useInvalidateProviderClaimPreview();
 
@@ -104,7 +121,7 @@ const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({ claimsVisit, loca
     });
   };
 
-    const handleSwitchIntervention = () => {
+  const handleSwitchIntervention = () => {
     launchWorkspace('switch-intervention-workspace', {
       consentToken: claimsVisit.authorization_code,
       currentInterventions: claimsVisit.interventions,
@@ -251,6 +268,7 @@ const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({ claimsVisit, loca
           onSuccess={onSubmitSuccess}
           claimsVisit={claimsVisit}
           invoiceNumber={invoiceNumber}
+          visitType={visitType}
         />
       )}
       {showAddDoctorModal && (
