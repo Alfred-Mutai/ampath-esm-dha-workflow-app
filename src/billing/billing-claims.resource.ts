@@ -80,6 +80,25 @@ export async function fetchProviderClaimPreview(
   return data ?? null;
 }
 
+// Fields only a real claim carries; used to tell the claim object apart from any
+// wrapper the endpoint might nest it under.
+const CLAIM_SIGNATURE_KEYS = ['authorization_code', 'workflow_state', 'scheme_code', 'invoices', 'interventions'];
+
+// The claim-preview endpoint has returned the claim both flat and wrapped (under
+// `data` / `results` / `visitResponse`) across API versions. Peel common single-key
+// wrappers until we reach the object that actually carries the claim fields, so the
+// Claim Details never render blank against a truthy-but-wrapped payload.
+function unwrapClaimVisit(body: unknown): ClaimsVisit | undefined {
+  let node: any = body;
+  for (let depth = 0; node && typeof node === 'object' && depth < 4; depth++) {
+    if (CLAIM_SIGNATURE_KEYS.some((key) => key in node)) {
+      return node as ClaimsVisit;
+    }
+    node = node.visitResponse ?? node.data ?? node.results ?? undefined;
+  }
+  return (node as ClaimsVisit) ?? undefined;
+}
+
 export function useProviderClaimPreview(consentToken: string, locationUuid: string) {
   const { hieBaseUrl } = useConfig({
     externalModuleName: '@ampath/esm-dha-workflow-app',
@@ -91,11 +110,11 @@ export function useProviderClaimPreview(consentToken: string, locationUuid: stri
     error,
     isLoading,
     isValidating
-  } = useSWR<{ data: ClaimsVisit }>(url, openmrsFetch, {
+  } = useSWR(url, openmrsFetch, {
     keepPreviousData: true
   });
 
-  const results = data?.data;
+  const results = unwrapClaimVisit(data?.data);
 
   return {
     claimVisit: results,

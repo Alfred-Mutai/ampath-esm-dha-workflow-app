@@ -6,12 +6,25 @@ export type FacilityBillsDto = {
 export type FacilityBillsResponse = {
   results: FacilityBill[];
 };
+/** A row from /facility/bills. Every field bar the identifiers can come back null. */
 export type FacilityBill = {
+  bill_uuid: string;
+  receipt_number: string | null;
   patient_name: string;
-  cash_point: string;
-  bill_date: string;
+  cash_point: string | null;
+  bill_date: string | null;
+  /** Comma-separated per-line-item statuses, e.g. "PENDING,PENDING". */
   paid_status: string;
   patient_uuid: string;
+  /** Present once the visit has an SHA/HIE authorisation. */
+  consent_token: string | null;
+  national_id: string | null;
+  cr_id: string | null;
+  visit_type: string | null;
+  /** SHA claim lifecycle status for this bill, when the eClaims status feed provides
+      it. Absent until the backend supplies it — used by the SHA-bills claim-status
+      filter. */
+  claim_status?: string | null;
 };
 
 export type PatientFacilityBillsDto = {
@@ -29,7 +42,7 @@ export type PatientFacilityBillDetails = {
   paid_status: string;
   patient_uuid: string;
   bill_line_item_id: number;
-  billable_service: string;
+  billable_service: string | null;
   item_price: number;
   payment_scheme: string;
   payment_status: string;

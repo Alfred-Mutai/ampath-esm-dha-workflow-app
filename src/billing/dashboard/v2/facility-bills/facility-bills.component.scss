@@ -1,9 +1,130 @@
+@use '@carbon/layout';
+@use '@openmrs/esm-styleguide/src/vars' as *;
+
+/* Boxed panel matching the Consultation clearance section. */
+.panel {
+  padding: layout.$spacing-05;
+  border: 1px solid $ui-03;
+  background-color: $ui-01;
+}
+
+/* Explanatory intro header, matching the Consultation clearance header. */
+.intro {
+  margin-bottom: layout.$spacing-04;
+}
+
+/* Trim Carbon's roomy tab-panel padding so the payer tabs, status sub-tabs, search and
+   table sit close together as one block. */
+.panel :global(.cds--tab-content) {
+  padding-inline: 0;
+  padding-block: layout.$spacing-04 0;
+}
+.introTitle {
+  margin: 0 0 layout.$spacing-02;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #161616;
+}
+.introText {
+  margin: 0;
+  max-width: 62ch;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: #525252;
+}
+
+/* Status sub-tabs (per payer), between the payer tabs and the search toolbar. */
+.statusTabs {
+  margin-top: layout.$spacing-05;
+  margin-bottom: layout.$spacing-04;
+}
+
+/* Count pill on each status sub-tab, matching the Consultation clearance tabs. */
+.pill {
+  display: inline-block;
+  margin-left: layout.$spacing-03;
+  min-width: 1.15rem;
+  padding: 0 layout.$spacing-02;
+  border-radius: 999px;
+  background-color: var(--brand-01);
+  color: #ffffff;
+  font-size: 0.68rem;
+  line-height: 1.15rem;
+  text-align: center;
+}
+
+/* Matches the other billing tables (clearance / active visits). */
+.tableCard {
+  overflow-x: auto;
+}
+
+/* Patient name as a neat inline link-button. */
 .clickableData {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--brand-01);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+.clickableData:hover {
+  color: var(--brand-02);
+  text-decoration: underline;
+}
+
+/* Bill details view: flat, no border, background or extra padding — the surrounding
+   page padding already insets it. */
+.detailsView {
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-05;
+  padding: 0;
+  border: none;
+  background-color: transparent;
+}
+
+/* Breadcrumb on the left, reload action on the right. Kept a light, backgroundless
+   bar so it takes minimal vertical space. */
+.detailsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: layout.$spacing-04;
+  padding: 0 0 layout.$spacing-02;
+  background-color: transparent;
+  border: none;
+  border-bottom: 1px solid $ui-03;
+}
+
+/* Breadcrumb stays clearly visible, larger text. */
+.breadcrumb {
+  margin-bottom: 0;
+
+  :global(.cds--breadcrumb-item),
+  :global(.cds--link) {
+    font-size: 0.9375rem;
+  }
+  /* Current page ("Bill details") — dark and bold so it stands out. */
+  :global(.cds--breadcrumb-item--current) {
+    color: #161616;
+    font-weight: 700;
+  }
+}
+
+/* The clickable "Facility bills" crumb rendered as a link-styled button. */
+.breadcrumbLink {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 0.9375rem;
   color: var(--brand-01);
   font-weight: 600;
   cursor: pointer;
 }
-.clickableData:hover {
+.breadcrumbLink:hover {
   color: var(--brand-02);
   text-decoration: underline;
 }

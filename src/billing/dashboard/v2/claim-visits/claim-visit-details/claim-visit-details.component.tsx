@@ -1,31 +1,39 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import styles from './claim-visit-details.component.scss';
 import { type PatientFacilityBillDetails, type ClaimsVisit, ApplicableDocumentType } from '../../types';
-import ClaimInvoiceDetails from '../claim-invoice-details/claim-invoice-details.component';
-import ClaimInterventionDetails from '../claim-intervention-details/claim-intervention-details.component';
-import ClaimDiagnosisDetails from '../claim-diagnosis-details/claim-diagnosis-details.component';
+import { buildInvoiceRecords } from '../claim-invoice-details/claim-invoice-details.component';
+import { buildInterventionRecords } from '../claim-intervention-details/claim-intervention-details.component';
+import { buildDiagnosisRecords } from '../claim-diagnosis-details/claim-diagnosis-details.component';
+import ClaimDoctors from '../claim-doctors/claim-doctors';
+import RecordCards from '../shared/record-cards.component';
 import { formatDate, launchWorkspace, parseDate, showSnackbar, useVisit } from '@openmrs/esm-framework';
-import { Button } from '@carbon/react';
+import { Button, Tag } from '@carbon/react';
 import CloseClaimModal from '../modal/close-claim/close-claim.modal';
 import SubmitClaimModal from '../modal/submit-claim/submit-claim.modal';
 import { endVisit, useInvalidateProviderClaimPreview } from '../../../../billing-claims.resource';
-import ClaimDocuments from '../claim-documents/claim-documents';
-import ClaimDoctors from '../claim-doctors/claim-doctors';
 import AddClaimDoctorModal from '../modal/claim-doctors/add-claim-doctor/add-claim-doctor.modal';
 import { VisitTypeUuids } from '../../../../../shared/constants/visit-types';
 import { VisitType } from '../../../../../claims';
+const money = (n: number | string) => `KES ${Number(n ?? 0).toLocaleString('en-KE')}`;
+
+// Tag colour for a claim state / auth status.
+const stateTagType = (value?: string): 'green' | 'red' | 'blue' | 'gray' => {
+  const s = (value ?? '').toUpperCase();
+  if (s === 'AUTHORIZED' || s === 'APPROVED' || s === 'PAID' || s === 'VALID') return 'green';
+  if (s === 'REJECTED' || s === 'EXPIRED' || s === 'INVALID' || s === 'CANCELLED') return 'red';
+  if (s === 'SUBMITTED' || s === 'PENDING' || s === 'DRAFT') return 'blue';
+  return 'gray';
+};
+
 interface claimVisitDetailsProps {
   claimsVisit: ClaimsVisit;
   locationUuid: string;
   patientBillDetails?: PatientFacilityBillDetails;
-  onBillDetailsChange?: () => void;
+  /** Hide the patient name / member number when a surrounding page already shows them
+      (e.g. the bill-details patient header), to avoid repeating identity fields. */
+  hidePatientIdentity?: boolean;
 }
-const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({
-  claimsVisit,
-  locationUuid,
-  patientBillDetails,
-  onBillDetailsChange,
-}) => {
+const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({ claimsVisit, locationUuid, patientBillDetails, hidePatientIdentity }) => {
   const [showCloseClaimModal, setShowCloseClaimModal] = useState<boolean>();
   const [showSubmitClaimModal, setSubmitCloseClaimModal] = useState<boolean>(false);
   const [showAddDoctorModal, setShowAddDoctorModal] = useState<boolean>(false);
@@ -77,6 +85,10 @@ const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({
 
   const invalidateProviderClaimPreview = useInvalidateProviderClaimPreview();
 
+  // A claim can't be submitted to SHA without at least one recorded diagnosis.
+  const hasDiagnosis = (claimsVisit?.claim_diagnoses ?? []).length > 0;
+
+  // All hooks are above this point, so the early return is safe here.
   if (!claimsVisit) {
     return <>No Data</>;
   }
@@ -109,24 +121,6 @@ const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({
     setShowAddDoctorModal(false);
   }
 
-  const handleAddAttachment = () => {
-    launchWorkspace('upload-intervention-attachments-workspace', {
-      consentToken: claimsVisit.authorization_code,
-      patientUuid: '10',
-      claimInterventions: claimsVisit.interventions,
-      bill: patientBillDetails,
-    });
-  };
-
-  const handleGenerateAttachment = () => {
-    launchWorkspace('generate-intervention-attachments-workspace', {
-      consentToken: claimsVisit.authorization_code,
-      patientUuid: '10',
-      claimInterventions: claimsVisit.interventions,
-      bill: patientBillDetails,
-    });
-  };
-
   const handleSwitchIntervention = () => {
     launchWorkspace('switch-intervention-workspace', {
       consentToken: claimsVisit.authorization_code,
@@ -137,130 +131,158 @@ const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({
       billDate: patientBillDetails?.bill_date ?? claimsVisit.visit_start,
       onSwitchSuccess: () => {
         invalidateProviderClaimPreview();
-        onBillDetailsChange?.();
       },
     });
   };
+
+  // Actions only apply while the claim is still a draft (case-insensitive).
+  const isDraft = (claimsVisit.workflow_state ?? '').trim().toLowerCase() === 'draft';
+
   return (
     <>
       <div className={styles.cvLayout}>
-        <div className={styles.cvHeaderSection}>
-          <div className={styles.headerTitle}>
-            <h4>Claim Visit Details</h4>
+        <div className={styles.cvHeader}>
+          <div className={styles.cvHeaderText}>
+            {/* State, Status and Scheme grouped together on the left; the long scheme
+                name lives here as a meta item so it doesn't crowd the action buttons. */}
+            <div className={styles.cvHeaderTags}>
+              {claimsVisit.workflow_state ? (
+                <span className={styles.cvMeta}>
+                  <span className={styles.cvMetaLabel}>State</span>
+                  <Tag size="sm" type={stateTagType(claimsVisit.workflow_state)}>{claimsVisit.workflow_state}</Tag>
+                </span>
+              ) : null}
+              {claimsVisit.claim_auth_status ? (
+                <span className={styles.cvMeta}>
+                  <span className={styles.cvMetaLabel}>Status</span>
+                  <Tag size="sm" type={stateTagType(claimsVisit.claim_auth_status)}>{claimsVisit.claim_auth_status}</Tag>
+                </span>
+              ) : null}
+              {claimsVisit.scheme_name ? (
+                <span className={styles.cvMeta}>
+                  <span className={styles.cvMetaLabel}>Scheme</span>
+                  <span className={styles.cvSchemeValue}>{claimsVisit.scheme_name}</span>
+                </span>
+              ) : null}
+            </div>
           </div>
-          <div className={styles.headerAction}>
-            <Button kind="primary" onClick={displayCloseClaimModal}>
-              Close Claim
-            </Button>
-            <Button kind="tertiary" onClick={displayCloseSubmitClaimModal}>
-              Submit claim
-            </Button>
-            <Button
-              kind="tertiary"
-              onClick={handleSwitchIntervention}
-              disabled={
-                !claimsVisit.interventions?.some((iv) => (iv.workflow_state ?? '').toUpperCase() === 'ACTIVE')
-              }
-            >
-              Switch Intervention
-            </Button>
-          </div>
+          {/* Close / Submit only while the claim is still a draft. */}
+          {isDraft ? (
+            <div className={styles.cvActions}>
+              <Button kind="danger--tertiary" size="sm" onClick={displayCloseClaimModal}>
+                Close claim
+              </Button>
+              {/* Disabled buttons don't emit hover events in some browsers, so the wrapping
+                  span carries the title to explain why submission is blocked. */}
+              <span
+                className={styles.submitClaimWrap}
+                title={hasDiagnosis ? undefined : 'A diagnosis must be recorded before this claim can be submitted.'}
+              >
+                <Button
+                  kind="primary"
+                  size="sm"
+                  onClick={displayCloseSubmitClaimModal}
+                  disabled={!hasDiagnosis}
+                >
+                  Submit claim
+                </Button>
+                <Button
+                  kind="tertiary"
+                  onClick={handleSwitchIntervention}
+                  disabled={
+                    !claimsVisit.interventions?.some((iv) => (iv.workflow_state ?? '').toUpperCase() === 'ACTIVE')
+                  }
+                >
+                  Switch Intervention
+                </Button>
+              </span>
+            </div>
+          ) : null}
         </div>
-        <div className={styles.cvContentSection}>
-          <div className={styles.cvRow}>
-            <div className={styles.cvWidth}>
-              <ul className={styles.claimList}>
-                <li>
-                  <strong>State :</strong> {claimsVisit.workflow_state}{' '}
-                </li>
-                <li>
-                  <strong>Status : </strong>
-                  {claimsVisit.claim_auth_status}
-                </li>
-                <li>
-                  <strong>Name :</strong> {claimsVisit.patient_name}
-                </li>
-                <li>
-                  <strong>Member Number :</strong> {claimsVisit.member_number}
-                </li>
-                <li>
-                  <strong>Scheme Code :</strong> {claimsVisit.scheme_code}
-                </li>
-                <li>
-                  <strong>Scheme Name :</strong> {claimsVisit.scheme_name}
-                </li>
-                <li>
-                  <strong>Service Type :</strong> {claimsVisit.service_type}
-                </li>
-                <li>
-                  <strong>Provider :</strong> {claimsVisit.provider_name}
-                </li>
-                <li>
-                  <strong>Visit Start :</strong> {formatDate(parseDate(claimsVisit.visit_start))}{' '}
-                </li>
-              </ul>
+
+        <section className={styles.card}>
+          <dl className={styles.detailsGrid}>
+            {!hidePatientIdentity ? (
+              <>
+                <div className={styles.detailRow}>
+                  <dt>Name</dt>
+                  <dd>{claimsVisit.patient_name}</dd>
+                </div>
+                <div className={styles.detailRow}>
+                  <dt>Member number</dt>
+                  <dd>{claimsVisit.member_number}</dd>
+                </div>
+              </>
+            ) : null}
+            <div className={styles.detailRow}>
+              <dt>Scheme code</dt>
+              <dd>{claimsVisit.scheme_code}</dd>
             </div>
-            <div className={styles.cvWidth}>
-              <ul className={styles.claimList}>
-                <li>
-                  <strong>Total Amount :</strong> {claimsVisit.total_claim_amount}
-                </li>
-                <li>
-                  <strong>Total Net Amount :</strong> {claimsVisit.total_claim_net_amount}
-                </li>
-              </ul>
+            <div className={styles.detailRow}>
+              <dt>Service type</dt>
+              <dd>{claimsVisit.service_type}</dd>
             </div>
-          </div>
-          <div className={styles.cvRow}>
-            <div className={styles.cvRow}>
-              <h6>Invoices</h6>
+            <div className={styles.detailRow}>
+              <dt>Provider</dt>
+              <dd>{claimsVisit.provider_name}</dd>
             </div>
-            <div className={styles.cvRow}>
-              {claimsVisit.invoices && (
-                <ClaimInvoiceDetails
-                  claimInvoices={claimsVisit.invoices}
-                  consentToken={claimsVisit.authorization_code}
-                />
-              )}
+            <div className={styles.detailRow}>
+              <dt>Visit start</dt>
+              <dd>{formatDate(parseDate(claimsVisit.visit_start))}</dd>
             </div>
-          </div>
-          <div className={styles.cvRow}>
-            <div className={styles.cvRow}>
-              <h6>Interventions</h6>
+            <div className={styles.detailRow}>
+              <dt>Total amount</dt>
+              <dd>{money(claimsVisit.total_claim_amount)}</dd>
             </div>
-            <div className={styles.cvRow}>
-              {claimsVisit.interventions && (
-                <ClaimInterventionDetails
-                  patientBillDetails={patientBillDetails}
-                  claimInterventions={claimsVisit.interventions}
-                  consentToken={claimsVisit.authorization_code}
-                />
-              )}
-            </div>
-          </div>
-          <div className={styles.cvRow}>
-            <div className={styles.cvRow}>
-              <h6>Diagnosis</h6>
-            </div>
-            <div className={styles.cvRow}>
-              {claimsVisit.claim_diagnoses && <ClaimDiagnosisDetails claimDiagnosiss={claimsVisit.claim_diagnoses} />}
-            </div>
-          </div>
-          <div className={styles.cvRow}>
-            <div className={styles.cvRow}>
-              <h6>Doctors</h6>
-            </div>
-            <div className={styles.cvRow}>{<ClaimDoctors claimDoctors={claimsVisit.claim_doctors ?? []} />}</div>
-          </div>
-          <div className={styles.cvRow}>
-            <div className={styles.cvRow}>
-              <h6>Attachments</h6>
-            </div>
-            <div className={styles.cvRow}>
-              {<ClaimDocuments claimAttachments={claimsVisit.claim_attachments ?? []} />}
-            </div>
-          </div>
-        </div>
+            {/* Net only differs from the gross when a discount or co-pay applies; when
+                they match, one figure says it all — so the duplicate row is dropped. */}
+            {Number(claimsVisit.total_claim_net_amount ?? 0) !== Number(claimsVisit.total_claim_amount ?? 0) ? (
+              <div className={styles.detailRow}>
+                <dt>Net amount</dt>
+                <dd>{money(claimsVisit.total_claim_net_amount)}</dd>
+              </div>
+            ) : null}
+          </dl>
+        </section>
+
+        {/* Each category is its own section on its own row, all using the same grid
+            approach (fills the row when few, up to three across). */}
+        <section className={styles.section}>
+          <h5 className={styles.sectionTitle}>Invoices</h5>
+          <RecordCards
+            records={buildInvoiceRecords(claimsVisit.invoices ?? [], claimsVisit.authorization_code)}
+            emptyMessage="No invoices on this claim."
+            layout="grid"
+          />
+        </section>
+
+        <section className={styles.section}>
+          <h5 className={styles.sectionTitle}>Interventions</h5>
+          <RecordCards
+            records={buildInterventionRecords(claimsVisit.interventions ?? [], {
+              consentToken: claimsVisit.authorization_code,
+              locationUuid,
+              claimAttachments: claimsVisit.claim_attachments ?? [],
+              bill: patientBillDetails,
+            })}
+            emptyMessage="No interventions on this claim."
+            layout="grid"
+          />
+        </section>
+
+        <section className={styles.section}>
+          <h5 className={styles.sectionTitle}>Diagnosis</h5>
+          <RecordCards
+            records={buildDiagnosisRecords(claimsVisit.claim_diagnoses ?? [])}
+            emptyMessage="No diagnosis data."
+            layout="grid"
+          />
+        </section>
+
+        <section className={styles.section}>
+          <h5 className={styles.sectionTitle}>Doctors</h5>
+          <ClaimDoctors claimDoctors={claimsVisit.claim_doctors ?? []} />
+        </section>
       </div>
       {showCloseClaimModal && (
         <CloseClaimModal
