@@ -1,13 +1,42 @@
-.billDetailsLayout{
-    display: flex;
-    flex-direction: column;
-    row-gap: 10px;
-    width: 100%;
-    padding: 15px 15px;
-    .billRow{
-        display: flex;
-        flex-direction: column;
-        width: 100%;
-        row-gap: 10px;
-    }
+@use '@carbon/layout';
+@use '@openmrs/esm-styleguide/src/vars' as *;
+
+.billDetailsLayout {
+  display: flex;
+  flex-direction: column;
+  row-gap: layout.$spacing-06;
+  width: 100%;
+}
+
+.billRow {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  row-gap: layout.$spacing-03;
+}
+
+/* Divider between categories so each reads as its own group. */
+.billRow + .billRow {
+  padding-top: layout.$spacing-05;
+  border-top: 1px solid $ui-03;
+}
+
+
+.sectionTitle {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #161616;
+}
+
+/* Muted em dash shown in place of a value the backend left blank. */
+.missingValue {
+  color: $text-03;
+}
+
+/* White bordered card wrapping the loading skeleton / bill-payments table. */
+.tableCard {
+  overflow-x: auto;
+  background-color: $ui-02;
+  border: 1px solid $ui-03;
 }

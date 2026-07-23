@@ -303,6 +303,22 @@
       "canHide": true,
       "canMaximize": true,
       "width": "narrow"
+    },
+    {
+      "name": "bill-item-payment-workspace",
+      "title": "Bill item payment",
+      "component": "billItemPaymentWorkspace",
+      "type": "bill-item-payment",
+      "canHide": true,
+      "width": "narrow"
+    },
+    {
+      "name": "add-claim-line-workspace",
+      "title": "Add claim line",
+      "component": "addClaimLineWorkspace",
+      "type": "add-claim-line",
+      "canHide": true,
+      "width": "narrow"
     }
   ],
   "workspaces2": [

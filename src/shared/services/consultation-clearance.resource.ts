@@ -188,7 +188,7 @@ export async function getConsultationClearances(
 export async function getClearanceCounts(
   locationUuid?: string,
   date?: string,
-): Promise<{ awaiting: number; cleared: number; prepaid: number }> {
+): Promise<{ awaiting: number }> {
   await wait(50);
   // Filter by date (createdAt) so the tab counts match the date-filtered tables.
   const scoped = load().filter(
@@ -196,15 +196,10 @@ export async function getClearanceCounts(
       (!locationUuid || r.locationUuid === locationUuid) &&
       (!date || new Date(r.createdAt).toLocaleDateString('en-CA') === date),
   );
-  const prepaid = loadPrepaid().filter(
-    (p) => (!locationUuid || p.locationUuid === locationUuid) && p.status === 'OPEN',
-  );
   // Awaiting payment is the CASH queue (SHA is cleared under Pending clearance),
   // so the count must exclude SHA payers to match the rows shown in the table.
   return {
     awaiting: scoped.filter((r) => r.status === 'AWAITING_PAYMENT' && !/sha|shif/i.test(r.payer)).length,
-    cleared: scoped.filter((r) => r.status === 'CLEARED').length,
-    prepaid: prepaid.length,
   };
 }
 

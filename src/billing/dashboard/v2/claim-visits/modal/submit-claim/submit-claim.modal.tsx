@@ -19,6 +19,7 @@ interface submitClaimModalProps {
 }
 const SubmitClaimModal: React.FC<submitClaimModalProps> = ({ open, onClose, onSuccess, locationUuid, claimsVisit, invoiceNumber }) => {
     const [loading, setLoading] = useState<boolean>(false);
+    const [confirmOpen, setConfirmOpen] = useState<boolean>(false);
     const [otp, setOtp] = useState("");
     const [authGuid, setAuthGuid] = useState("");
     const [dischargeReason, setDischargeReason] = useState<DischargeReasonType>();
@@ -90,6 +91,7 @@ const SubmitClaimModal: React.FC<submitClaimModalProps> = ({ open, onClose, onSu
     }
 
     async function handleSubmitClaim() {
+        setConfirmOpen(false);
         setLoading(true);
         try {
             const submitClaimPayload = getSubmitClaimPayload();
@@ -149,7 +151,7 @@ const SubmitClaimModal: React.FC<submitClaimModalProps> = ({ open, onClose, onSu
                 size="md"
                 onSecondarySubmit={onClose}
                 onRequestClose={onClose}
-                onRequestSubmit={!invalidValues ? (loading ? holderFunction : (consentComplete ? handleSubmitClaim : null)) : null}
+                onRequestSubmit={!invalidValues ? (loading ? holderFunction : (consentComplete ? () => setConfirmOpen(true) : null)) : null}
                 primaryButtonText={!invalidValues ? (loading ? 'Submitting claim...' : (consentComplete ? 'Submit claim' : null)) : null}
                 secondaryButtonText="Close"
             >
@@ -177,6 +179,22 @@ const SubmitClaimModal: React.FC<submitClaimModalProps> = ({ open, onClose, onSu
                         (dischargeReason && notes) &&
                         <ClaimsConsentExtension patient={consentPatient} intervention={getIntervention()} crIdentifierId={claimsVisit.member_number} visitType={'OUTPATIENT'} onClientConsent={onClientConsent} />
                     }
+                </ModalBody>
+            </Modal>
+            <Modal
+                modalHeading="Confirm claim submission"
+                open={confirmOpen}
+                size="sm"
+                onRequestClose={() => setConfirmOpen(false)}
+                onRequestSubmit={handleSubmitClaim}
+                primaryButtonText="Yes, submit claim"
+                secondaryButtonText="Cancel"
+            >
+                <ModalBody>
+                    <p>
+                        Are you sure you want to submit this claim to SHA? Please confirm the details are correct — this
+                        can’t be undone.
+                    </p>
                 </ModalBody>
             </Modal>
         </>

@@ -3,11 +3,11 @@ import styles from './billing-claims-dashboard.component.scss';
 import { DatePicker, DatePickerInput, Tab, TabList, TabPanel, TabPanels, Tabs } from '@carbon/react';
 import { Wallet } from '@carbon/react/icons';
 import FacilityBills from './facility-bills/facility-bills.component';
+import Preauths from './facility-bills/preauths.component';
 import ClaimsAccounting from './claims-accounting/claims-accounting.component';
 import { useSession } from '@openmrs/esm-framework';
 import ActiveVisits from './active-visits/active-visits.component';
 import Clearance from './clearance/clearance.component';
-import CashChecklist from './cash-checklist/cash-checklist.component';
 import { billBalance, getPayableBills } from './cash-checklist/cash-checklist.resource';
 import { getClearanceCounts } from '../../../shared/services/consultation-clearance.resource';
 import { getClaimCounts } from './claims-accounting/claims-accounting.resource';
@@ -28,10 +28,12 @@ const BillingClaimsDashboard: React.FC<billingClaimsDashboardProps> = () => {
   const [claimCounts, setClaimCounts] = useState<Record<string, number>>({});
   const [selectedTab, setSelectedTab] = useState(0);
   const [billsSub, setBillsSub] = useState(0);
+  // When a facility bill is drilled into, its details take over the whole page — the
+  // dashboard header, metric tiles and tabs are hidden so the details aren't buried.
+  const [billsDetailsOpen, setBillsDetailsOpen] = useState(false);
   // Which sub-tab to open, with a nonce so repeat clicks still re-navigate.
   const [claimsNav, setClaimsNav] = useState<{ key?: string; nonce: number }>({ nonce: 0 });
   const [clearanceNav, setClearanceNav] = useState<{ key?: string; nonce: number }>({ nonce: 0 });
-  const hideCheckList = true;
 
   useEffect(() => {
     if (locationUuid) {
@@ -53,10 +55,9 @@ const BillingClaimsDashboard: React.FC<billingClaimsDashboardProps> = () => {
     billsSub?: number;
   }[] = [
     { key: 'awaiting', label: 'Awaiting clearance', unit: 'Patients', value: awaiting, tab: 0, clearKey: 'pending' },
-    { key: 'cashdue', label: 'Cash due', unit: 'Patients', value: cashDue, tab: 1, billsSub: 0 },
-    { key: 'pending', label: 'Pending claims', unit: 'Claims', value: claimCounts.pending ?? 0, tab: 2, claimKey: 'pending' },
+    { key: 'cashdue', label: 'Facility bills', unit: 'Patients', value: cashDue, tab: 1, billsSub: 0 },
+    { key: 'pending', label: 'Draft claims', unit: 'Claims', value: claimCounts.pending ?? 0, tab: 2, claimKey: 'pending' },
     { key: 'rejected', label: 'Rejected claims', unit: 'Claims', value: claimCounts.rejected ?? 0, color: 'red', tab: 2, claimKey: 'rejected' },
-    { key: 'resubmission', label: 'Needs resubmission', unit: 'Claims', value: claimCounts.resubmission ?? 0, tab: 2, claimKey: 'resubmission' },
   ];
 
   const handleTileClick = (s: { tab: number; claimKey?: string; clearKey?: string; billsSub?: number }) => {
@@ -79,48 +80,57 @@ const BillingClaimsDashboard: React.FC<billingClaimsDashboardProps> = () => {
   return (
     <>
       <div className={styles.bcLayout}>
-        <div className={styles.hwrSection}>
-          <FacilityAndWorkerSlot />
-        </div>
-        <div className={styles.bcHeader}>
-          <span className={styles.bcHeaderIcon}>
-            <Wallet size={24} />
-          </span>
-          <div className={styles.bcHeaderTitle}>
-            <h3 className={styles.bcTitle}>Billing &amp; Claims</h3>
-            <p className={styles.bcSubtitle}>Consultation clearance, facility bills and SHA claims.</p>
-          </div>
-        </div>
-        <div className={styles.summaryRow}>
-          {summary.map((s) => (
-            <button key={s.key} type="button" className={styles.metricButton} onClick={() => handleTileClick(s)}>
-              <MetricsCard>
-                <MetricsCardHeader title={s.label} />
-                <MetricsCardBody>
-                  <MetricsCardItem label={s.unit} value={s.value ? s.value : '--'} color={s.color} />
-                </MetricsCardBody>
-              </MetricsCard>
-            </button>
-          ))}
-        </div>
+        {!billsDetailsOpen ? (
+          <>
+            <div className={styles.hwrSection}>
+              <FacilityAndWorkerSlot />
+            </div>
+            <div className={styles.bcHeader}>
+              <span className={styles.bcHeaderIcon}>
+                <Wallet size={24} />
+              </span>
+              <div className={styles.bcHeaderTitle}>
+                <h3 className={styles.bcTitle}>Billing &amp; Claims</h3>
+                <p className={styles.bcSubtitle}>Consultation clearance, facility bills and SHA claims.</p>
+              </div>
+            </div>
+            <div className={styles.summaryRow}>
+              {summary.map((s) => (
+                <button key={s.key} type="button" className={styles.metricButton} onClick={() => handleTileClick(s)}>
+                  <MetricsCard>
+                    <MetricsCardHeader title={s.label} />
+                    <MetricsCardBody>
+                      <MetricsCardItem label={s.unit} value={s.value ? s.value : '--'} color={s.color} />
+                    </MetricsCardBody>
+                  </MetricsCard>
+                </button>
+              ))}
+            </div>
+          </>
+        ) : null}
         <div className={styles.bcContent}>
           <div className={styles.bcContentTabs}>
-            <DatePicker
-              className={styles.tabRowDate}
-              datePickerType="single"
-              dateFormat="Y-m-d"
-              value={billingDate}
-              maxDate={new Date().toLocaleDateString('en-CA')}
-              onChange={(dates) =>
-                handleDateChange(dates?.[0] ? (dates[0] as Date).toLocaleDateString('en-CA') : '')
-              }
-            >
-              <DatePickerInput id="billing-date" labelText="" placeholder="yyyy-mm-dd" size="sm" />
-            </DatePicker>
+            {!billsDetailsOpen ? (
+              <DatePicker
+                className={styles.tabRowDate}
+                datePickerType="single"
+                dateFormat="Y-m-d"
+                value={billingDate}
+                maxDate={new Date().toLocaleDateString('en-CA')}
+                onChange={(dates) =>
+                  handleDateChange(dates?.[0] ? (dates[0] as Date).toLocaleDateString('en-CA') : '')
+                }
+              >
+                <DatePickerInput id="billing-date" labelText="" placeholder="yyyy-mm-dd" size="sm" />
+              </DatePicker>
+            ) : null}
             <Tabs selectedIndex={selectedTab} onChange={({ selectedIndex }) => setSelectedTab(selectedIndex)}>
-              <TabList scrollDebounceWait={200}>
+              {/* Tab list hidden while a bill's details are open, but the panels stay
+                  mounted so FacilityBills keeps its selected patient and fetched data. */}
+              <TabList scrollDebounceWait={200} className={billsDetailsOpen ? styles.hiddenTabList : undefined}>
                 <Tab>Pending clearance</Tab>
-                <Tab>Bills</Tab>
+                <Tab>Facility bills</Tab>
+                <Tab>Preauthorizations</Tab>
                 {/* <Tab>Claims</Tab> */}
               </TabList>
               <TabPanels>
@@ -141,30 +151,14 @@ const BillingClaimsDashboard: React.FC<billingClaimsDashboardProps> = () => {
                   />
                 </TabPanel>
                 <TabPanel>
-                  <Tabs selectedIndex={billsSub} onChange={({ selectedIndex }) => setBillsSub(selectedIndex)}>
-                    <TabList aria-label="Bills">
-                      <Tab>Facility bills</Tab>
-                    </TabList>
-                    <TabPanels>
-                      <TabPanel>
-                        <FacilityBills
-                          locationUuid={locationUuid}
-                          billingDate={billingDate}
-                          onDateChange={handleDateChange}
-                        />
-                      </TabPanel>
-
-                      {
-                        hideCheckList ? (<></>) : (<>
-                          <TabPanel>
-                            <CashChecklist />
-                          </TabPanel>
-                        </>)
-                      }
-
-
-                    </TabPanels>
-                  </Tabs>
+                  <FacilityBills
+                    locationUuid={locationUuid}
+                    billingDate={billingDate}
+                    onDetailsOpenChange={setBillsDetailsOpen}
+                  />
+                </TabPanel>
+                <TabPanel>
+                  <Preauths />
                 </TabPanel>
                 {/* <TabPanel>
                   <ClaimsAccounting initialTabKey={claimsNav.key} navNonce={claimsNav.nonce} locationUuid={locationUuid}

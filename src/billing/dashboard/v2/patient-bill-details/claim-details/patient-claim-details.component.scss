@@ -1,0 +1,32 @@
+.pcLayout {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+/* Shown when the claims service can't be reached and there's nothing to display. */
+.errorState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.75rem;
+  padding: 2rem 1rem;
+}
+
+.errorIcon {
+  color: #da1e28;
+}
+
+.errorTitle {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #161616;
+}
+
+.errorSubtitle {
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+  color: #6f6f6f;
+}

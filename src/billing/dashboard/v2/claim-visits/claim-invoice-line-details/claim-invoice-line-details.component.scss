@@ -1,0 +1,15 @@
+.confirmText {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: #393939;
+}
+
+/* Buttons live inside the modal body (not Carbon's ModalFooter, whose full-height
+   buttons were overflowing the container) — a simple right-aligned sm row. */
+.confirmActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+}

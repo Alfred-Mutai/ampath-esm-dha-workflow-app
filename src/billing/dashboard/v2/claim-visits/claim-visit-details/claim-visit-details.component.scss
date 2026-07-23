@@ -1,58 +1,136 @@
-.cvLayout{
-    display: flex;
-    flex-direction: column;
-    padding: 15px 15px;
-    row-gap: 10px;
-    width: 100%;
-    .cvHeaderSection{
-        display: flex;
-        flex-direction: row;
-        column-gap: 5px;
-        width: 100%;
-        .headerTitle{
-            display: flex;
-            flex-direction: row;
-            width: 50%;
-        }
-        .headerAction{
-            display: flex;
-            flex-direction: row;
-            justify-content: flex-end;
-            width: 50%;
-            column-gap: 5px;
-        }
-    }
-    .cvContentSection{
-        display: flex;
-        flex-direction: column;
-        .cvRow{
-            display: flex;
-            flex-direction: row;
-            width: 100%;
-            flex-wrap: wrap;
-            margin-top: 10px;
-            .cvWidth{
-                display: flex;
-                width: 45%;
-            }
-        }
-    }
+/* No own padding — the containing block body (page) or ModalBody (modal) already
+   provides it, so the content lines up with the Bill Details side. */
+.cvLayout {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
 }
 
-.claimList{
-    display: flex;
-    flex-direction: column;
-    row-gap: 10px;
+/* ---- Header ---- */
+.cvHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.cvHeaderText {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  min-width: 0;
+}
+.cvHeaderTags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+}
+.cvMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+.cvMetaLabel {
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: #6f6f6f;
+}
+.cvMetaLabel::after {
+  content: ':';
+}
+.cvActions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
 }
 
-.claimSubmitBtn {
-    display: flex;
-    justify-content: flex-end;
-    margin-left: auto;
-    float: right;
+/* Wrapper around the Submit claim button. When the button is disabled it stops
+   emitting pointer events, so hover falls through to this span and its title
+   tooltip (explaining why submission is blocked) can show. */
+.submitClaimWrap {
+  display: inline-flex;
+
+  :global(button:disabled) {
+    pointer-events: none;
+  }
 }
 
-.generateButtonSection {
-    display: flex;
-    gap: 1rem;
+/* Scheme shown as a header meta item beside State/Status (kept out of the details grid
+   below, where its long value would take a whole cell). */
+.cvSchemeValue {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #161616;
+  overflow-wrap: anywhere;
+}
+
+/* ---- Summary card + details grid ---- */
+/* Only the claim summary keeps a box; the record sections below are borderless — a
+   title over its tinted cards, like the Bill Details side — so the page doesn't stack
+   boxes inside boxes. */
+.card {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 1rem 1.25rem;
+}
+/* Each category is its own row, separated by a divider so the groups read distinctly. */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e0e0e0;
+}
+
+
+.detailsGrid {
+  display: grid;
+  /* Smaller min so the short claim facts (code, service, provider, date, total) line
+     up on one row on a normal-width panel, wrapping only when it gets narrow. */
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.625rem 1.5rem;
+  margin: 0;
+}
+.detailRow {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+
+  dt {
+    font-size: 0.75rem;
+    color: #6f6f6f;
+  }
+  dd {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #161616;
+    overflow-wrap: anywhere;
+  }
+}
+
+/* ---- Section headers ---- */
+.sectionTitle {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #161616;
+}
+.sectionHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.attachActions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
 }

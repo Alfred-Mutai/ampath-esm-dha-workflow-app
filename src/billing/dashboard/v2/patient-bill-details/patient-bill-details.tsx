@@ -11,26 +11,46 @@ import {
   fetchPatientBillPayments,
   fetchPatientDiagnosis,
   fetchPatientFacilityBillDetails,
+  useProviderClaimPreview,
 } from '../../../billing-claims.resource';
 import { showSnackbar } from '@openmrs/esm-styleguide';
-import { Tab, TabList, TabPanel, TabPanels, Tabs } from '@carbon/react';
+import { InlineLoading, SkeletonText } from '@carbon/react';
+import { Receipt, DocumentTasks } from '@carbon/react/icons';
 import BillDetails from './bill-details/bill-details';
 import PatientClaimDetails from './claim-details/patient-claim-details.component';
+import EmptyState from '../shared/empty-state.component';
+import ScrollToTop from '../shared/scroll-to-top.component';
 import { type AmrsVisitDiagnosisDto, type AmrsVisitDiagnosis, AmrsMaternityDiagnosisDto } from '../../../types';
 interface patientBillDetailsProps {
   patientUuid: string;
   locationUuid: string;
   billingDate: string;
+  refreshToken?: number;
 }
-const PatientBillDetails: React.FC<patientBillDetailsProps> = ({ patientUuid, locationUuid, billingDate }) => {
+const PatientBillDetails: React.FC<patientBillDetailsProps> = ({ patientUuid, locationUuid, billingDate, refreshToken }) => {
   const [patientBillDetails, setPatientBillDetails] = useState<PatientFacilityBillDetails[]>([]);
   const [consentToken, setConsentToken] = useState<string>('');
   const [patientBillPayments, setPatientBillPayments] = useState<PatientPayment[]>([]);
+  const [billLoading, setBillLoading] = useState<boolean>(true);
+  const [diagnosisLoading, setDiagnosisLoading] = useState<boolean>(true);
   const facilityPatientDetail = useMemo(() => {
     return patientBillDetails[0] ?? null;
   }, [patientBillDetails]);
   const billStatus = useMemo(() => getBillStatus(patientBillDetails), [patientBillDetails]);
   const [patientAmrsVisitDiagnosis, setPatientAmrsVisitDiagnosis] = useState<AmrsVisitDiagnosis[]>([]);
+  // Claim load state, surfaced on the Claim Details header. Shares the SWR request the
+  // claim section itself uses, so it's not a second fetch.
+  const { claimVisit, isLoading: claimLoading, isValidating: claimValidating } = useProviderClaimPreview(
+    consentToken,
+    locationUuid,
+  );
+  // Stamp the time each load/refresh completes, to show "Last refreshed at …".
+  const [claimLastRefreshed, setClaimLastRefreshed] = useState<Date | null>(null);
+  useEffect(() => {
+    if (claimVisit && !claimValidating) {
+      setClaimLastRefreshed(new Date());
+    }
+  }, [claimVisit, claimValidating]);
 
   useEffect(() => {
     if (locationUuid && patientUuid && billingDate) {
@@ -39,8 +59,9 @@ const PatientBillDetails: React.FC<patientBillDetailsProps> = ({ patientUuid, lo
       getPatientAmrsVisitDiagnosis();
       getPatientAmrsMaternityDiagnosis();
     }
-  }, [locationUuid, patientUuid, billingDate]);
+  }, [locationUuid, patientUuid, billingDate, refreshToken]);
   async function getPatientBillDetails() {
+    setBillLoading(true);
     const patientBillPayload = generatePatientBillPayload();
     try {
       const data = await fetchPatientFacilityBillDetails(patientBillPayload);
@@ -54,6 +75,8 @@ const PatientBillDetails: React.FC<patientBillDetailsProps> = ({ patientUuid, lo
         kind: 'error',
         subtitle: 'An error occurred while generat',
       });
+    } finally {
+      setBillLoading(false);
     }
   }
   function generatePatientBillPayload(): PatientFacilityBillsDto {
@@ -106,6 +129,7 @@ const PatientBillDetails: React.FC<patientBillDetailsProps> = ({ patientUuid, lo
     }
   }
   async function getPatientAmrsVisitDiagnosis() {
+    setDiagnosisLoading(true);
     const amrsVisitDiagnosisPayload = getPatientAmrsVisitDiagnosisPayload();
     try {
       const resp = await fetchPatientDiagnosis(amrsVisitDiagnosisPayload);
@@ -120,6 +144,8 @@ const PatientBillDetails: React.FC<patientBillDetailsProps> = ({ patientUuid, lo
         kind: 'error',
         subtitle: 'An error occurred while fetching the patient diagnosis',
       });
+    } finally {
+      setDiagnosisLoading(false);
     }
   }
   async function getPatientAmrsMaternityDiagnosis() {
@@ -154,63 +180,102 @@ const PatientBillDetails: React.FC<patientBillDetailsProps> = ({ patientUuid, lo
   return (
     <>
       <div className={styles.bdLayout}>
-        <div className={styles.bdHeader}>
-          {facilityPatientDetail ? (
-            <>
-              <div className={styles.pdCol}>
-                <strong>Name:</strong> {facilityPatientDetail.patient_name}
+        {billLoading ? (
+          <dl className={styles.bdHeader}>
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div className={styles.pdCol} key={i}>
+                <dt>
+                  <SkeletonText width="45%" />
+                </dt>
+                <dd>
+                  <SkeletonText width="75%" />
+                </dd>
               </div>
-              <div className={styles.pdCol}>
-                <strong>CashPoint:</strong> {facilityPatientDetail.cash_point}
+            ))}
+          </dl>
+        ) : facilityPatientDetail ? (
+          <dl className={styles.bdHeader}>
+            <div className={styles.pdCol}>
+              <dt>Name</dt>
+              <dd>{facilityPatientDetail.patient_name}</dd>
+            </div>
+            <div className={styles.pdCol}>
+              <dt>Bill date</dt>
+              <dd>{facilityPatientDetail.bill_date}</dd>
+            </div>
+            <div className={styles.pdCol}>
+              <dt>CR</dt>
+              <dd>{facilityPatientDetail.cr_no}</dd>
+            </div>
+            <div className={styles.pdCol}>
+              <dt>Bill status</dt>
+              <dd>{billStatus ?? ''}</dd>
+            </div>
+          </dl>
+        ) : (
+          <></>
+        )}
+        <section className={`${styles.block} ${styles.blockBills}`}>
+          <header className={styles.blockHeader}>
+            <span className={styles.blockIcon}>
+              <Receipt size={20} />
+            </span>
+            <div>
+              <h5 className={styles.blockTitle}>Bill Details</h5>
+              <p className={styles.blockSubtitle}>Itemised charges, payments received and diagnoses for this visit.</p>
+            </div>
+          </header>
+          <div className={styles.blockBody}>
+            {patientBillDetails && (
+              <BillDetails
+                patientBillDetails={patientBillDetails}
+                patientPayments={patientBillPayments}
+                amrsVisitDiagnosis={patientAmrsVisitDiagnosis}
+                locationUuid={locationUuid}
+                consentToken={consentToken}
+                billLoading={billLoading}
+                diagnosisLoading={diagnosisLoading}
+              />
+            )}
+          </div>
+        </section>
+
+        <section className={`${styles.block} ${styles.blockClaims}`}>
+          <header className={styles.blockHeader}>
+            <span className={styles.blockIcon}>
+              <DocumentTasks size={20} />
+            </span>
+            <div>
+              <h5 className={styles.blockTitle}>Claim Details</h5>
+              <p className={styles.blockSubtitle}>SHA claim built from this visit's billed interventions.</p>
+            </div>
+            {consentToken ? (
+              <div className={styles.blockHeaderStatus}>
+                {claimLoading || claimValidating ? (
+                  <InlineLoading description={claimLoading ? 'Loading…' : 'Refreshing…'} status="active" />
+                ) : claimLastRefreshed ? (
+                  <span className={styles.lastRefreshed}>
+                    Last refreshed at{' '}
+                    {claimLastRefreshed.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                ) : null}
               </div>
-              <div className={styles.pdCol}>
-                <strong>Bill Date:</strong> {facilityPatientDetail.bill_date}
-              </div>
-              <div className={styles.pdCol}>
-                <strong>CR:</strong> {facilityPatientDetail.cr_no}
-              </div>
-              <div className={styles.pdCol}>
-                <strong>AMRS Universl ID:</strong> {facilityPatientDetail.amrs_universal_id}
-              </div>
-              <div className={styles.pdCol}>
-                <strong>Bill Status:</strong> {billStatus ?? ''}
-              </div>
-            </>
-          ) : (
-            <></>
-          )}
-        </div>
-        <div>
-          <Tabs>
-            <TabList scrollDebounceWait={200}>
-              <Tab>Bill Details</Tab>
-              <Tab>Claim</Tab>
-            </TabList>
-            <TabPanels>
-              <TabPanel>
-                {patientBillDetails && (
-                  <BillDetails
-                    patientBillDetails={patientBillDetails}
-                    patientPayments={patientBillPayments}
-                    amrsVisitDiagnosis={patientAmrsVisitDiagnosis}
-                    locationUuid={locationUuid}
-                    consentToken={consentToken}
-                  />
-                )}
-              </TabPanel>
-              <TabPanel>
-                {locationUuid && consentToken ? (
-                  <>
-                    <PatientClaimDetails locationUuid={locationUuid} patientBillDetails={patientBillDetails} consentToken={consentToken} />
-                  </>
-                ) : (
-                  <></>
-                )}
-              </TabPanel>
-            </TabPanels>
-          </Tabs>
-        </div>
+            ) : null}
+          </header>
+          <div className={styles.blockBody}>
+            {locationUuid && consentToken ? (
+              <PatientClaimDetails
+                locationUuid={locationUuid}
+                patientBillDetails={patientBillDetails}
+                consentToken={consentToken}
+              />
+            ) : (
+              <EmptyState message="No claim associated with this visit yet." />
+            )}
+          </div>
+        </section>
       </div>
+      <ScrollToTop />
     </>
   );
 };
