@@ -8,6 +8,7 @@ import {
   type Intervention,
   VisitType,
   type ClientSubBenefit,
+  PomsfBalance,
 } from './index';
 import { fetchUrl, getHieBaseUrl, getUrl, useHie } from './utils';
 import { openmrsFetch, restBaseUrl, useSession, Visit } from '@openmrs/esm-framework';
@@ -47,10 +48,10 @@ export const useInterventions = (clientRegistryId: string, subBenefitCode: strin
   };
 };
 
-export const useBenefitUtilizations = (clientRegistryId: string, interventionCode: string, isCapitation: boolean) => {
+export const useBenefitUtilizations = (clientRegistryId: string, interventionCode: string, isCapitation: boolean, isPomsf: boolean) => {
   const { hieBaseUrl, locationUuid } = useHie();
   const url =
-    clientRegistryId && interventionCode && !isCapitation
+    clientRegistryId && interventionCode && !isCapitation && !isPomsf
       ? `${hieBaseUrl}/benefits-utilization?patient_id=${clientRegistryId}&locationUuid=${locationUuid}&intervention_code=${interventionCode}`
       : null;
 
@@ -70,6 +71,32 @@ export const useBenefitUtilizations = (clientRegistryId: string, interventionCod
     benefitUtilizations: results,
     error,
     isLoadingBenefitUtilization: isLoading,
+  };
+};
+
+export const usePomsfBalance = (clientRegistryId: string, isPomsf: boolean) => {
+  const { hieBaseUrl, locationUuid } = useHie();
+  const url =
+    clientRegistryId && isPomsf
+      ? `${hieBaseUrl}/pomsf-balance?patient_id=${clientRegistryId}&locationUuid=${locationUuid}`
+      : null;
+
+  const { data, error, isLoading } = useSWR<{ data: PomsfBalance }>(url, openmrsFetch);
+
+  const results = data?.data;
+
+   if (results && 'error' in results && 'message' in results) {
+    return {
+      pomsfBalance: null,
+      error,
+      isLoadingPomsfBalances: isLoading,
+    }
+  }
+
+  return {
+    pomsfBalance: results,
+    error,
+    isLoadingPomsfBalances: isLoading,
   };
 };
 

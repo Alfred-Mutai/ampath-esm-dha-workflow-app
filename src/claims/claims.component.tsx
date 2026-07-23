@@ -1,6 +1,6 @@
 import { Button, ComboBox, InlineLoading, Loading, Tag, TextInput } from '@carbon/react';
 import styles from './claims.component.scss';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   createClaimsVisit,
   fetchConsentToken,
@@ -9,6 +9,7 @@ import {
   useClientSubBenefits,
   useInterventions,
   usePatientVisit,
+  usePomsfBalance,
 } from './claims.resource';
 import {
   type BenefitUtilization,
@@ -59,13 +60,39 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
 
   const { clientSubBenefits, isLoadingClientSubBenefits } = useClientSubBenefits(clientRegistryId);
   const { interventions, isLoadingInterventions } = useInterventions(clientRegistryId, selectedSubBenefitCode?.code);
-  const { benefitUtilizations, isLoadingBenefitUtilization } = useBenefitUtilizations(
+  const { sessionLocation } = useSession();
+  const { t } = useTranslation();
+
+  const isPmsf = useMemo(() => {
+    if (selectedSubBenefitCode) {
+      return selectedSubBenefitCode.code.toUpperCase().includes("PMF");
+    }
+    return false;
+  }, [selectedSubBenefitCode]);
+
+   const { benefitUtilizations, isLoadingBenefitUtilization } = useBenefitUtilizations(
     clientRegistryId,
     selectedIntervention?.code,
     selectedIntervention?.paymentMechanism?.toUpperCase() === 'CAPITATION',
+    isPmsf
   );
-  const { sessionLocation } = useSession();
-  const { t } = useTranslation();
+
+  const { pomsfBalance, isLoadingPomsfBalances } = usePomsfBalance(clientRegistryId, isPmsf);
+
+  const pmfBalance = useMemo(() => {
+    let pBalance = 0;
+    if (!isLoadingPomsfBalances && pomsfBalance && selectedSubBenefitCode && selectedIntervention) {
+      pomsfBalance.memberPolicies.map((memberPolicy) => {
+        memberPolicy.benefit.map((benefit) => {
+          const balance = benefit.subBenefit.find((subBenefit) => subBenefit.subBenefitCode === selectedSubBenefitCode.code)?.balance;
+          if (balance && balance?.length) {
+            pBalance = balance[0].balance;
+          }
+        });
+      });
+    }
+    return pBalance;
+  }, [pomsfBalance, isLoadingPomsfBalances, selectedSubBenefitCode, selectedIntervention]);
 
   useEffect(() => {
     // The endpoint returns an empty list for clients with no utilization record,
@@ -333,7 +360,8 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
             <Loading small withOverlay={false} className={styles.fieldSpinner} description="Loading interventions" />
           ) : null}
         </div>
-        {isLoadingBenefitUtilization ? (
+
+        {isLoadingBenefitUtilization && !isPmsf ? (
           <InlineLoading className={styles.checkingEligibility} description="Checking eligibility" />
         ) : benefitUtilizations?.length ? (
           isBenefitEligible ? (
@@ -348,6 +376,17 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
         ) : (
           <></>
         )}
+
+        {isLoadingPomsfBalances && isPmsf ? (
+          <InlineLoading className={styles.checkingEligibility} description="Loading POMSF balance" />
+        ) : (
+          pmfBalance ? (
+            <Tag size="sm" type="green">
+              {pmfBalance}
+            </Tag>
+          ) : <></>
+        )}
+
         {selectedIntervention ? (
           selectedIntervention.needsPreauth && !selectedIntervention.needsManualPreauthApproval ? (
             <Tag size="sm" type="blue" onClick={launchPreauthsModal}>
