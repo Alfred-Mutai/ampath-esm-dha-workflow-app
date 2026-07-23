@@ -88,12 +88,13 @@ const AddInterventionAttachmentsWorkspace: React.FC<AddInterventionAttachmentWor
     closeWorkspace();
   };
 
-  const allUploaded =
-    attachments.length > 0 && attachments.every((a) => a.files.length > 0 && a.files.every((f) => f.uploaded));
-
   if (!claimInterventions) return null;
 
-  const docTypes = claimInterventions.applicable_document_types;
+  const docTypes = Array.from(
+    new Map(
+      (claimInterventions.applicable_document_types ?? []).map((type) => [type.trim().toUpperCase(), type.trim()]),
+    ).values(),
+  );
 
   const addFiles = (attachmentId: string, selectedFiles: FileList | null) => {
     if (!selectedFiles) return;

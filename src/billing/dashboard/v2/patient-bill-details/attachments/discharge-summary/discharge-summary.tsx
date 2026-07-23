@@ -1,7 +1,7 @@
 import React, { forwardRef, useEffect, useState } from 'react';
-import { type VisitIntervention } from '../../types';
-import { type DischargeSummary } from './type';
-import { getDischargeSummary } from '../../../../maternity-discharge.resource';
+import { type VisitIntervention } from '../../../types';
+import { type DischargeSummary } from '../type';
+import { getDischargeSummary } from '../../../../../maternity-discharge.resource';
 
 import styles from './discharge-summary.scss';
 

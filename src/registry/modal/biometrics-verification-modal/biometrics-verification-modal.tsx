@@ -62,7 +62,7 @@ const BiometricsVerificationModal: React.FC<BiometricsVerificationModalProps> = 
 
       switch (status) {
         case 'AUTHORIZED': {
-          const authGuid = authorization.token;
+          const authGuid = authorization.guid;
 
           setAuthGuid(authGuid);
           onScanStatusChange?.(authGuid);
@@ -108,8 +108,8 @@ const BiometricsVerificationModal: React.FC<BiometricsVerificationModalProps> = 
         serviceType,
         workstation.workstationID,
         {
-          isDischarge
-        }
+          isDischarge,
+        },
       );
       const token = urlData.token;
 
@@ -185,13 +185,7 @@ const BiometricsVerificationModal: React.FC<BiometricsVerificationModalProps> = 
           <p className={styles.bioSubtitle}>{statusMeta.subtitle}</p>
         </div>
         {status === 'error' ? (
-          <Button
-            kind="danger--ghost"
-            size="sm"
-            renderIcon={Renew}
-            onClick={initialize}
-            className={styles.bioRetry}
-          >
+          <Button kind="danger--ghost" size="sm" renderIcon={Renew} onClick={initialize} className={styles.bioRetry}>
             Retry
           </Button>
         ) : (

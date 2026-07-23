@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { type GeneratedDocument } from './type';
 import { DocumentPdf, TrashCan, View } from '@carbon/react/icons';
 import InvoiceComponent from './invoice.component';
-import DischargeSummaryComponent from './discharge-summary';
+import DischargeSummaryComponent from './discharge-summary/discharge-summary';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { sendClaimAttachment } from '../../../../../registry/hie.resource';
@@ -32,21 +32,24 @@ const GenerateAttachments: React.FC<GenerateAttachmentsProps> = ({
   const [previewUrl, setPreviewUrl] = useState<string>();
   const [previewOpen, setPreviewOpen] = useState(false);
 
-  const [documents, setDocuments] = useState<GeneratedDocument[]>(
-    () =>
-      claimInterventions?.applicable_document_types?.map((documentType) => ({
-        id: crypto.randomUUID(),
-        name: documentType,
-        generated: false,
-        uploaded: false,
-      })) ?? [],
-  );
+  const [documents, setDocuments] = useState<GeneratedDocument[]>(() => {
+    const uniqueDocumentTypes = [...new Set(claimInterventions?.applicable_document_types ?? [])];
+
+    return uniqueDocumentTypes.map((documentType) => ({
+      id: crypto.randomUUID(),
+      name: documentType,
+      generated: false,
+      uploaded: false,
+    }));
+  });
   const session = useSession();
   const locationUuid = session.sessionLocation?.uuid;
 
   const invoiceRef = useRef<HTMLDivElement>(null);
   const dischargeRef = useRef<HTMLDivElement>(null);
   const finalBillRef = useRef<HTMLDivElement>(null);
+  const dialysisRef = useRef<HTMLDivElement>(null);
+  const caseSummaryRef = useRef<HTMLDivElement>(null);
 
   if (!claimInterventions) return null;
 

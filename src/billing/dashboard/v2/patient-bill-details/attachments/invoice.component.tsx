@@ -21,7 +21,7 @@ const InvoiceComponent = forwardRef<HTMLDivElement, InvoiceComponentProps>(({ bi
         boxSizing: 'border-box',
       }}
     >
-      <h1>KESSES SUB-COUNTY CENTRE</h1>
+      <h1>KESSES SUB-COUNTY HOSPITAL</h1>
       <hr />
       <h2>INVOICE</h2>
       <p>

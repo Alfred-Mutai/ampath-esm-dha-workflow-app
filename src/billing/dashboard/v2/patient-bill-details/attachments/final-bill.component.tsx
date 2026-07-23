@@ -21,7 +21,7 @@ const FinalBillComponent = forwardRef<HTMLDivElement, FinalBillComponentProps>((
         boxSizing: 'border-box',
       }}
     >
-      <h1>KESSES SUB-COUNTY CENTRE</h1>
+      <h1>KESSES SUB-COUNTY HOSPITAL</h1>
       <hr />
       <h2>FINAL BILL</h2>
       <p>
