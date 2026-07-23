@@ -4,7 +4,7 @@ import { submitClaim } from '../../../../../billing-claims.resource';
 import { Patient, showModal, showSnackbar } from '@openmrs/esm-framework';
 import { DischargeReasonType, type ClaimsVisit, type SubmitClaimDto } from '../../../types';
 import { type HieClient, HieIdentificationType } from '../../../../../../registry/types';
-import { Intervention } from '../../../../../../claims';
+import { Intervention, VisitType } from '../../../../../../claims';
 import { searchPatientByCrNumber } from '../../../../../../resources/patient-search.resource';
 import { IdentifierTypesUuids } from '../../../../../../resources/identifier-types';
 import ClaimsConsentExtension from '../../../../../../registry/modal/otp-verification-modal/extension/claims-consent.extension';
@@ -16,8 +16,9 @@ interface submitClaimModalProps {
     claimsVisit: ClaimsVisit;
     invoiceNumber: string;
     locationUuid: string;
+    visitType: VisitType;
 }
-const SubmitClaimModal: React.FC<submitClaimModalProps> = ({ open, onClose, onSuccess, locationUuid, claimsVisit, invoiceNumber }) => {
+const SubmitClaimModal: React.FC<submitClaimModalProps> = ({ open, onClose, onSuccess, locationUuid, claimsVisit, invoiceNumber, visitType }) => {
     const [loading, setLoading] = useState<boolean>(false);
     const [otp, setOtp] = useState("");
     const [authGuid, setAuthGuid] = useState("");
@@ -175,7 +176,7 @@ const SubmitClaimModal: React.FC<submitClaimModalProps> = ({ open, onClose, onSu
                     </Row>
                     {
                         (dischargeReason && notes) &&
-                        <ClaimsConsentExtension patient={consentPatient} intervention={getIntervention()} crIdentifierId={claimsVisit.member_number} visitType={'OUTPATIENT'} onClientConsent={onClientConsent} />
+                        <ClaimsConsentExtension patient={consentPatient} intervention={getIntervention()} crIdentifierId={claimsVisit.member_number} visitType={visitType} onClientConsent={onClientConsent} consentToken={claimsVisit.authorization_code} isDischarge={true}/>
                     }
                 </ModalBody>
             </Modal>
