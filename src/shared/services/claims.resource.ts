@@ -46,5 +46,5 @@ export const getServiceType = (
   if (accessPoint.trim().toUpperCase() === 'OP AND IP') {
     return visitType;
   }
-  throw Error(`Undefined payment mechanism`);
+  return visitType;
 };

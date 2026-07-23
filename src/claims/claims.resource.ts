@@ -231,7 +231,7 @@ export const getServiceType = (selectedIntervention: Intervention, visitType?: V
   if (accessPoint.trim().toUpperCase() === 'OP AND IP') {
     return visitType;
   }
-  throw Error(`Undefined payment mechanism`);
+  return visitType;
 };
 
 export const fetchConsentToken = async () => {

@@ -13,9 +13,10 @@ import { createOrderBillInHie, createPatientBill, removePatientBill, updatePatie
 import { generateUpdateBillLineItems } from "../../utils";
 import { IdentifierTypesUuids } from "../../../resources/identifier-types";
 import { type ConfigObject } from "../../../config-schema";
-import { type ClaimIntervention } from "../../../claims";
+import { VisitType, type ClaimIntervention } from "../../../claims";
 import { getConsentToken, getPaymentMode, getServiceType } from "../../../shared/services/claims.resource";
 import { useProviderClaimPreview } from "../../billing-claims.resource";
+import { VisitTypeUuids } from "../../../shared/constants/visit-types";
 
 interface CreateOrderBillFormProps {
     closeWorkspace: () => void;
@@ -164,7 +165,22 @@ const CreateOrderBillForm: React.FC<CreateOrderBillFormProps> = ({
             return claimVisit.interventions.some((i) => !subBenefitCodesWithHiddenClaimWidget.includes(i.sub_benefit_code));
         }
         return false;
-    }, [claimVisit, isLoadingClaimVisits])
+    }, [claimVisit, isLoadingClaimVisits]);
+
+    const visitType: VisitType = useMemo(() => {
+        if (activeVisit) {
+            const visitTypeUuid = activeVisit?.visitType?.uuid;
+            if (visitTypeUuid) {
+                if (visitTypeUuid === VisitTypeUuids.OPD_VISIT_TYPE_UUID) {
+                    return 'OUTPATIENT';
+                }
+                if (visitTypeUuid === VisitTypeUuids.INPATIENT_VISIT_TYPE_UUID) {
+                    return 'INPATIENT';
+                }
+            }
+        }
+        return 'OUTPATIENT';
+    }, [activeVisit, VisitTypeUuids]);
 
     const onAddIntervention = (result: ClaimIntervention) => {
         if (result) {
@@ -241,7 +257,7 @@ const CreateOrderBillForm: React.FC<CreateOrderBillFormProps> = ({
                 let intervention = {
                     intervention_code: interventionResult.intervention_code,
                     consent_token: getConsentToken(activeVisit),
-                    service_type: getServiceType(interventionResult, "OUTPATIENT"),
+                    service_type: getServiceType(interventionResult, visitType),
                     requires_preauth: requiresPreauth,
                     normal_preauth: requiresPreauth && !electivePreauth,
                     elective_preauth: electivePreauth
