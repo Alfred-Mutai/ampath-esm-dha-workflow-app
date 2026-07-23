@@ -117,6 +117,11 @@ export const configSchema = {
     _description: 'SHA Consultation Order type uuid',
     _default: '',
   },
+  shaInterventionSwitchingUuid: {
+    _type: Type.String,
+    _description: 'SHA Intervention Switching Order type uuid',
+    _default: '',
+  },
   cashConsulationConceptUuid: {
     _type: Type.String,
     _description: 'Cash Consultation concept uuid',
@@ -222,6 +227,7 @@ export interface ConfigObject {
   cashConsultationOrderTypeUuid: string;
   cashConsulationConceptUuid: string;
   shaConsultationOrderTypeUuid: string;
+  shaInterventionSwitchingUuid: string;
   shaConsulationConceptUuid: string;
   outPatientCareSettingUuid: string;
   orderEncounterTypeUuid: string;

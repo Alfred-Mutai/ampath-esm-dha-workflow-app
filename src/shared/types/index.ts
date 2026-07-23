@@ -136,11 +136,12 @@ export type Order = {
   patient: string;
   careSetting: string;
   orderer: string;
-  encounter: string;
   concept: string;
-  accessionNumber: string;
   urgency: OrderUrgency;
-  scheduledDate: null;
+  orderType?: { uuid: string };
+  encounter?: string;
+  accessionNumber?: string;
+  scheduledDate?: null;
 };
 
 export type CreateOrderEncounterDto = {
@@ -150,4 +151,5 @@ export type CreateOrderEncounterDto = {
   visit: string;
   obs: any[];
   orders: Order[];
+  encounterDatetime?: string;
 };

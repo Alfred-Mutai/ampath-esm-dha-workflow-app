@@ -18,8 +18,14 @@ interface claimVisitDetailsProps {
   claimsVisit: ClaimsVisit;
   locationUuid: string;
   patientBillDetails?: PatientFacilityBillDetails;
+  onBillDetailsChange?: () => void;
 }
-const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({ claimsVisit, locationUuid, patientBillDetails }) => {
+const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({
+  claimsVisit,
+  locationUuid,
+  patientBillDetails,
+  onBillDetailsChange,
+}) => {
   const [showCloseClaimModal, setShowCloseClaimModal] = useState<boolean>();
   const [showSubmitClaimModal, setSubmitCloseClaimModal] = useState<boolean>(false);
   const [showAddDoctorModal, setShowAddDoctorModal] = useState<boolean>(false);
@@ -126,8 +132,13 @@ const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({ claimsVisit, loca
       consentToken: claimsVisit.authorization_code,
       currentInterventions: claimsVisit.interventions,
       patientId: patientBillDetails?.cr_no ?? claimsVisit.patient_number,
+      patientUuid: patientBillDetails?.patient_uuid,
+      visitUuid: activeVisit?.uuid,
       billDate: patientBillDetails?.bill_date ?? claimsVisit.visit_start,
-      onSwitchSuccess: () => invalidateProviderClaimPreview(),
+      onSwitchSuccess: () => {
+        invalidateProviderClaimPreview();
+        onBillDetailsChange?.();
+      },
     });
   };
   return (

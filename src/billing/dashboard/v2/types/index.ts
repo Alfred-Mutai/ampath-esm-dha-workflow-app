@@ -344,6 +344,13 @@ export type AddClaimDiagnosisDto = {
 // VisitIntervention.switched_lines_retained; `billFrom` / `billTo` are the
 // bill-period date range (ISO `YYYY-MM-DD`) used only when bill items are
 // retained (empty strings otherwise).
+// TODO(backend): `billedAmount` is not yet confirmed against the
+// `/interventions/switch` contract (that route itself is still a backend
+// TODO — see switchClaimIntervention). It's the selected service type's
+// SHA-tariff price. Confirm the field name/acceptance with the backend
+// before this ships. The OpenMRS order for the switch is created only
+// *after* this call succeeds (see switch-intervention.workspace.tsx), so
+// there is no order number to attach to this DTO at submit time.
 export type SwitchInterventionDto = {
   consentToken: string;
   existingInterventionCode: string;
@@ -352,4 +359,5 @@ export type SwitchInterventionDto = {
   billFrom: string;
   billTo: string;
   locationUuid: string;
+  billedAmount: string;
 };

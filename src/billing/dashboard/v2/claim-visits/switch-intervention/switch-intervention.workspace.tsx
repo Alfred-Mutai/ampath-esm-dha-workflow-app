@@ -14,18 +14,32 @@ import {
   Toggle,
 } from '@carbon/react';
 import { Renew, WarningAltFilled } from '@carbon/react/icons';
-import { showSnackbar, useSession, type DefaultWorkspaceProps } from '@openmrs/esm-framework';
+import { showSnackbar, useConfig, useSession, type DefaultWorkspaceProps } from '@openmrs/esm-framework';
 import { useTranslation } from 'react-i18next';
 import styles from './switch-intervention.workspace.scss';
 import { type SwitchInterventionDto, type VisitIntervention } from '../../types';
 import { switchClaimIntervention } from '../../../../billing-claims.resource';
 import { useClientSubBenefits, useInterventions } from '../../../../../claims/claims.resource';
 import { type ClientSubBenefit, type Intervention } from '../../../../../claims';
+import { type ConfigObject } from '../../../../../config-schema';
+import { type CreateBillDto } from '../../../../../shared/types';
+import {
+  createOrderBillInHie,
+  createPatientBill,
+  removePatientBill,
+  useBillableItems,
+  useCashPoint,
+} from '../../../../workspaces/create-order-bill-form-workspace/create-order-bill-form.resource';
+import { createSwitchInterventionOrder } from './switch-intervention.resource';
+
+type ServicePrice = { uuid: string; name: string; price: number; paymentMode?: { uuid: string; name: string } };
 
 interface SwitchInterventionWorkspaceProps extends DefaultWorkspaceProps {
   consentToken: string;
   currentInterventions: VisitIntervention[];
   patientId?: string;
+  patientUuid?: string;
+  visitUuid?: string;
   billDate?: string;
   onSwitchSuccess?: () => void;
 }
@@ -50,12 +64,20 @@ const SwitchInterventionForm: React.FC<SwitchInterventionWorkspaceProps> = ({
   consentToken,
   currentInterventions,
   patientId,
+  patientUuid,
+  visitUuid,
   billDate,
   onSwitchSuccess,
 }) => {
   const { t } = useTranslation();
   const session = useSession();
   const locationUuid = session.sessionLocation?.uuid;
+  const {
+    orderEncounterTypeUuid,
+    outPatientCareSettingUuid,
+    shaConsulationConceptUuid,
+    shaPaymentModeUuid,
+  } = useConfig<ConfigObject>();
 
   // Step 1 — the intervention being switched FROM.
   const [selectedCurrentCode, setSelectedCurrentCode] = useState<string>(
@@ -70,8 +92,39 @@ const SwitchInterventionForm: React.FC<SwitchInterventionWorkspaceProps> = ({
   const [billFrom, setBillFrom] = useState<string>('');
   const [billTo, setBillTo] = useState<string>('');
 
+  // Step 2b — the service type whose SHA-tariff price becomes the switch's
+  // billed amount. Keyed to the currently selected target so a target
+  // change starts it over.
+  const [selectedServiceUuid, setSelectedServiceUuid] = useState<string>('');
+
+  // The OpenMRS order is created only *after* switchClaimIntervention
+  // succeeds — switchCompleted gates the post-switch order-creation step and
+  // locks the form against a second submission. The bill item is then
+  // created only after the order exists, tied to it via orderNumber.
+  const [switchCompleted, setSwitchCompleted] = useState<boolean>(false);
+  const [creatingOrder, setCreatingOrder] = useState<boolean>(false);
+  const [orderNumber, setOrderNumber] = useState<string>('');
+  const [orderError, setOrderError] = useState<string>('');
+  const [creatingBillItem, setCreatingBillItem] = useState<boolean>(false);
+  const [billItemCreated, setBillItemCreated] = useState<boolean>(false);
+  const [billItemError, setBillItemError] = useState<string>('');
+
   const [showConfirm, setShowConfirm] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
+
+  const { lineItems: billableItems } = useBillableItems();
+  const { cashPoints } = useCashPoint();
+  const selectedBillableItem = useMemo(
+    () => (billableItems ?? []).find((item) => item.uuid === selectedServiceUuid),
+    [billableItems, selectedServiceUuid],
+  );
+  const shaPrice = useMemo(
+    () =>
+      (selectedBillableItem?.servicePrices as ServicePrice[] | undefined)?.find(
+        (sp) => sp.paymentMode?.uuid === shaPaymentModeUuid,
+      ),
+    [selectedBillableItem, shaPaymentModeUuid],
+  );
 
   // Sub-benefits load once; interventions load lazily only after a sub-benefit
   // is chosen (useInterventions returns a null key until both args are set).
@@ -92,10 +145,124 @@ const SwitchInterventionForm: React.FC<SwitchInterventionWorkspaceProps> = ({
   );
   const target = useMemo(() => targetOptions.find((iv) => iv.code === targetCode), [targetOptions, targetCode]);
 
+  // Create the bill item for the switch. Called only after the OpenMRS order
+  // already exists, tying the two together via orderNumber — mirrors
+  // create-order-bill-form.workspace.tsx's create-then-link-to-HIE pattern.
+  // A failure here never leaves an orphaned order: the order already
+  // succeeded, so the user just retries this step alone.
+  const attemptCreateBillItem = async (createdOrderNumber: string) => {
+    if (!selectedBillableItem || !shaPrice) {
+      setBillItemError(t('missingServiceType', 'Select a service type before creating the bill item.'));
+      return;
+    }
+    const cashPointUuid = cashPoints?.[0]?.uuid;
+    if (!cashPointUuid || !patientUuid) {
+      setBillItemError(
+        t('missingBillContext', 'Cash point or patient context unavailable — cannot create the bill item.'),
+      );
+      return;
+    }
+    setCreatingBillItem(true);
+    setBillItemError('');
+    try {
+      const billPayload: CreateBillDto = {
+        lineItems: [
+          {
+            billableService: selectedBillableItem.uuid,
+            quantity: 1,
+            price: shaPrice.price,
+            priceName: shaPrice.name,
+            priceUuid: shaPrice.uuid,
+            lineItemOrder: 0,
+            status: shaPrice.price === 0 ? 'PAID' : 'PENDING',
+          },
+        ],
+        cashPoint: cashPointUuid,
+        patient: patientUuid,
+        status: 'PENDING',
+        payments: [],
+      };
+      const billResponse = await createPatientBill(billPayload);
+      const billUuid = billResponse?.data?.uuid;
+      const lineItemUuid = billResponse?.data?.lineItems?.find((li) => li.lineItemOrder === 0)?.uuid;
+      if (!billUuid) {
+        throw new Error('Bill was created without a uuid');
+      }
+      try {
+        await createOrderBillInHie({
+          bill_uuid: billUuid,
+          order_no: createdOrderNumber,
+          line_item_uuid: lineItemUuid,
+          intervention_code: target?.code,
+          consent_token: consentToken,
+        });
+      } catch (hieError) {
+        await removePatientBill(billUuid);
+        throw hieError;
+      }
+      setBillItemCreated(true);
+      // Refresh again now that the order + bill are actually in place, on
+      // top of the earlier refresh right after the switch itself succeeded.
+      onSwitchSuccess?.();
+      promptBeforeClosing(() => false);
+      closeWorkspace();
+    } catch (error) {
+      setBillItemError(typeof error === 'string' ? error : (error as Error)?.message ?? 'Failed to create bill item.');
+      showSnackbar({
+        kind: 'error',
+        title: t('billItemCreationFailed', 'Bill item creation failed'),
+        subtitle: t(
+          'billItemCreationFailedSubtitle',
+          'The order was already created. Retry creating the bill item below.',
+        ),
+      });
+    } finally {
+      setCreatingBillItem(false);
+    }
+  };
+
+  // Create the OpenMRS order for the switch. Called only after
+  // switchClaimIntervention has already succeeded, so a failure here never
+  // leaves an orphaned order — the switch itself is already done, and the
+  // user can retry just this step.
+  const attemptCreateOrder = async () => {
+    if (!patientUuid || !visitUuid || !locationUuid) {
+      setOrderError(t('missingOrderContext', 'Patient or visit context unavailable — cannot create an order.'));
+      return;
+    }
+    setCreatingOrder(true);
+    setOrderError('');
+    try {
+      const { orderNumber: createdOrderNumber } = await createSwitchInterventionOrder({
+        patientUuid,
+        visitUuid,
+        locationUuid,
+        providerUuid: session.currentProvider?.uuid ?? '',
+        orderEncounterTypeUuid,
+        outPatientCareSettingUuid,
+        shaConsulationConceptUuid,
+      });
+      setOrderNumber(createdOrderNumber);
+      await attemptCreateBillItem(createdOrderNumber);
+    } catch (error) {
+      setOrderError(typeof error === 'string' ? error : (error as Error)?.message ?? 'Failed to create order.');
+      showSnackbar({
+        kind: 'error',
+        title: t('orderCreationFailed', 'Order creation failed'),
+        subtitle: t(
+          'orderCreationFailedSubtitle',
+          'The intervention switch already succeeded. Retry creating the order below.',
+        ),
+      });
+    } finally {
+      setCreatingOrder(false);
+    }
+  };
+
   const subBenefitDiffers = Boolean(
     currentIntervention && selectedSubBenefitCode && selectedSubBenefitCode !== currentIntervention.sub_benefit_code,
   );
-  const hasUnsavedSelection = Boolean(targetCode);
+  const hasUnsavedSelection = Boolean(targetCode) && (!switchCompleted || !orderNumber || !billItemCreated);
 
   useEffect(() => {
     promptBeforeClosing(() => hasUnsavedSelection);
@@ -109,20 +276,39 @@ const SwitchInterventionForm: React.FC<SwitchInterventionWorkspaceProps> = ({
     );
   }
 
+  // Clears the service-type selection and any switch/order/bill progress so
+  // nothing from a previous target carries into a switch for a different one.
+  const resetOrderState = () => {
+    setSelectedServiceUuid('');
+    setSwitchCompleted(false);
+    setOrderNumber('');
+    setOrderError('');
+    setBillItemCreated(false);
+    setBillItemError('');
+  };
+
   const pickCurrent = (code: string) => {
     setSelectedCurrentCode(code);
     setTargetCode('');
     setShowConfirm(false);
+    resetOrderState();
   };
 
   const pickSubBenefit = (code: string) => {
     setSelectedSubBenefitCode(code);
     setTargetCode('');
     setShowConfirm(false);
+    resetOrderState();
+  };
+
+  const pickTarget = (code: string) => {
+    setTargetCode(code);
+    setShowConfirm(false);
+    resetOrderState();
   };
 
   const confirmSwitch = async () => {
-    if (!currentIntervention || !target || !locationUuid) {
+    if (!currentIntervention || !target || !locationUuid || !shaPrice) {
       return;
     }
     setSubmitting(true);
@@ -137,9 +323,11 @@ const SwitchInterventionForm: React.FC<SwitchInterventionWorkspaceProps> = ({
       billFrom: retainBillItems ? billFrom : toIso(billDate) || now,
       billTo: retainBillItems ? billTo : now,
       locationUuid,
+      billedAmount: String(shaPrice.price),
     };
     try {
       await switchClaimIntervention(dto);
+      setSwitchCompleted(true);
       showSnackbar({
         kind: 'success',
         title: t('interventionSwitched', 'Intervention switched'),
@@ -149,8 +337,9 @@ const SwitchInterventionForm: React.FC<SwitchInterventionWorkspaceProps> = ({
         }),
       });
       onSwitchSuccess?.();
-      promptBeforeClosing(() => false);
-      closeWorkspace();
+      // The switch succeeded before any order exists, so nothing is orphaned
+      // if the order-creation step below fails — the user just retries it.
+      await attemptCreateOrder();
     } catch (error) {
       showSnackbar({
         kind: 'error',
@@ -255,10 +444,7 @@ const SwitchInterventionForm: React.FC<SwitchInterventionWorkspaceProps> = ({
                       item ? `${(item as Intervention).code} · ${(item as Intervention).name}` : ''
                     }
                     selectedItem={target ?? null}
-                    onChange={({ selectedItem }) => {
-                      setTargetCode((selectedItem as Intervention)?.code ?? '');
-                      setShowConfirm(false);
-                    }}
+                    onChange={({ selectedItem }) => pickTarget((selectedItem as Intervention)?.code ?? '')}
                   />
                 )
               ) : null}
@@ -290,6 +476,73 @@ const SwitchInterventionForm: React.FC<SwitchInterventionWorkspaceProps> = ({
           ) : null}
         </section>
 
+        {/* Step 2b — service type whose SHA-tariff price becomes the
+            switch's billed amount. The OpenMRS order itself is only created
+            after the switch succeeds (see the post-switch section below). */}
+        {target && !switchCompleted ? (
+          <section className={styles.section}>
+            <h5 className={styles.sectionTitle}>{t('serviceType', 'Service type')}</h5>
+            <ComboBox
+              id="service-type"
+              titleText={t('serviceType', 'Service type')}
+              placeholder={t('searchServiceType', 'Search billable service')}
+              items={billableItems ?? []}
+              itemToString={(item) => item?.name ?? ''}
+              selectedItem={selectedBillableItem ?? null}
+              onChange={({ selectedItem }) => setSelectedServiceUuid(selectedItem?.uuid ?? '')}
+            />
+            {selectedBillableItem ? (
+              shaPrice ? (
+                <p className={styles.sectionSub}>{`${selectedBillableItem.name} (SHA: ${shaPrice.price})`}</p>
+              ) : (
+                <p className={styles.hintBad}>{t('noShaPrice', 'This service has no SHA price configured.')}</p>
+              )
+            ) : null}
+          </section>
+        ) : null}
+
+        {/* Post-switch — the OpenMRS order is created only once the switch
+            itself has succeeded, so a failure here never leaves an
+            orphaned order; the user retries just this step. */}
+        {switchCompleted ? (
+          <section className={styles.section}>
+            <h5 className={styles.sectionTitle}>{t('switchOrder', 'Switch order')}</h5>
+            {creatingOrder ? (
+              <InlineLoading description={t('creatingOrder', 'Creating order…')} />
+            ) : orderNumber ? (
+              <div className={styles.currentCard}>
+                <span>
+                  {t('orderCreated', 'Order created')}: <strong>{orderNumber}</strong>
+                </span>
+              </div>
+            ) : orderError ? (
+              <>
+                <p className={styles.hintBad}>{orderError}</p>
+                <Button kind="ghost" size="sm" onClick={attemptCreateOrder}>
+                  {t('retry', 'Retry')}
+                </Button>
+              </>
+            ) : null}
+
+            {orderNumber ? (
+              creatingBillItem ? (
+                <InlineLoading description={t('creatingBillItem', 'Creating bill item…')} />
+              ) : billItemCreated ? (
+                <div className={styles.currentCard}>
+                  <span>{t('billItemCreated', 'Bill item created')}</span>
+                </div>
+              ) : billItemError ? (
+                <>
+                  <p className={styles.hintBad}>{billItemError}</p>
+                  <Button kind="ghost" size="sm" onClick={() => attemptCreateBillItem(orderNumber)}>
+                    {t('retry', 'Retry')}
+                  </Button>
+                </>
+              ) : null
+            ) : null}
+          </section>
+        ) : null}
+
         {/* Retain bill items */}
         <section className={styles.section}>
           <Toggle
@@ -314,7 +567,7 @@ const SwitchInterventionForm: React.FC<SwitchInterventionWorkspaceProps> = ({
         </section>
 
         {/* Confirmation prompt */}
-        {showConfirm && currentIntervention && target ? (
+        {showConfirm && !switchCompleted && currentIntervention && target ? (
           <div className={styles.switchPrompt}>
             <Renew size={18} />
             <div className={styles.switchBody}>
@@ -327,7 +580,11 @@ const SwitchInterventionForm: React.FC<SwitchInterventionWorkspaceProps> = ({
                 <strong>
                   {target.code} · {target.name}
                 </strong>
-                ? {t('billItemsWillBe', 'Bill items will be')}{' '}
+                , {t('billedAt', 'billed at')}{' '}
+                <strong>
+                  {shaPrice?.price} {t('via', 'via')} {selectedBillableItem?.name}
+                </strong>
+                . {t('billItemsWillBe', 'Bill items will be')}{' '}
                 <strong>{retainBillItems ? t('retained', 'retained') : t('notRetained', 'not retained')}</strong>.
               </p>
               {subBenefitDiffers ? (
@@ -368,7 +625,11 @@ const SwitchInterventionForm: React.FC<SwitchInterventionWorkspaceProps> = ({
         <Button kind="secondary" onClick={() => closeWorkspace()} disabled={submitting}>
           {t('cancel', 'Cancel')}
         </Button>
-        <Button kind="primary" onClick={() => setShowConfirm(true)} disabled={!targetCode || submitting || showConfirm}>
+        <Button
+          kind="primary"
+          onClick={() => setShowConfirm(true)}
+          disabled={!targetCode || !shaPrice || submitting || showConfirm || switchCompleted}
+        >
           {t('switchIntervention', 'Switch intervention')}
         </Button>
       </ButtonSet>
