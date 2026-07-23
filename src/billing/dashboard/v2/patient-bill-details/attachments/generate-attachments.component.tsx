@@ -4,7 +4,7 @@ import { showSnackbar, useSession, type DefaultWorkspaceProps } from '@openmrs/e
 import { type VisitIntervention } from '../../types';
 
 import styles from './attachments.scss';
-import { Button, ButtonSet, Form, Modal, Tag } from '@carbon/react';
+import { Button, Form, Modal, Tag } from '@carbon/react';
 import { useTranslation } from 'react-i18next';
 import { type GeneratedDocument } from './type';
 import { DocumentPdf, TrashCan, View } from '@carbon/react/icons';
@@ -31,23 +31,16 @@ const GenerateAttachments: React.FC<GenerateAttachmentsProps> = ({
   const { t } = useTranslation();
   const [previewUrl, setPreviewUrl] = useState<string>();
   const [previewOpen, setPreviewOpen] = useState(false);
-  const [documents, setDocuments] = useState<GeneratedDocument[]>([
-    {
-      id: crypto.randomUUID(),
-      name: 'DISCHARGE_SUMMARY',
-      generated: false,
-    },
-    {
-      id: crypto.randomUUID(),
-      name: 'INVOICE',
-      generated: false,
-    },
-    {
-      id: crypto.randomUUID(),
-      name: 'FINAL_BILL',
-      generated: false,
-    },
-  ]);
+
+  const [documents, setDocuments] = useState<GeneratedDocument[]>(
+    () =>
+      claimInterventions?.applicable_document_types?.map((documentType) => ({
+        id: crypto.randomUUID(),
+        name: documentType,
+        generated: false,
+        uploaded: false,
+      })) ?? [],
+  );
   const session = useSession();
   const locationUuid = session.sessionLocation?.uuid;
 
@@ -151,12 +144,27 @@ const GenerateAttachments: React.FC<GenerateAttachmentsProps> = ({
   const generateDocument = async (document: GeneratedDocument) => {
     let element: HTMLDivElement | null = null;
 
-    if (document.name === 'INVOICE') {
-      element = invoiceRef.current;
-    } else if (document.name === 'FINAL_BILL') {
-      element = finalBillRef.current;
-    } else {
-      element = dischargeRef.current;
+    switch (document.name) {
+      case 'INVOICE':
+        element = invoiceRef.current;
+        break;
+
+      case 'FINAL_BILL':
+        element = finalBillRef.current;
+        break;
+
+      case 'DISCHARGE_SUMMARY':
+        element = dischargeRef.current;
+        break;
+
+      default:
+        console.warn(`No generator implemented for ${document.name}`);
+        showSnackbar({
+          kind: 'error',
+          title: 'Error Generating Attachment',
+          subtitle: `No generator implemented for ${document.name}. Kindly and Upload it instead`,
+        });
+        return;
     }
 
     if (!element) {
@@ -256,11 +264,11 @@ const GenerateAttachments: React.FC<GenerateAttachmentsProps> = ({
             </div>
           ))}
         </div>
-        <ButtonSet className={styles.buttonSet}>
+        <div className={styles.closeButton}>
           <Button kind="secondary" onClick={handleDiscard}>
             {t('close', 'Close')}
           </Button>
-        </ButtonSet>
+        </div>
       </Form>
       <Modal
         open={previewOpen}
