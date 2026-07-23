@@ -206,3 +206,97 @@ export interface ClaimResult {
   updated_by_name: string;
   notes: string;
 }
+export interface PomsfBalance {
+  memberNumber: string;
+  parentNumber: string;
+  schemeCount: number;
+  policyCount: number;
+  title: string;
+  firstName: string;
+  middleName: string;
+  lastName: string;
+  gender: string;
+  dateOfBirth: string;
+  relationshipType: string;
+  phoneCode: string;
+  phone: string;
+  registeredOn: string;
+  householdId: string;
+  nationalId: string;
+  shaNumber: string;
+  memberPolicies: MemberPolicy[];
+}
+
+export interface Policy {
+  policyId: string;
+  name: string;
+  description: string;
+  type: string;
+  status: string;
+  totalBenefit: number;
+  PolicyYear: string;
+  endDate: string;
+  terminationDate: string;
+  activeDate: string;
+  policyCode: string;
+  companyName: string;
+  schemeName: string;
+  schemeCode: string;
+  policyGroup: string;
+  hasHospitalCodes: boolean;
+  hasIncludeandExclude: boolean;
+  hasICD10Code: boolean;
+  hasImagingServices: boolean;
+  hasLabtests: boolean;
+  hasMedicalprocedures: boolean;
+  hasOpticalServices: boolean;
+  hasMedicines: boolean;
+  iCD10Type: string;
+  medicalproceduresType: string;
+}
+
+interface MemberPolicy {
+  parentMemberNumber: string;
+  policy: Policy;
+  benefit: Benefit[];
+  status: string;
+  joinDate: string;
+  leaveDate: string | null;
+  memberOriginalJoinDate: string;
+  policyJoinDate: string;
+  dependentCount: unknown[];
+  spouseCount: unknown[];
+}
+
+export interface Benefit {
+  benefitId: number;
+  name: string;
+  description: string;
+  type: string;
+  limit: number;
+  benefitShared: any;
+  benefitRelation: any;
+  benefitGender: any;
+  subBenefit: SubBenefit[];
+  balance: MemberBalance[];
+  benefitCode: string;
+}
+
+export interface SubBenefit {
+  subBenefitId: number;
+  name: string;
+  description: string;
+  type: string;
+  limit: number;
+  subBenefitShared: any;
+  subBenefitRelation: any;
+  subBenefitGender: any;
+  subBenefitWaitingPeriod: number | string | null;
+  balance: MemberBalance[];
+  subBenefitCode: string;
+}
+
+export interface MemberBalance {
+  member: string;
+  balance: number;
+}
