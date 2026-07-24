@@ -7,7 +7,7 @@ import {
 } from "../../../../billing-claims.resource";
 import styles from './patient-claim-details.component.scss';
 import ClaimVisitDetails from "../../claim-visits/claim-visit-details/claim-visit-details.component";
-import { Button, InlineLoading } from "@carbon/react";
+import { Button } from "@carbon/react";
 import { Renew, WarningAltFilled } from "@carbon/react/icons";
 import ClaimDetailsSkeleton from "./claim-details-skeleton.component";
 import EmptyState from "../../shared/empty-state.component";
@@ -31,7 +31,7 @@ const PatientClaimDetails: React.FC<patientClaimDetailsProps> = ({
   const [claimFromVisit, setClaimFromVisit] = useState<ClaimsVisit>();
   const [visitLoading, setVisitLoading] = useState<boolean>(true);
   const [visitError, setVisitError] = useState<boolean>(false);
-  const { claimVisit, isValidating } = useProviderClaimPreview(consentToken, locationUuid);
+  const { claimVisit } = useProviderClaimPreview(consentToken, locationUuid);
   const invalidateProviderClaimPreview = useInvalidateProviderClaimPreview();
 
   useEffect(() => {
@@ -94,20 +94,14 @@ const PatientClaimDetails: React.FC<patientClaimDetailsProps> = ({
     );
   }
 
-  return <>
-    {
-      isValidating &&
-      <InlineLoading description='Refreshing data...' />
-    }
+  return (
     <div className={styles.pcLayout}>
-      {
-        claim ? (
-          <ClaimVisitDetails patientBillDetails={patientBill} claimsVisit={claim} locationUuid={locationUuid} hidePatientIdentity />
-        ) : (
-          <EmptyState message="No claim details available for this visit." />
-        )
-      }
+      {claim ? (
+        <ClaimVisitDetails patientBillDetails={patientBill} claimsVisit={claim} locationUuid={locationUuid} hidePatientIdentity />
+      ) : (
+        <EmptyState message="No claim details available for this visit." />
+      )}
     </div>
-  </>
+  );
 };
 export default PatientClaimDetails;

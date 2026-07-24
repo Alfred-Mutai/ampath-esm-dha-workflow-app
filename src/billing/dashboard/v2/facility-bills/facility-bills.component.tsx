@@ -137,7 +137,8 @@ const FacilityBills: React.FC<facilityBillsProps> = ({ billingDate, locationUuid
   const shaBills = useMemo(() => (facilityBills ?? []).filter((fb) => paymentMode(fb) === 'SHA'), [facilityBills]);
 
   const isSha = tabIndex === 1;
-  const activeBills = tabIndex === 0 ? cashBills : shaBills;
+  // 0 = Cash bills, 1 = SHA claims, 2 = All bills (both payers together).
+  const activeBills = tabIndex === 0 ? cashBills : tabIndex === 1 ? shaBills : (facilityBills ?? []);
   // Each SHA claim's workflow_state, keyed by its authorization code (== the bill's
   // consent token).
   const claimStateByToken = useMemo(() => {
@@ -209,7 +210,7 @@ const FacilityBills: React.FC<facilityBillsProps> = ({ billingDate, locationUuid
     goTo(1);
   };
 
-  const payerNoun = isSha ? 'SHA claims' : 'cash bills';
+  const payerNoun = tabIndex === 1 ? 'SHA claims' : tabIndex === 2 ? 'bills' : 'cash bills';
   const emptyBillsMessage = selectedBucket
     ? `No ${payerNoun} under “${selectedBucket.label}”.`
     : search
@@ -361,10 +362,12 @@ const FacilityBills: React.FC<facilityBillsProps> = ({ billingDate, locationUuid
               <TabList aria-label="Facility bills" scrollDebounceWait={200}>
                 <Tab>Cash bills</Tab>
                 <Tab>SHA claims</Tab>
+                <Tab>All bills</Tab>
               </TabList>
               <TabPanels>
                 <TabPanel>{tabIndex === 0 ? billsTable : null}</TabPanel>
                 <TabPanel>{tabIndex === 1 ? billsTable : null}</TabPanel>
+                <TabPanel>{tabIndex === 2 ? billsTable : null}</TabPanel>
               </TabPanels>
             </Tabs>
           )}
