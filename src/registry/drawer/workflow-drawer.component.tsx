@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Button,
+  ComboBox,
   Dropdown,
   FileUploaderItem,
   FormLabel,
@@ -55,6 +56,8 @@ type Phase =
 
 type Method = 'cash' | 'insurance';
 
+type RequiredField = 'visitType' | 'room' | 'insurance';
+
 const STEPS = ['Verify & consent', 'Start visit'];
 const BIOMETRIC_MAX_ATTEMPTS = 3;
 
@@ -79,6 +82,75 @@ const NON_INSURANCE_PAYMENT_MODES = /cash|mpesa|m-pesa|waiver/i;
 
 // OpenMRS visit types (searchable).
 const VISIT_TYPE_OPTIONS = ['Outpatient', 'Inpatient'];
+
+// Keys that still have to work while an option is selected: menu navigation, commit
+// and dismiss. Everything else that would mutate the text is blocked below.
+const SELECTION_NAV_KEYS = new Set([
+  'Tab',
+  'Enter',
+  'Escape',
+  'ArrowUp',
+  'ArrowDown',
+  'ArrowLeft',
+  'ArrowRight',
+  'Home',
+  'End',
+  'Shift',
+  'Control',
+  'Alt',
+  'Meta',
+]);
+
+// A picked option behaves as a single locked token: while one is selected the field
+// can't be typed into, pasted into, or erased from the keyboard, so it can never hold
+// a half-edited label that still reads as a valid selection. Clearing is deliberate —
+// only the combo box's ✕ button removes a selection. Bound on the wrapper in the
+// capture phase so these run before Carbon's own handlers.
+function lockSelection(hasSelection: boolean) {
+  const block = (event: React.SyntheticEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+  return {
+    onKeyDownCapture: (event: React.KeyboardEvent) => {
+      if (!hasSelection) {
+        return;
+      }
+      // Backspace/Delete included: use the ✕ button to change a selection.
+      if (event.key === 'Backspace' || event.key === 'Delete') {
+        block(event);
+        return;
+      }
+      // Let shortcuts through — an actual paste is stopped by onPasteCapture.
+      if (SELECTION_NAV_KEYS.has(event.key) || event.ctrlKey || event.metaKey) {
+        return;
+      }
+      // Any single-character key would append to the locked label.
+      if (event.key.length === 1) {
+        block(event);
+      }
+    },
+    onPasteCapture: (event: React.ClipboardEvent) => {
+      if (hasSelection) {
+        block(event);
+      }
+    },
+  };
+}
+
+// Carbon's ComboBox shows every item unless it's given a shouldFilterItem, so each
+// searchable dropdown gets one of these. Once an item is picked Carbon puts its label
+// in the input, which would otherwise filter the reopened menu down to that one item —
+// hence treating "input equals the current selection" as an empty query.
+function filterByLabel<T>(toLabel: (item: T) => string, selectedLabel: string) {
+  return ({ item, inputValue }: { item: T; inputValue: string | null }) => {
+    const query = (inputValue ?? '').trim().toLowerCase();
+    if (!query || query === (selectedLabel ?? '').trim().toLowerCase()) {
+      return true;
+    }
+    return toLabel(item).toLowerCase().includes(query);
+  };
+}
 
 // Reasons biometric identification could not be used (option set for the request).
 const WHITELIST_REASONS = [
@@ -172,6 +244,15 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
   const [loadingEligibility, setLoadingEligibility] = useState(false);
   const [eligibilityChecked, setEligibilityChecked] = useState(false);
   const [insuranceError, setInsuranceError] = useState('');
+  // Required fields only flag once the user has actually been in them, so the step
+  // doesn't open pre-painted red. Each clears the moment its field has a value.
+  const [touched, setTouched] = useState<Record<RequiredField, boolean>>({
+    visitType: false,
+    room: false,
+    insurance: false,
+  });
+  const markTouched = (field: RequiredField) => () =>
+    setTouched((prev) => (prev[field] ? prev : { ...prev, [field]: true }));
 
   useEffect(() => {
     if (open) {
@@ -199,6 +280,7 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
       setHasCashPoint(null);
       setHasCashMode(null);
       setEligibilityChecked(false);
+      setTouched({ visitType: false, room: false, insurance: false });
     }
   }, [open]);
 
@@ -299,9 +381,7 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
         if (!active) {
           return;
         }
-        const facilityCashPoints = (cashPoints ?? []).filter(
-          (cp) => !cp.retired && cp.location?.uuid === locationUuid,
-        );
+        const facilityCashPoints = (cashPoints ?? []).filter((cp) => !cp.retired && cp.location?.uuid === locationUuid);
         setHasCashPoint(facilityCashPoints.length > 0);
 
         // Whether a "cash" payment mode is configured on the backend.
@@ -417,7 +497,13 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
         Create in EMR
       </Button>
     ) : (
-      <Button kind="tertiary" size="sm" renderIcon={Renew} disabled={syncingAmrs} onClick={() => setPendingEmrAction('sync')}>
+      <Button
+        kind="tertiary"
+        size="sm"
+        renderIcon={Renew}
+        disabled={syncingAmrs}
+        onClick={() => setPendingEmrAction('sync')}
+      >
         {syncingAmrs ? 'Syncing…' : 'Sync'}
       </Button>
     );
@@ -460,7 +546,7 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
   // create the patient in the EMR (not found) or sync an existing record (found).
   const emrStatusCard = !amrsChecked ? null : amrsPatient ? (
     <div>
-    {/* <div className={`${styles.emrStatus} ${styles.emrStatusFound}`}> */}
+      {/* <div className={`${styles.emrStatus} ${styles.emrStatusFound}`}> */}
       {/* <span className={styles.emrStatusIcon}>
         <CheckmarkOutline size={20} />
       </span>
@@ -559,7 +645,12 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
     }
     setSubmittingWhitelist(true);
     try {
-      await requestOtpWhitelist({ crId: client.id, reason, failureCount: failCount, failedBiometricImage: failedImage });
+      await requestOtpWhitelist({
+        crId: client.id,
+        reason,
+        failureCount: failCount,
+        failedBiometricImage: failedImage,
+      });
       showSnackbar({ kind: 'success', title: 'Request submitted', subtitle: 'Awaiting approval from the SHA team.' });
       setPhase('whitelist-pending');
     } finally {
@@ -587,15 +678,18 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
     });
   };
 
-  // Required-field validation, shown as soon as the user lands on the visit step
-  // so a disabled "Start visit" button is always explained. Each message clears
-  // reactively once its field is filled.
-  const roomInvalidText = !room ? `Select a ${patientCategory === 'Walk-in' ? 'walk-in' : 'triage'} room` : '';
-  const visitTypeInvalidText = !visitType ? 'Select a visit type' : '';
+  // Required-field validation. A field flags only once the user has been in it and
+  // left it empty, so the step doesn't open pre-painted red; each message then clears
+  // reactively the moment its field is filled.
+  const roomInvalidText =
+    touched.room && !room ? `Select a ${patientCategory === 'Walk-in' ? 'walk-in' : 'triage'} room` : '';
+  const visitTypeInvalidText = touched.visitType && !visitType ? 'Select a visit type' : '';
   // The SHA-ineligibility message (set on selecting an ineligible scheme) takes
-  // precedence over the "select a scheme" prompt.
+  // precedence over the "select a scheme" prompt, and is shown regardless of touch
+  // state because it's a response to something the user just did.
   const insuranceInvalidText =
-    insuranceError || (method === 'insurance' && !insurance ? 'Select an insurance scheme' : '');
+    insuranceError ||
+    (method === 'insurance' && touched.insurance && !insurance ? 'Select an insurance scheme' : '');
 
   // A scheme is active/eligible when its coverage status is '1'.
   const isActiveScheme = (s: Scheme) => s.coverage?.status === '1';
@@ -688,373 +782,384 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
 
           <div className={styles.bodyInner}>
             {/* ---- Step 1: Verify — biometric ---- */}
-          {phase === 'biometric' ? (
-            <div className={styles.verifyContent}>
-              {!biometricUrl && clientStrip}
-              {!biometricUrl ? (
-                <>
-                  {/* The scanner card — the primary action */}
-                  <div className={styles.biometricArea}>
-                    <button
-                      type="button"
-                      className={styles.biometricLaunch}
-                      onClick={launchBiometric}
-                      disabled={launchingBiometric}
-                    >
-                      <span className={styles.biometricIcon}>
-                        <FingerprintRecognition size={48} />
-                      </span>
-                      <span className={styles.biometricLaunchText}>
-                        {launchingBiometric ? 'Starting scanner…' : 'Tap to scan fingerprint'}
-                      </span>
-                      <span className={styles.biometricLaunchHint}>Confirm the patient&apos;s identity</span>
-                    </button>
-                    {failCount > 0 ? (
-                      <p className={styles.failNote}>
-                        Attempt {failCount} of {BIOMETRIC_MAX_ATTEMPTS} failed. Please try again.
-                      </p>
-                    ) : (
-                      <></>
-                    )}
-                  </div>
-                  {/* The step-by-step guide, below the scanner */}
-                  <div className={styles.guidePanel}>
-                    <div className={styles.guideHead}>
-                      <Information size={18} className={styles.guideHeadIcon} />
-                      How verification works
+            {phase === 'biometric' ? (
+              <div className={styles.verifyContent}>
+                {!biometricUrl && clientStrip}
+                {!biometricUrl ? (
+                  <>
+                    {/* The scanner card — the primary action */}
+                    <div className={styles.biometricArea}>
+                      <button
+                        type="button"
+                        className={styles.biometricLaunch}
+                        onClick={launchBiometric}
+                        disabled={launchingBiometric}
+                      >
+                        <span className={styles.biometricIcon}>
+                          <FingerprintRecognition size={48} />
+                        </span>
+                        <span className={styles.biometricLaunchText}>
+                          {launchingBiometric ? 'Starting scanner…' : 'Tap to scan fingerprint'}
+                        </span>
+                        <span className={styles.biometricLaunchHint}>Confirm the patient&apos;s identity</span>
+                      </button>
+                      {failCount > 0 ? (
+                        <p className={styles.failNote}>
+                          Attempt {failCount} of {BIOMETRIC_MAX_ATTEMPTS} failed. Please try again.
+                        </p>
+                      ) : (
+                        <></>
+                      )}
                     </div>
-                    <ol className={styles.guideSteps}>
-                      <li>Scan the patient&apos;s fingerprint to confirm their identity.</li>
-                      <li>If the fingerprint fails {BIOMETRIC_MAX_ATTEMPTS} times, switch to an OTP code.</li>
-                      <li>If OTP isn&apos;t allowed for this patient yet, request OTP whitelisting.</li>
-                      <li>Once approved (or if already allowed), verify with the OTP sent to their phone.</li>
-                    </ol>
+                    {/* The step-by-step guide, below the scanner */}
+                    <div className={styles.guidePanel}>
+                      <div className={styles.guideHead}>
+                        <Information size={18} className={styles.guideHeadIcon} />
+                        How verification works
+                      </div>
+                      <ol className={styles.guideSteps}>
+                        <li>Scan the patient&apos;s fingerprint to confirm their identity.</li>
+                        <li>If the fingerprint fails {BIOMETRIC_MAX_ATTEMPTS} times, switch to an OTP code.</li>
+                        <li>If OTP isn&apos;t allowed for this patient yet, request OTP whitelisting.</li>
+                        <li>Once approved (or if already allowed), verify with the OTP sent to their phone.</li>
+                      </ol>
+                    </div>
+                  </>
+                ) : (
+                  <div className={styles.biometricFrameWrap}>
+                    <iframe title="Fingerprint capture" src={biometricUrl} className={styles.biometricFrame} />
+                    <div className={styles.capturePrompt}>
+                      <span className={styles.capturePromptText}>Did the fingerprint match the patient?</span>
+                      <span className={styles.capturePromptHint}>
+                        {failCount > 0
+                          ? `Attempt ${failCount + 1} of ${BIOMETRIC_MAX_ATTEMPTS}. After ${BIOMETRIC_MAX_ATTEMPTS} tries you'll switch to OTP.`
+                          : `You have ${BIOMETRIC_MAX_ATTEMPTS} tries before switching to OTP.`}
+                      </span>
+                      <div className={styles.captureActions}>
+                        <Button kind="secondary" size="sm" renderIcon={Renew} onClick={handleBiometricFailed}>
+                          No, try again
+                        </Button>
+                        <Button
+                          kind="primary"
+                          size="sm"
+                          renderIcon={CheckmarkOutline}
+                          onClick={() => {
+                            setConsent(true);
+                            setPhase('consent');
+                          }}
+                        >
+                          Yes, identified
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                </>
-              ) : (
-                <div className={styles.biometricFrameWrap}>
-                  <iframe title="Fingerprint capture" src={biometricUrl} className={styles.biometricFrame} />
-                  <div className={styles.capturePrompt}>
-                    <span className={styles.capturePromptText}>Did the fingerprint match the patient?</span>
-                    <span className={styles.capturePromptHint}>
-                      {failCount > 0
-                        ? `Attempt ${failCount + 1} of ${BIOMETRIC_MAX_ATTEMPTS}. After ${BIOMETRIC_MAX_ATTEMPTS} tries you'll switch to OTP.`
-                        : `You have ${BIOMETRIC_MAX_ATTEMPTS} tries before switching to OTP.`}
+                )}
+              </div>
+            ) : (
+              <></>
+            )}
+
+            {/* ---- Step 1: Verify — biometric not configured ---- */}
+            {phase === 'biometric-not-setup' ? (
+              <div className={styles.verifyContent}>
+                {clientStrip}
+                <div className={`${styles.statusCard} ${styles.statusCardDanger}`}>
+                  <span className={`${styles.statusBadge} ${styles.statusBadgeDanger}`}>
+                    <ScanDisabled size={20} />
+                  </span>
+                  <h5 className={styles.statusTitle}>Biometric not detected</h5>
+                  <p className={styles.statusText}>
+                    We couldn&apos;t detect a fingerprint scanner on this workstation. You can proceed by verifying the
+                    patient with a one-time PIN (OTP) sent to their phone.
+                  </p>
+                  <Button
+                    kind="primary"
+                    size="sm"
+                    renderIcon={ArrowRight}
+                    onClick={() => setPhase(isOtpWhitelisted ? 'otp' : 'otp-gate')}
+                  >
+                    Use OTP instead
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <></>
+            )}
+
+            {/* ---- Step 1: Verify — checking whitelist ---- */}
+            {phase === 'otp-gate' ? (
+              <div className={styles.verifyContent}>
+                <div className={styles.loadingCard}>
+                  <InlineLoading description="Checking OTP whitelist status…" />
+                </div>
+              </div>
+            ) : (
+              <></>
+            )}
+
+            {/* ---- Step 1: Verify — whitelist request ---- */}
+            {phase === 'whitelist-request' ? (
+              <div className={styles.verifyContent}>
+                {!showWhitelistForm ? (
+                  <div className={styles.statusCard}>
+                    <span className={styles.statusBadge}>
+                      <WarningAltFilled size={24} />
                     </span>
-                    <div className={styles.captureActions}>
-                      <Button kind="secondary" size="sm" renderIcon={Renew} onClick={handleBiometricFailed}>
-                        No, try again
+                    <h5 className={styles.statusTitle}>Not whitelisted for OTP</h5>
+                    <p className={styles.statusText}>
+                      This patient isn&apos;t whitelisted to receive a One-Time Password. Request whitelisting from the
+                      SHA team to continue verifying by OTP.
+                    </p>
+                    <div className={styles.statusActions}>
+                      <Button
+                        kind="tertiary"
+                        size="sm"
+                        disabled={checkingWhitelist}
+                        onClick={() => checkWhitelistStatus(true)}
+                      >
+                        {checkingWhitelist ? 'Checking…' : 'Check whitelist status'}
                       </Button>
                       <Button
                         kind="primary"
                         size="sm"
-                        renderIcon={CheckmarkOutline}
-                        onClick={() => {
-                          setConsent(true);
-                          setPhase('consent');
-                        }}
+                        renderIcon={ArrowRight}
+                        onClick={() => setShowWhitelistForm(true)}
                       >
-                        Yes, identified
+                        Request whitelisting
                       </Button>
                     </div>
                   </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            <></>
-          )}
-
-          {/* ---- Step 1: Verify — biometric not configured ---- */}
-          {phase === 'biometric-not-setup' ? (
-            <div className={styles.verifyContent}>
-              {clientStrip}
-              <div className={`${styles.statusCard} ${styles.statusCardDanger}`}>
-                <span className={`${styles.statusBadge} ${styles.statusBadgeDanger}`}>
-                  <ScanDisabled size={20} />
-                </span>
-                <h5 className={styles.statusTitle}>Biometric not detected</h5>
-                <p className={styles.statusText}>
-                  We couldn&apos;t detect a fingerprint scanner on this workstation. You can proceed by verifying the
-                  patient with a one-time PIN (OTP) sent to their phone.
-                </p>
-                <Button
-                  kind="primary"
-                  size="sm"
-                  renderIcon={ArrowRight}
-                  onClick={() => setPhase(isOtpWhitelisted ? 'otp' : 'otp-gate')}
-                >
-                  Use OTP instead
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <></>
-          )}
-
-          {/* ---- Step 1: Verify — checking whitelist ---- */}
-          {phase === 'otp-gate' ? (
-            <div className={styles.verifyContent}>
-              <div className={styles.loadingCard}>
-                <InlineLoading description="Checking OTP whitelist status…" />
-              </div>
-            </div>
-          ) : (
-            <></>
-          )}
-
-          {/* ---- Step 1: Verify — whitelist request ---- */}
-          {phase === 'whitelist-request' ? (
-            <div className={styles.verifyContent}>
-              {!showWhitelistForm ? (
-                <div className={styles.statusCard}>
-                  <span className={styles.statusBadge}>
-                    <WarningAltFilled size={24} />
-                  </span>
-                  <h5 className={styles.statusTitle}>Not whitelisted for OTP</h5>
-                  <p className={styles.statusText}>
-                    This patient isn&apos;t whitelisted to receive a One-Time Password. Request whitelisting from the SHA
-                    team to continue verifying by OTP.
-                  </p>
-                  <div className={styles.statusActions}>
-                    <Button kind="tertiary" size="sm" disabled={checkingWhitelist} onClick={() => checkWhitelistStatus(true)}>
-                      {checkingWhitelist ? 'Checking…' : 'Check whitelist status'}
-                    </Button>
-                    <Button
-                      kind="primary"
-                      size="sm"
-                      renderIcon={ArrowRight}
-                      onClick={() => setShowWhitelistForm(true)}
-                    >
-                      Request whitelisting
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className={styles.panel}>
-                  <div className={styles.panelHead}>Request OTP whitelisting</div>
-                <div className={styles.panelBody}>
-                  <div className={styles.infoNote}>
-                    <Information size={20} className={styles.infoNoteIcon} />
-                    <p className={styles.infoNoteText}>
-                      OTP is not yet approved for this patient. Submit the details below to request whitelisting from the
-                      SHA team.
-                    </p>
-                  </div>
-                  <div className={styles.readonlyField}>
-                    <span className={styles.readonlyLabel}>Biometric attempts failed</span>
-                    <span className={styles.readonlyValue}>
-                      {failCount} of {BIOMETRIC_MAX_ATTEMPTS}
-                    </span>
-                  </div>
-                  <Dropdown
-                    id="whitelist-reason"
-                    titleText={
-                      <span>
-                        Reason for OTP <span className={styles.required}>*</span>
-                      </span>
-                    }
-                    label="Select a reason"
-                    items={WHITELIST_REASONS}
-                    selectedItem={reason || null}
-                    invalid={!!reasonError}
-                    invalidText={reasonError}
-                    onChange={({ selectedItem }) => {
-                      setReason((selectedItem as string) ?? '');
-                      setReasonError('');
-                    }}
-                  />
-                  <div className={styles.uploadField}>
-                    <FormLabel>
-                      Image of failed biometric <span className={styles.required}>*</span>
-                    </FormLabel>
-                    <p className={styles.uploadHint}>Screenshot or photo of the failed attempt · PNG or JPG · one file</p>
-                    <div
-                      className={`${styles.dropZone} ${dragOver ? styles.dropZoneActive : ''} ${
-                        imageError ? styles.dropZoneInvalid : ''
-                      }`}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => fileInputRef.current?.click()}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          fileInputRef.current?.click();
+                ) : (
+                  <div className={styles.panel}>
+                    <div className={styles.panelHead}>Request OTP whitelisting</div>
+                    <div className={styles.panelBody}>
+                      <div className={styles.infoNote}>
+                        <Information size={20} className={styles.infoNoteIcon} />
+                        <p className={styles.infoNoteText}>
+                          OTP is not yet approved for this patient. Submit the details below to request whitelisting
+                          from the SHA team.
+                        </p>
+                      </div>
+                      <div className={styles.readonlyField}>
+                        <span className={styles.readonlyLabel}>Biometric attempts failed</span>
+                        <span className={styles.readonlyValue}>
+                          {failCount} of {BIOMETRIC_MAX_ATTEMPTS}
+                        </span>
+                      </div>
+                      <Dropdown
+                        id="whitelist-reason"
+                        titleText={
+                          <span>
+                            Reason for OTP <span className={styles.required}>*</span>
+                          </span>
                         }
-                      }}
-                      onDragOver={(e) => {
-                        e.preventDefault();
-                        setDragOver(true);
-                      }}
-                      onDragLeave={() => setDragOver(false)}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        setDragOver(false);
-                        const file = e.dataTransfer.files?.[0];
-                        if (file) {
-                          setFailedImage(file);
-                          setImageError('');
-                        }
-                      }}
-                    >
-                      <span className={styles.dropIcon}>
-                        <CloudUpload size={24} />
-                      </span>
-                      <span className={styles.dropTitle}>Drag and drop an image here</span>
-                      <span className={styles.dropSubtitle}>or click to browse</span>
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept=".png,.jpg,.jpeg"
-                        className={styles.hiddenInput}
-                        onChange={(e) => {
-                          const file = e.target.files?.[0] ?? null;
-                          setFailedImage(file);
-                          if (file) {
-                            setImageError('');
-                          }
+                        label="Select a reason"
+                        items={WHITELIST_REASONS}
+                        selectedItem={reason || null}
+                        invalid={!!reasonError}
+                        invalidText={reasonError}
+                        onChange={({ selectedItem }) => {
+                          setReason((selectedItem as string) ?? '');
+                          setReasonError('');
                         }}
                       />
+                      <div className={styles.uploadField}>
+                        <FormLabel>
+                          Image of failed biometric <span className={styles.required}>*</span>
+                        </FormLabel>
+                        <p className={styles.uploadHint}>
+                          Screenshot or photo of the failed attempt · PNG or JPG · one file
+                        </p>
+                        <div
+                          className={`${styles.dropZone} ${dragOver ? styles.dropZoneActive : ''} ${
+                            imageError ? styles.dropZoneInvalid : ''
+                          }`}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => fileInputRef.current?.click()}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              fileInputRef.current?.click();
+                            }
+                          }}
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                            setDragOver(true);
+                          }}
+                          onDragLeave={() => setDragOver(false)}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            setDragOver(false);
+                            const file = e.dataTransfer.files?.[0];
+                            if (file) {
+                              setFailedImage(file);
+                              setImageError('');
+                            }
+                          }}
+                        >
+                          <span className={styles.dropIcon}>
+                            <CloudUpload size={24} />
+                          </span>
+                          <span className={styles.dropTitle}>Drag and drop an image here</span>
+                          <span className={styles.dropSubtitle}>or click to browse</span>
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept=".png,.jpg,.jpeg"
+                            className={styles.hiddenInput}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0] ?? null;
+                              setFailedImage(file);
+                              if (file) {
+                                setImageError('');
+                              }
+                            }}
+                          />
+                        </div>
+                        {failedImage ? (
+                          <FileUploaderItem
+                            name={failedImage.name}
+                            status="edit"
+                            iconDescription="Remove file"
+                            onDelete={() => setFailedImage(null)}
+                          />
+                        ) : null}
+                        {imageError ? <p className={styles.fieldError}>{imageError}</p> : null}
+                      </div>
+                      <Button
+                        className={styles.submitBtn}
+                        kind="primary"
+                        size="sm"
+                        disabled={submittingWhitelist || !reason.trim() || !failedImage}
+                        onClick={submitWhitelistRequest}
+                      >
+                        {submittingWhitelist ? 'Submitting…' : 'Submit request'}
+                      </Button>
                     </div>
-                    {failedImage ? (
-                      <FileUploaderItem
-                        name={failedImage.name}
-                        status="edit"
-                        iconDescription="Remove file"
-                        onDelete={() => setFailedImage(null)}
-                      />
-                    ) : null}
-                    {imageError ? <p className={styles.fieldError}>{imageError}</p> : null}
                   </div>
-                  <Button
-                    className={styles.submitBtn}
-                    kind="primary"
-                    size="sm"
-                    disabled={submittingWhitelist || !reason.trim() || !failedImage}
-                    onClick={submitWhitelistRequest}
-                  >
-                    {submittingWhitelist ? 'Submitting…' : 'Submit request'}
+                )}
+              </div>
+            ) : (
+              <></>
+            )}
+
+            {/* ---- Step 1: Verify — whitelist pending ---- */}
+            {phase === 'whitelist-pending' ? (
+              <div className={styles.verifyContent}>
+                <div className={styles.statusCard}>
+                  <span className={styles.statusBadge}>
+                    <PendingFilled size={24} />
+                  </span>
+                  <h5 className={styles.statusTitle}>Awaiting approval</h5>
+                  <p className={styles.statusText}>
+                    Your OTP whitelisting request is pending approval. Check back to see if it has been approved.
+                  </p>
+                  <Button kind="primary" size="sm" disabled={checkingWhitelist} onClick={() => checkWhitelistStatus()}>
+                    {checkingWhitelist ? 'Checking…' : 'Check whitelist status'}
                   </Button>
                 </div>
+              </div>
+            ) : (
+              <></>
+            )}
+
+            {/* ---- Step 1: Verify — OTP ---- */}
+            {phase === 'otp' && requestCustomOtpDto ? (
+              <div className={styles.verifyContent}>
+                <OtpVerificationStep
+                  requestCustomOtpDto={requestCustomOtpDto}
+                  phoneNumber={phoneNumber ?? ''}
+                  timerSeconds={OTP_EXPIRY_SECONDS}
+                  biometricFailedCount={failCount}
+                  onVerified={() => {
+                    setConsent(true);
+                    setPhase('consent');
+                  }}
+                />
+              </div>
+            ) : (
+              <></>
+            )}
+
+            {/* ---- Step 2: Consent ---- */}
+            {phase === 'consent' ? (
+              <div className={styles.verifyContent}>
+                <div className={styles.consentConfirmed}>
+                  <CheckboxCheckedFilled size={20} className={styles.consentConfirmedIcon} />
+                  <span className={styles.consentConfirmedText}>
+                    The patient has consented to you accessing their details. You can now proceed.
+                  </span>
                 </div>
-              )}
-            </div>
-          ) : (
-            <></>
-          )}
 
-          {/* ---- Step 1: Verify — whitelist pending ---- */}
-          {phase === 'whitelist-pending' ? (
-            <div className={styles.verifyContent}>
-              <div className={styles.statusCard}>
-                <span className={styles.statusBadge}>
-                  <PendingFilled size={24} />
-                </span>
-                <h5 className={styles.statusTitle}>Awaiting approval</h5>
-                <p className={styles.statusText}>
-                  Your OTP whitelisting request is pending approval. Check back to see if it has been approved.
-                </p>
-                <Button kind="primary" size="sm" disabled={checkingWhitelist} onClick={() => checkWhitelistStatus()}>
-                  {checkingWhitelist ? 'Checking…' : 'Check whitelist status'}
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <></>
-          )}
+                {consent ? (
+                  <>
+                    <div className={styles.panel}>
+                      <div className={styles.panelHead}>Patient details</div>
+                      <div className={styles.panelBody}>
+                        <dl className={styles.detailGrid}>
+                          <div className={`${styles.detailRow} ${styles.detailFull}`}>
+                            <dt>Full name</dt>
+                            <dd>
+                              {[client.first_name, client.middle_name, client.last_name].filter(Boolean).join(' ')}
+                            </dd>
+                          </div>
+                          <div className={styles.detailRow}>
+                            <dt>CR number</dt>
+                            <dd>{client.id}</dd>
+                          </div>
+                          <div className={styles.detailRow}>
+                            <dt>Phone number</dt>
+                            <dd>{client.phone || '—'}</dd>
+                          </div>
+                          <div className={styles.detailRow}>
+                            <dt>ID number</dt>
+                            <dd>{client.identification_number || '—'}</dd>
+                          </div>
+                          <div className={styles.detailRow}>
+                            <dt>SHA eligibility</dt>
+                            <dd>{shaEligibilityTag}</dd>
+                          </div>
+                        </dl>
 
-          {/* ---- Step 1: Verify — OTP ---- */}
-          {phase === 'otp' && requestCustomOtpDto ? (
-            <div className={styles.verifyContent}>
-              <OtpVerificationStep
-                requestCustomOtpDto={requestCustomOtpDto}
-                phoneNumber={phoneNumber ?? ''}
-                timerSeconds={OTP_EXPIRY_SECONDS}
-                biometricFailedCount={failCount}
-                onVerified={() => {
-                  setConsent(true);
-                  setPhase('consent');
-                }}
-              />
-            </div>
-          ) : (
-            <></>
-          )}
-
-          {/* ---- Step 2: Consent ---- */}
-          {phase === 'consent' ? (
-            <div className={styles.verifyContent}>
-              <div className={styles.consentConfirmed}>
-                <CheckboxCheckedFilled size={20} className={styles.consentConfirmedIcon} />
-                <span className={styles.consentConfirmedText}>
-                  The patient has consented to you accessing their details. You can now proceed.
-                </span>
-              </div>
-
-              {consent ? (
-                <>
-                  <div className={styles.panel}>
-                    <div className={styles.panelHead}>Patient details</div>
-                    <div className={styles.panelBody}>
-                      <dl className={styles.detailGrid}>
-                        <div className={`${styles.detailRow} ${styles.detailFull}`}>
-                          <dt>Full name</dt>
-                          <dd>
-                            {[client.first_name, client.middle_name, client.last_name].filter(Boolean).join(' ')}
-                          </dd>
-                        </div>
-                        <div className={styles.detailRow}>
-                          <dt>CR number</dt>
-                          <dd>{client.id}</dd>
-                        </div>
-                        <div className={styles.detailRow}>
-                          <dt>Phone number</dt>
-                          <dd>{client.phone || '—'}</dd>
-                        </div>
-                        <div className={styles.detailRow}>
-                          <dt>ID number</dt>
-                          <dd>{client.identification_number || '—'}</dd>
-                        </div>
-                        <div className={styles.detailRow}>
-                          <dt>SHA eligibility</dt>
-                          <dd>{shaEligibilityTag}</dd>
-                        </div>
-                      </dl>
-
-                      {eligibleSchemesList}
+                        {eligibleSchemesList}
+                      </div>
                     </div>
-                  </div>
-                  {emrStatusCard}
-                  {emrConfirmModal}
-                </>
-              ) : (
-                <></>
-              )}
-            </div>
-          ) : (
-            <></>
-          )}
+                    {emrStatusCard}
+                    {emrConfirmModal}
+                  </>
+                ) : (
+                  <></>
+                )}
+              </div>
+            ) : (
+              <></>
+            )}
 
-          {/* ---- Step 3: Start visit ---- */}
-          {phase === 'visit' ? (
-            <div className={styles.verifyContent}>
-              <div className={`${styles.panelBody} ${styles.scrollBody}`}>
-                  <Dropdown
-                    id="visit-type"
-                    titleText={
-                      <span>
-                        Visit type<span className={styles.required}>*</span>
-                      </span>
-                    }
-                    label="Select a visit type"
-                    items={VISIT_TYPE_OPTIONS}
-                    selectedItem={visitType || null}
-                    invalid={!!visitTypeInvalidText}
-                    invalidText={visitTypeInvalidText}
-                    onChange={({ selectedItem }) => {
-                      setVisitType((selectedItem as string) ?? '');
-                    }}
-                  />
+            {/* ---- Step 3: Start visit ---- */}
+            {phase === 'visit' ? (
+              <div className={styles.verifyContent}>
+                <div className={`${styles.panelBody} ${styles.scrollBody}`}>
+                  <div {...lockSelection(!!visitType)} onBlurCapture={markTouched('visitType')}>
+                    <ComboBox
+                      id="visit-type"
+                      titleText={
+                        <span>
+                          Visit type<span className={styles.required}>*</span>
+                        </span>
+                      }
+                      placeholder="Search or select a visit type"
+                      items={VISIT_TYPE_OPTIONS}
+                      itemToString={(item) => item ?? ''}
+                      shouldFilterItem={filterByLabel<string>((item) => item ?? '', visitType)}
+                      selectedItem={visitType || null}
+                      invalid={!!visitTypeInvalidText}
+                      invalidText={visitTypeInvalidText}
+                      onChange={({ selectedItem }) => {
+                        setVisitType((selectedItem as string) ?? '');
+                      }}
+                    />
+                  </div>
                   <div className={styles.formSection}>
                     <h6 className={styles.sectionLabel}>Patient category</h6>
                     <RadioButtonGroup
@@ -1072,32 +1177,36 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
                       ))}
                     </RadioButtonGroup>
 
-                    <Dropdown
-                      id="visit-room"
-                      titleText={
-                        <span>
-                          {patientCategory === 'Walk-in' ? 'Walk-in room' : 'Triage room'}
-                          <span className={styles.required}>*</span>
-                        </span>
-                      }
-                      label={
-                        patientCategory === 'Walk-in'
-                          ? 'Select a walk-in room'
-                          : loadingRooms
-                            ? 'Loading triage rooms…'
-                            : triageRooms.length === 0
-                              ? 'No triage rooms for this location'
-                              : 'Select a triage room'
-                      }
-                      items={patientCategory === 'Walk-in' ? WALK_IN_ROOMS : triageRooms}
-                      disabled={patientCategory === 'Triage' && (loadingRooms || triageRooms.length === 0)}
-                      selectedItem={room || null}
-                      invalid={!!roomInvalidText}
-                      invalidText={roomInvalidText}
-                      onChange={({ selectedItem }) => {
-                        setRoom((selectedItem as string) ?? '');
-                      }}
-                    />
+                    <div {...lockSelection(!!room)} onBlurCapture={markTouched('room')}>
+                      <ComboBox
+                        id="visit-room"
+                        titleText={
+                          <span>
+                            {patientCategory === 'Walk-in' ? 'Walk-in room' : 'Triage room'}
+                            <span className={styles.required}>*</span>
+                          </span>
+                        }
+                        placeholder={
+                          patientCategory === 'Walk-in'
+                            ? 'Search or select a walk-in room'
+                            : loadingRooms
+                              ? 'Loading triage rooms…'
+                              : triageRooms.length === 0
+                                ? 'No triage rooms for this location'
+                                : 'Search or select a triage room'
+                        }
+                        items={patientCategory === 'Walk-in' ? WALK_IN_ROOMS : triageRooms}
+                        itemToString={(item) => item ?? ''}
+                        shouldFilterItem={filterByLabel<string>((item) => item ?? '', room)}
+                        disabled={patientCategory === 'Triage' && (loadingRooms || triageRooms.length === 0)}
+                        selectedItem={room || null}
+                        invalid={!!roomInvalidText}
+                        invalidText={roomInvalidText}
+                        onChange={({ selectedItem }) => {
+                          setRoom((selectedItem as string) ?? '');
+                        }}
+                      />
+                    </div>
                   </div>
 
                   <div className={styles.formSection}>
@@ -1140,55 +1249,64 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
                     ) : null}
 
                     {method === 'insurance' ? (
-                      <Dropdown
-                        id="insurance-scheme"
-                        titleText={
-                          <span>
-                            Insurance scheme<span className={styles.required}>*</span>
-                          </span>
-                        }
-                        label={
-                          loadingSchemes
-                            ? 'Loading insurance schemes…'
-                            : insuranceSchemes.length === 0
-                              ? 'No insurance schemes available'
-                              : 'Select insurance scheme'
-                        }
-                        items={insuranceItems}
-                        itemToString={(item) => (item ? item.label : '')}
-                        itemToElement={(item) =>
-                          item ? (
-                            item.isSha ? (
-                              <span
-                                className={`${styles.schemePill} ${
-                                  item.eligible ? styles.schemePillEligible : styles.schemePillIneligible
-                                }`}
-                              >
-                                {item.label}
-                              </span>
-                            ) : (
-                              <span>{item.label}</span>
-                            )
-                          ) : null
-                        }
-                        disabled={loadingSchemes || insuranceSchemes.length === 0}
-                        selectedItem={insuranceItems.find((i) => i.id === insurance) ?? null}
-                        invalid={!!insuranceInvalidText}
-                        invalidText={insuranceInvalidText}
-                        onChange={({ selectedItem }) => {
-                          if (!selectedItem) {
-                            return;
+                      <div {...lockSelection(!!insurance)} onBlurCapture={markTouched('insurance')}>
+                        <ComboBox
+                          id="insurance-scheme"
+                          titleText={
+                            <span>
+                              Insurance scheme<span className={styles.required}>*</span>
+                            </span>
                           }
-                          if (selectedItem.disabled) {
-                            // Patient isn't SHA-eligible — block the selection.
-                            setInsurance('');
-                            setInsuranceError('Patient is not eligible for SHA. Choose another scheme.');
-                            return;
+                          placeholder={
+                            loadingSchemes
+                              ? 'Loading insurance schemes…'
+                              : insuranceSchemes.length === 0
+                                ? 'No insurance schemes available'
+                                : 'Search or select insurance scheme'
                           }
-                          setInsurance(selectedItem.id);
-                          setInsuranceError('');
-                        }}
-                      />
+                          items={insuranceItems}
+                          itemToString={(item) => (item ? item.label : '')}
+                          shouldFilterItem={filterByLabel(
+                            (item: (typeof insuranceItems)[number]) => item?.label ?? '',
+                            insuranceItems.find((i) => i.id === insurance)?.label ?? '',
+                          )}
+                          itemToElement={(item) =>
+                            item ? (
+                              item.isSha ? (
+                                <span
+                                  className={`${styles.schemePill} ${
+                                    item.eligible ? styles.schemePillEligible : styles.schemePillIneligible
+                                  }`}
+                                >
+                                  {item.label}
+                                </span>
+                              ) : (
+                                <span>{item.label}</span>
+                              )
+                            ) : null
+                          }
+                          disabled={loadingSchemes || insuranceSchemes.length === 0}
+                          selectedItem={insuranceItems.find((i) => i.id === insurance) ?? null}
+                          invalid={!!insuranceInvalidText}
+                          invalidText={insuranceInvalidText}
+                          onChange={({ selectedItem }) => {
+                            if (!selectedItem) {
+                              // The combo box's clear button hands back null — drop the selection.
+                              setInsurance('');
+                              setInsuranceError('');
+                              return;
+                            }
+                            if (selectedItem.disabled) {
+                              // Patient isn't SHA-eligible — block the selection.
+                              setInsurance('');
+                              setInsuranceError('Patient is not eligible for SHA. Choose another scheme.');
+                              return;
+                            }
+                            setInsurance(selectedItem.id);
+                            setInsuranceError('');
+                          }}
+                        />
+                      </div>
                     ) : (
                       <></>
                     )}
@@ -1205,11 +1323,11 @@ const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
                       </div>
                     ) : null}
                   </div>
+                </div>
               </div>
-            </div>
-          ) : (
-            <></>
-          )}
+            ) : (
+              <></>
+            )}
           </div>
         </div>
 

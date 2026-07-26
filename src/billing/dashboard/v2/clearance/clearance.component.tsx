@@ -25,7 +25,6 @@ import {
   type ClearanceStatus,
   type ConsultationClearance,
 } from '../../../../shared/services/consultation-clearance.resource';
-import PrepaidServices from './prepaid-services.component';
 import TableToolbar from '../shared/table-toolbar.component';
 import EmptyState from '../shared/empty-state.component';
 import { usePendingClearanceVisits } from '../active-visits/active-visits.resource';
@@ -153,18 +152,14 @@ const Clearance: React.FC<{
   const session = useSession();
   const locationUuid = session?.sessionLocation?.uuid ?? '';
   const [reloadKey, setReloadKey] = useState(0);
-  const [counts, setCounts] = useState<{ awaiting: number; cleared: number; prepaid: number }>({
-    awaiting: 0,
-    cleared: 0,
-    prepaid: 0,
-  });
+  const [counts, setCounts] = useState<{ awaiting: number }>({ awaiting: 0 });
   const [loadingCounts, setLoadingCounts] = useState(true);
   const [tabIndex, setTabIndex] = useState(0);
   // SHA visits awaiting clearance — drives the Pending clearance tab count.
   const { count: pendingCount, isLoading: pendingLoading } = usePendingClearanceVisits(date);
 
   // Order of the sub-tabs (the "pending" tab only exists when pendingTab is passed).
-  const tabKeys = [...(pendingTab ? ['pending'] : []), 'awaiting', 'cleared', 'prepaid'];
+  const tabKeys = [...(pendingTab ? ['pending'] : []), 'awaiting'];
 
   const refresh = () => {
     setReloadKey((k) => k + 1);
@@ -213,19 +208,11 @@ const Clearance: React.FC<{
         <TabList aria-label="Clearance">
           {pendingTab ? <Tab>Pending clearance (SHA){countPill(pendingLoading, pendingCount)}</Tab> : null}
           <Tab>Awaiting payment (CASH){countPill(loadingCounts, counts.awaiting)}</Tab>
-          <Tab>Cleared{countPill(loadingCounts, counts.cleared)}</Tab>
-          <Tab>Scheduled (prepaid){countPill(loadingCounts, counts.prepaid)}</Tab>
         </TabList>
         <TabPanels>
           {pendingTab ? <TabPanel>{pendingTab}</TabPanel> : null}
           <TabPanel>
             <ClearanceTable status="AWAITING_PAYMENT" locationUuid={locationUuid} reloadKey={reloadKey} onCleared={refresh} date={date} />
-          </TabPanel>
-          <TabPanel>
-            <ClearanceTable status="CLEARED" locationUuid={locationUuid} reloadKey={reloadKey} onCleared={refresh} date={date} />
-          </TabPanel>
-          <TabPanel>
-            <PrepaidServices locationUuid={locationUuid} onChanged={refresh} date={date} />
           </TabPanel>
         </TabPanels>
       </Tabs>

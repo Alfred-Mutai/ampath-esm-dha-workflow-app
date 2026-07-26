@@ -155,3 +155,8 @@
         box-shadow: inset 0 2px 0 0 var(--brand-03) !important;
     }
 }
+/* Hides the tab bar while a bill's details take over the page (the panels stay
+   mounted, so FacilityBills keeps its state). */
+.hiddenTabList {
+    display: none;
+}

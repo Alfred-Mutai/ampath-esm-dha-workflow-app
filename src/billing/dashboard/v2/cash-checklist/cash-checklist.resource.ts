@@ -225,7 +225,6 @@ export async function payItem(billId: string, itemId: string, input: PayInput): 
   return entry ?? { id: `p-${receiptNo}`, itemId, service: '', amount: 0, method, reference, receiptNo, at: now };
 }
 
-/** Close a fully-settled bill — marks it Paid and stops new items being added. */
 export async function closeBill(billId: string): Promise<void> {
   await wait(250);
   if (billId.startsWith('copaybill-')) {

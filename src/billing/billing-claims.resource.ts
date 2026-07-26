@@ -25,7 +25,7 @@ import {
 } from './dashboard/v2/types';
 import { getHieBaseUrl } from '../claims/utils';
 import { type AmrsMaternityDiagnosis, type AmrsMaternityDiagnosisDto, type AmrsMaternityDiagnosisResponse, type AmrsVisitDiagnosis, type AmrsVisitDiagnosisDto, type AmrsVisitDiagnosisResponse } from './types';
-import { useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import useSWR, { mutate } from 'swr';
 
 export async function fetchFacilityBills(facilityBillsDto: FacilityBillsDto): Promise<FacilityBill[]> {
@@ -80,6 +80,25 @@ export async function fetchProviderClaimPreview(
   return data ?? null;
 }
 
+// Fields only a real claim carries; used to tell the claim object apart from any
+// wrapper the endpoint might nest it under.
+const CLAIM_SIGNATURE_KEYS = ['authorization_code', 'workflow_state', 'scheme_code', 'invoices', 'interventions'];
+
+// The claim-preview endpoint has returned the claim both flat and wrapped (under
+// `data` / `results` / `visitResponse`) across API versions. Peel common single-key
+// wrappers until we reach the object that actually carries the claim fields, so the
+// Claim Details never render blank against a truthy-but-wrapped payload.
+function unwrapClaimVisit(body: unknown): ClaimsVisit | undefined {
+  let node: any = body;
+  for (let depth = 0; node && typeof node === 'object' && depth < 4; depth++) {
+    if (CLAIM_SIGNATURE_KEYS.some((key) => key in node)) {
+      return node as ClaimsVisit;
+    }
+    node = node.visitResponse ?? node.data ?? node.results ?? undefined;
+  }
+  return (node as ClaimsVisit) ?? undefined;
+}
+
 export function useProviderClaimPreview(consentToken: string, locationUuid: string) {
   const { hieBaseUrl } = useConfig({
     externalModuleName: '@ampath/esm-dha-workflow-app',
@@ -91,11 +110,27 @@ export function useProviderClaimPreview(consentToken: string, locationUuid: stri
     error,
     isLoading,
     isValidating
-  } = useSWR<{ data: ClaimsVisit }>(url, openmrsFetch, {
-    keepPreviousData: true
+  } = useSWR(url, openmrsFetch, {
+    keepPreviousData: true,
+    // This preview is an expensive round trip to the HIE, so it is fetched only when
+    // something actually asks for it: the first load of a claim, a mutation that
+    // invalidates it, or the Refresh control on Claim Details. Every one of SWR's
+    // automatic triggers is off — window focus, reconnect, and the revalidation it
+    // would otherwise run whenever a component remounts over cached data.
+    //
+    // The trade-off is that a claim changed elsewhere won't appear here until someone
+    // refreshes; that is the intent, and the timestamp beside the Refresh control says
+    // how old what you are looking at is.
+    // `revalidateOnMount` is deliberately left unset: SWR then fetches when there is no
+    // cached claim yet — so opening one for the first time still loads it — and skips
+    // the fetch when the cache already holds it. Forcing it true would re-fetch on
+    // every remount and undo the line above.
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    revalidateIfStale: false,
   });
 
-  const results = data?.data;
+  const results = unwrapClaimVisit(data?.data);
 
   return {
     claimVisit: results,
@@ -105,6 +140,17 @@ export function useProviderClaimPreview(consentToken: string, locationUuid: stri
   };
 }
 
+/**
+ * Announced whenever the claim has been mutated (a diagnosis or claim line added, an
+ * attachment sent, an intervention switched…).
+ *
+ * Every one of those call sites already invalidates the SWR-backed claim preview. The
+ * claims-visit endpoint is fetched imperatively rather than through SWR, so there is no
+ * cache to invalidate — this event is how anything holding that response knows to go
+ * and refetch it. See PatientClaimDetails.
+ */
+export const CLAIM_CHANGED_EVENT = 'ampath:claim-changed';
+
 export function useInvalidateProviderClaimPreview() {
   const { hieBaseUrl } = useConfig({
     externalModuleName: '@ampath/esm-dha-workflow-app',
@@ -112,7 +158,220 @@ export function useInvalidateProviderClaimPreview() {
   return useCallback(() => {
     const url = `${hieBaseUrl}/claim-preview/provider`;
     mutate((key) => typeof key === 'string' && key.startsWith(`${url}`), undefined, { revalidate: true });
+    window.dispatchEvent(new CustomEvent(CLAIM_CHANGED_EVENT));
   }, [hieBaseUrl]);
+}
+
+/**
+ * The claims filed at a facility on a date, reloaded whenever one is mutated.
+ *
+ * Everything that lists claims — the bills table, the dashboard tiles — reads this same
+ * shape, so they can't disagree about which claims exist.
+ */
+export function useFacilityClaimVisits(locationUuid: string, visitDate: string) {
+  const [claimVisits, setClaimVisits] = useState<ClaimVisitReponse[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  const load = useCallback(() => {
+    if (!locationUuid || !visitDate) {
+      setClaimVisits([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    fetchFacilityClaimVisits({ locationUuid, visitDate })
+      .then((data) => setClaimVisits(data ?? []))
+      .catch(() => setClaimVisits([]))
+      .finally(() => setLoading(false));
+  }, [locationUuid, visitDate]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  useClaimChanged(load);
+
+  return { claimVisits, loading, reload: load };
+}
+
+/** The consent token a claim visit is identified by on the claims endpoints. */
+export function claimVisitToken(claimVisit: ClaimVisitReponse): string {
+  return (claimVisit?.authorizationCode || claimVisit?.visitResponse?.authorization_code || '').trim();
+}
+
+/** One claim's live state, fetched outside SWR so many can be resolved at once. */
+async function fetchProviderClaimState(consentToken: string, locationUuid: string): Promise<string | undefined> {
+  const { hieBaseUrl } = await getHieBaseUrl();
+  const url = `${hieBaseUrl}/claim-preview/provider?consentToken=${encodeURIComponent(
+    consentToken,
+  )}&locationUuid=${encodeURIComponent(locationUuid)}`;
+  const response = await openmrsFetch(url);
+  const claim = unwrapClaimVisit(await response.json());
+  const state = (claim?.workflow_state ?? '').trim();
+  return state || undefined;
+}
+
+// How many claim previews are in flight at once. Each is a round trip to the HIE that
+// has been seen to take several seconds, so they overlap — but not so many that opening
+// a busy day's bills buries the HIE in requests.
+const CLAIM_STATE_CONCURRENCY = 4;
+
+/**
+ * States resolved so far this page-load, shared by everything that shows them — the
+ * dashboard tiles and the bills table would otherwise each pay for the same slow preview
+ * of the same claim, and could disagree about it. Entries are dropped when the claim is
+ * mutated (see `load(force)`), so this never serves a state the user has just changed.
+ */
+const claimStateCache = new Map<string, string>();
+const claimStateInFlight = new Map<string, Promise<string | undefined>>();
+const claimStateKey = (locationUuid: string, consentToken: string) => `${locationUuid}|${consentToken}`;
+
+function resolveClaimState(consentToken: string, locationUuid: string): Promise<string | undefined> {
+  const key = claimStateKey(locationUuid, consentToken);
+  const cached = claimStateCache.get(key);
+  if (cached) {
+    return Promise.resolve(cached);
+  }
+  // Two lists asking for the same claim at once share one request rather than racing.
+  const inFlight = claimStateInFlight.get(key);
+  if (inFlight) {
+    return inFlight;
+  }
+  const request = fetchProviderClaimState(consentToken, locationUuid)
+    .then((state) => {
+      if (state) {
+        claimStateCache.set(key, state);
+      }
+      return state;
+    })
+    .finally(() => {
+      if (claimStateInFlight.get(key) === request) {
+        claimStateInFlight.delete(key);
+      }
+    });
+  claimStateInFlight.set(key, request);
+  return request;
+}
+
+async function runWithConcurrency<T>(items: T[], limit: number, worker: (item: T) => Promise<void>): Promise<void> {
+  const queue = [...items];
+  const runners = Array.from({ length: Math.min(limit, queue.length) }, async () => {
+    for (let next = queue.shift(); next !== undefined; next = queue.shift()) {
+      await worker(next);
+    }
+  });
+  await Promise.all(runners);
+}
+
+/**
+ * The live `workflow_state` of each claim, keyed by consent token.
+ *
+ * /claims-visit returns the copy of the claim that was stored when the visit was
+ * recorded, so its `workflow_state` is whatever the claim was *then* — a claim submitted
+ * afterwards still reads DRAFT there. claim-preview/provider is the live view, which is
+ * why Claim Details opens on DRAFT and corrects itself to the real state a few seconds
+ * later, once the preview lands.
+ *
+ * A list of claims therefore can't trust the state it was handed. There is no bulk
+ * status feed, so the preview is fetched per claim, a few at a time, and each row is
+ * upgraded as its answer arrives. Claims whose preview fails keep the stored state —
+ * `failed` says how many, so the caller can admit that rather than present a stale
+ * status as current.
+ */
+export function useLiveClaimStates(consentTokens: string[], locationUuid: string, enabled = true) {
+  const [states, setStates] = useState<Record<string, string>>({});
+  const [resolving, setResolving] = useState<boolean>(false);
+  const [failed, setFailed] = useState<number>(0);
+  // The claim set a run has finished for. Compared against the current one to answer
+  // "are these states final?" — `resolving` alone can't, since it is still false in the
+  // render between the claims arriving and the first run starting.
+  const [settledKey, setSettledKey] = useState<string>('');
+  // Deduped and sorted, so this re-runs when the set of claims genuinely changes rather
+  // than on every render that rebuilds the array.
+  const tokenKey = useMemo(
+    () =>
+      Array.from(new Set((consentTokens ?? []).map((token) => (token ?? '').trim()).filter(Boolean)))
+        .sort()
+        .join('|'),
+    [consentTokens],
+  );
+  // Only the newest run may write: a date changed mid-flight would otherwise have the
+  // previous day's answers land on top of the current one's.
+  const runSeq = useRef(0);
+  // Mirrors settledKey for `load` to read without depending on it.
+  const settledKeyRef = useRef('');
+
+  const load = useCallback(
+    (force = false) => {
+      const tokens = tokenKey ? tokenKey.split('|') : [];
+      if (!enabled || !locationUuid || tokens.length === 0) {
+        return;
+      }
+      // These claims have already been resolved and nothing has happened to them since.
+      // Without this, leaving the tab and coming back would re-run every request and put
+      // the caller back behind a loading state for states it already has.
+      if (!force && settledKeyRef.current === tokenKey) {
+        return;
+      }
+      const seq = ++runSeq.current;
+      setResolving(true);
+      setFailed(0);
+      settledKeyRef.current = '';
+      setSettledKey('');
+      // A forced run is one asking past what was already resolved — a claim has been
+      // submitted or closed — so the shared cache gives up its answers for these claims.
+      if (force) {
+        tokens.forEach((consentToken) => claimStateCache.delete(claimStateKey(locationUuid, consentToken)));
+      }
+      runWithConcurrency(tokens, CLAIM_STATE_CONCURRENCY, async (consentToken) => {
+        try {
+          const state = await resolveClaimState(consentToken, locationUuid);
+          if (seq === runSeq.current && state) {
+            setStates((prev) => (prev[consentToken] === state ? prev : { ...prev, [consentToken]: state }));
+          }
+        } catch {
+          if (seq === runSeq.current) {
+            setFailed((count) => count + 1);
+          }
+        }
+      }).finally(() => {
+        if (seq === runSeq.current) {
+          setResolving(false);
+          settledKeyRef.current = tokenKey;
+          setSettledKey(tokenKey);
+        }
+      });
+    },
+    [tokenKey, locationUuid, enabled],
+  );
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // Submitting or closing a claim changes the very state this is reporting, so that one
+  // refetches even though these claims were already resolved.
+  const reload = useCallback(() => load(true), [load]);
+  useClaimChanged(reload);
+
+  // Nothing to resolve counts as settled; otherwise the current claim set must be the
+  // one a run has finished for. A caller that shouldn't show half-resolved statuses can
+  // wait on this.
+  const settled = !enabled || tokenKey === '' || settledKey === tokenKey;
+
+  return { states, resolving, settled, failed, reload };
+}
+
+/** Run `onClaimChanged` whenever the claim is mutated anywhere in the page. */
+export function useClaimChanged(onClaimChanged: () => void) {
+  const onClaimChangedRef = useRef(onClaimChanged);
+  onClaimChangedRef.current = onClaimChanged;
+
+  useEffect(() => {
+    const handler = () => onClaimChangedRef.current();
+    window.addEventListener(CLAIM_CHANGED_EVENT, handler);
+    return () => window.removeEventListener(CLAIM_CHANGED_EVENT, handler);
+  }, []);
 }
 
 export async function fetchPatientClaimVisit(

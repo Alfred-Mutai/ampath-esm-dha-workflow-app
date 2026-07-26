@@ -1,58 +1,174 @@
-.cvLayout{
-    display: flex;
-    flex-direction: column;
-    padding: 15px 15px;
-    row-gap: 10px;
-    width: 100%;
-    .cvHeaderSection{
-        display: flex;
-        flex-direction: row;
-        column-gap: 5px;
-        width: 100%;
-        .headerTitle{
-            display: flex;
-            flex-direction: row;
-            width: 50%;
-        }
-        .headerAction{
-            display: flex;
-            flex-direction: row;
-            justify-content: flex-end;
-            width: 50%;
-            column-gap: 5px;
-        }
-    }
-    .cvContentSection{
-        display: flex;
-        flex-direction: column;
-        .cvRow{
-            display: flex;
-            flex-direction: row;
-            width: 100%;
-            flex-wrap: wrap;
-            margin-top: 10px;
-            .cvWidth{
-                display: flex;
-                width: 45%;
-            }
-        }
-    }
+/* No own padding — the containing block body (page) or ModalBody (modal) already
+   provides it, so the content lines up with the Bill Details side. */
+.cvLayout {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
 }
 
-.claimList{
-    display: flex;
-    flex-direction: column;
-    row-gap: 10px;
+/* ---- Header ---- */
+.cvHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.cvHeaderText {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  min-width: 0;
+}
+.cvHeaderTags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+}
+.cvMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+.cvMetaLabel {
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: #6f6f6f;
+}
+.cvMetaLabel::after {
+  content: ':';
+}
+/* Stands in for the State tag until the live claim state arrives. Sized like the tag it
+   replaces so the header doesn't shift when they swap. */
+.cvStateLoading {
+  min-height: 1.25rem;
+
+  :global(.cds--inline-loading__text) {
+    font-size: 0.75rem;
+    color: #6f6f6f;
+  }
 }
 
-.claimSubmitBtn {
-    display: flex;
-    justify-content: flex-end;
-    margin-left: auto;
-    float: right;
+.cvActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
 }
 
-.generateButtonSection {
-    display: flex;
-    gap: 1rem;
+/* Placeholders shown in place of the actions while the claim is still resolving. Same
+   flow and gap as the real row, so the header doesn't shift when they swap. */
+.cvActionsLoading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  /* Carbon's skeleton mixin strips the button's padding and it has no label to give it
+     height, so it can render shorter than the sm buttons it stands in for. Pin it to the
+     sm button height so the row is the same height loading or loaded. */
+  :global(.cds--btn.cds--skeleton) {
+    block-size: 2rem;
+    min-block-size: 2rem;
+    /* Roughly the width of the labels being replaced; the default skeleton is 150px,
+       which makes the row noticeably wider than it settles to. */
+    inline-size: 7rem;
+  }
+}
+
+/* Wrapper around the Submit claim button, used only while it is disabled. A disabled
+   button emits no pointer events, so hover would never reach it; dropping pointer
+   events on the button lets hover fall through to this span, which is what the Carbon
+   Tooltip explaining the block is attached to. */
+.submitClaimWrap {
+  display: inline-flex;
+
+  /* The span is focusable (tabIndex) purely to carry the tooltip, so hide the
+     focus ring it would otherwise draw around the button. */
+  &:focus {
+    outline: none;
+  }
+
+  :global(button:disabled) {
+    pointer-events: none;
+  }
+}
+
+/* Scheme shown as a header meta item beside State/Status (kept out of the details grid
+   below, where its long value would take a whole cell). */
+.cvSchemeValue {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #161616;
+  overflow-wrap: anywhere;
+}
+
+/* ---- Summary card + details grid ---- */
+/* Only the claim summary keeps a box; the record sections below are borderless — a
+   title over its tinted cards, like the Bill Details side — so the page doesn't stack
+   boxes inside boxes. */
+.card {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 1rem 1.25rem;
+}
+/* Each category is its own row, separated by a divider so the groups read distinctly. */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e0e0e0;
+}
+
+
+.detailsGrid {
+  display: grid;
+  /* Smaller min so the short claim facts (code, service, provider, date, total) line
+     up on one row on a normal-width panel, wrapping only when it gets narrow. */
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.625rem 1.5rem;
+  margin: 0;
+}
+.detailRow {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+
+  dt {
+    font-size: 0.75rem;
+    color: #6f6f6f;
+  }
+  dd {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #161616;
+    overflow-wrap: anywhere;
+  }
+}
+
+/* ---- Section headers ---- */
+.sectionTitle {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #161616;
+}
+.sectionHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.attachActions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
 }

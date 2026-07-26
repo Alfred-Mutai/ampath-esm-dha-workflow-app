@@ -1,30 +1,48 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import styles from './claim-visit-details.component.scss';
 import { type PatientFacilityBillDetails, type ClaimsVisit, ApplicableDocumentType } from '../../types';
-import ClaimInvoiceDetails from '../claim-invoice-details/claim-invoice-details.component';
-import ClaimInterventionDetails from '../claim-intervention-details/claim-intervention-details.component';
-import ClaimDiagnosisDetails from '../claim-diagnosis-details/claim-diagnosis-details.component';
+import { buildInvoiceRecords } from '../claim-invoice-details/claim-invoice-details.component';
+import { buildInterventionRecords } from '../claim-intervention-details/claim-intervention-details.component';
+import { buildDiagnosisRecords } from '../claim-diagnosis-details/claim-diagnosis-details.component';
+import ClaimDoctors from '../claim-doctors/claim-doctors';
+import RecordCards from '../shared/record-cards.component';
 import { formatDate, launchWorkspace, parseDate, showSnackbar, useVisit } from '@openmrs/esm-framework';
-import { Button } from '@carbon/react';
+import { Button, ButtonSkeleton, InlineLoading, Tag, Tooltip } from '@carbon/react';
 import CloseClaimModal from '../modal/close-claim/close-claim.modal';
 import SubmitClaimModal from '../modal/submit-claim/submit-claim.modal';
 import { endVisit, useInvalidateProviderClaimPreview } from '../../../../billing-claims.resource';
-import ClaimDocuments from '../claim-documents/claim-documents';
-import ClaimDoctors from '../claim-doctors/claim-doctors';
 import AddClaimDoctorModal from '../modal/claim-doctors/add-claim-doctor/add-claim-doctor.modal';
 import { VisitTypeUuids } from '../../../../../shared/constants/visit-types';
 import { VisitType } from '../../../../../claims';
+import {
+  canDispatchClaim,
+  canEditClaimContent,
+  canEditClaimDocuments,
+  claimStatusTagType,
+} from '../../claim-statuses';
+const money = (n: number | string) => `KES ${Number(n ?? 0).toLocaleString('en-KE')}`;
+
 interface claimVisitDetailsProps {
   claimsVisit: ClaimsVisit;
   locationUuid: string;
   patientBillDetails?: PatientFacilityBillDetails;
-  onBillDetailsChange?: () => void;
+  /** Hide the patient name / member number when a surrounding page already shows them
+      (e.g. the bill-details patient header), to avoid repeating identity fields. */
+  hidePatientIdentity?: boolean;
+  /** The claim is being fetched or revalidated, so its state may already be stale. */
+  claimRefreshing?: boolean;
+  /** No live `workflow_state` has arrived yet, so the one on `claimsVisit` is only the
+      copy stored when the visit was recorded — frozen at DRAFT for any claim submitted
+      since. The State tag holds back rather than assert it. */
+  claimStateUnconfirmed?: boolean;
 }
 const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({
   claimsVisit,
   locationUuid,
   patientBillDetails,
-  onBillDetailsChange,
+  hidePatientIdentity,
+  claimRefreshing,
+  claimStateUnconfirmed,
 }) => {
   const [showCloseClaimModal, setShowCloseClaimModal] = useState<boolean>();
   const [showSubmitClaimModal, setSubmitCloseClaimModal] = useState<boolean>(false);
@@ -77,17 +95,29 @@ const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({
 
   const invalidateProviderClaimPreview = useInvalidateProviderClaimPreview();
 
+  // A claim can't be submitted to SHA without at least one recorded diagnosis.
+  const hasDiagnosis = (claimsVisit?.claim_diagnoses ?? []).length > 0;
+
+  // All hooks are above this point, so the early return is safe here.
   if (!claimsVisit) {
     return <>No Data</>;
   }
 
+  // Each of these writes to the claim, so all three refuse to open on anything but a
+  // settled draft — the visible gating below can lag a state change by a render.
   function displayCloseClaimModal() {
+    if (!canActOnClaim) {
+      return;
+    }
     setShowCloseClaimModal(true);
   }
   function handleCloseClaimModal() {
     setShowCloseClaimModal(false);
   }
   function displayCloseSubmitClaimModal() {
+    if (!canActOnClaim || !hasDiagnosis) {
+      return;
+    }
     setSubmitCloseClaimModal(true);
   }
   function handleCloseSubmitClaimModal() {
@@ -109,25 +139,10 @@ const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({
     setShowAddDoctorModal(false);
   }
 
-  const handleAddAttachment = () => {
-    launchWorkspace('upload-intervention-attachments-workspace', {
-      consentToken: claimsVisit.authorization_code,
-      patientUuid: '10',
-      claimInterventions: claimsVisit.interventions,
-      bill: patientBillDetails,
-    });
-  };
-
-  const handleGenerateAttachment = () => {
-    launchWorkspace('generate-intervention-attachments-workspace', {
-      consentToken: claimsVisit.authorization_code,
-      patientUuid: '10',
-      claimInterventions: claimsVisit.interventions,
-      bill: patientBillDetails,
-    });
-  };
-
   const handleSwitchIntervention = () => {
+    if (!canSwitchIntervention) {
+      return;
+    }
     launchWorkspace('switch-intervention-workspace', {
       consentToken: claimsVisit.authorization_code,
       currentInterventions: claimsVisit.interventions,
@@ -137,130 +152,221 @@ const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({
       billDate: patientBillDetails?.bill_date ?? claimsVisit.visit_start,
       onSwitchSuccess: () => {
         invalidateProviderClaimPreview();
-        onBillDetailsChange?.();
       },
     });
   };
+
+  // Which actions apply depends on where the claim sits in the lifecycle, grouped in
+  // ../../claim-statuses from the HIE's own phases. Changing what the claim contains
+  // needs an open claim (DRAFT, or DRAFT_RESUBMIT after a clarification); submitting or
+  // closing additionally covers one already prepared or that failed to dispatch.
+  const canEditContent = canEditClaimContent(claimsVisit.workflow_state);
+  const canDispatch = canDispatchClaim(claimsVisit.workflow_state);
+
+  // A refresh in flight means the claim on screen may already have moved on — most of
+  // all right after a submit, where the previous response is still being served. The
+  // actions stay visible but stand down until the claim settles, so the state can't be
+  // acted on twice.
+  const canActOnClaim = canDispatch && !claimRefreshing;
+  const canSwitchIntervention = canEditContent && !claimRefreshing;
+
+  const submitClaimButton = (
+    <Button
+      kind="primary"
+      size="sm"
+      onClick={displayCloseSubmitClaimModal}
+      disabled={!canActOnClaim || !hasDiagnosis}
+    >
+      Submit claim
+    </Button>
+  );
+
   return (
     <>
       <div className={styles.cvLayout}>
-        <div className={styles.cvHeaderSection}>
-          <div className={styles.headerTitle}>
-            <h4>Claim Visit Details</h4>
-          </div>
-          <div className={styles.headerAction}>
-            <Button kind="primary" onClick={displayCloseClaimModal}>
-              Close Claim
-            </Button>
-            <Button kind="tertiary" onClick={displayCloseSubmitClaimModal}>
-              Submit claim
-            </Button>
-            <Button
-              kind="tertiary"
-              onClick={handleSwitchIntervention}
-              disabled={
-                !claimsVisit.interventions?.some((iv) => (iv.workflow_state ?? '').toUpperCase() === 'ACTIVE')
-              }
-            >
-              Switch Intervention
-            </Button>
-          </div>
-        </div>
-        <div className={styles.cvContentSection}>
-          <div className={styles.cvRow}>
-            <div className={styles.cvWidth}>
-              <ul className={styles.claimList}>
-                <li>
-                  <strong>State :</strong> {claimsVisit.workflow_state}{' '}
-                </li>
-                <li>
-                  <strong>Status : </strong>
-                  {claimsVisit.claim_auth_status}
-                </li>
-                <li>
-                  <strong>Name :</strong> {claimsVisit.patient_name}
-                </li>
-                <li>
-                  <strong>Member Number :</strong> {claimsVisit.member_number}
-                </li>
-                <li>
-                  <strong>Scheme Code :</strong> {claimsVisit.scheme_code}
-                </li>
-                <li>
-                  <strong>Scheme Name :</strong> {claimsVisit.scheme_name}
-                </li>
-                <li>
-                  <strong>Service Type :</strong> {claimsVisit.service_type}
-                </li>
-                <li>
-                  <strong>Provider :</strong> {claimsVisit.provider_name}
-                </li>
-                <li>
-                  <strong>Visit Start :</strong> {formatDate(parseDate(claimsVisit.visit_start))}{' '}
-                </li>
-              </ul>
-            </div>
-            <div className={styles.cvWidth}>
-              <ul className={styles.claimList}>
-                <li>
-                  <strong>Total Amount :</strong> {claimsVisit.total_claim_amount}
-                </li>
-                <li>
-                  <strong>Total Net Amount :</strong> {claimsVisit.total_claim_net_amount}
-                </li>
-              </ul>
+        <div className={styles.cvHeader}>
+          <div className={styles.cvHeaderText}>
+            {/* State, Status and Scheme grouped together on the left; the long scheme
+                name lives here as a meta item so it doesn't crowd the action buttons. */}
+            <div className={styles.cvHeaderTags}>
+              {claimStateUnconfirmed ? (
+                /* Showing the stored state here would assert DRAFT for a claim already
+                   submitted, then correct itself seconds later. Wait for the live one. */
+                <span className={styles.cvMeta}>
+                  <span className={styles.cvMetaLabel}>State</span>
+                  <InlineLoading
+                    status="active"
+                    description="Confirming…"
+                    className={styles.cvStateLoading}
+                    aria-label="Confirming claim state"
+                  />
+                </span>
+              ) : claimsVisit.workflow_state ? (
+                <span className={styles.cvMeta}>
+                  <span className={styles.cvMetaLabel}>State</span>
+                  <Tag size="sm" type={claimStatusTagType(claimsVisit.workflow_state)}>{claimsVisit.workflow_state}</Tag>
+                </span>
+              ) : null}
+              {claimsVisit.claim_auth_status ? (
+                <span className={styles.cvMeta}>
+                  <span className={styles.cvMetaLabel}>Status</span>
+                  <Tag size="sm" type={claimStatusTagType(claimsVisit.claim_auth_status)}>{claimsVisit.claim_auth_status}</Tag>
+                </span>
+              ) : null}
+              {claimsVisit.scheme_name ? (
+                <span className={styles.cvMeta}>
+                  <span className={styles.cvMetaLabel}>Scheme</span>
+                  <span className={styles.cvSchemeValue}>{claimsVisit.scheme_name}</span>
+                </span>
+              ) : null}
             </div>
           </div>
-          <div className={styles.cvRow}>
-            <div className={styles.cvRow}>
-              <h6>Invoices</h6>
-            </div>
-            <div className={styles.cvRow}>
-              {claimsVisit.invoices && (
-                <ClaimInvoiceDetails
-                  claimInvoices={claimsVisit.invoices}
-                  consentToken={claimsVisit.authorization_code}
-                />
+          {/* Close / Submit while the claim can still be dispatched; content-editable
+              states are a subset of those, so this covers the whole row. */}
+          {canDispatch ? (
+            <div className={styles.cvActions}>
+              {claimRefreshing ? (
+                /* The claim is being fetched or revalidated, so which actions apply is
+                   not yet settled. Standing placeholders in the same row keep the
+                   header from reflowing while it resolves. */
+                <span className={styles.cvActionsLoading} aria-busy="true" aria-label="Loading claim actions">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <ButtonSkeleton size="sm" key={i} />
+                  ))}
+                </span>
+              ) : (
+                <>
+                  <Button
+                    kind="tertiary"
+                    size="sm"
+                    onClick={handleSwitchIntervention}
+                    disabled={
+                      !canSwitchIntervention ||
+                      !claimsVisit.interventions?.some((iv) => (iv.workflow_state ?? '').toUpperCase() === 'ACTIVE')
+                    }
+                  >
+                    Switch Intervention
+                  </Button>
+                  <Button
+                    kind="danger--tertiary"
+                    size="sm"
+                    onClick={displayCloseClaimModal}
+                    disabled={!canActOnClaim}
+                  >
+                    Close claim
+                  </Button>
+                  {/* A disabled button emits no pointer events, so the tooltip hangs off
+                      the wrapping span instead — `.submitClaimWrap` drops pointer events
+                      on the button so hover lands on the span. tabIndex keeps the reason
+                      reachable by keyboard, since a disabled button can't be focused. */}
+                  {hasDiagnosis ? (
+                    submitClaimButton
+                  ) : (
+                    <Tooltip align="bottom" label="A diagnosis must be recorded before this claim can be submitted.">
+                      <span className={styles.submitClaimWrap} tabIndex={0}>
+                        {submitClaimButton}
+                      </span>
+                    </Tooltip>
+                  )}
+                </>
               )}
             </div>
-          </div>
-          <div className={styles.cvRow}>
-            <div className={styles.cvRow}>
-              <h6>Interventions</h6>
-            </div>
-            <div className={styles.cvRow}>
-              {claimsVisit.interventions && (
-                <ClaimInterventionDetails
-                  patientBillDetails={patientBillDetails}
-                  claimInterventions={claimsVisit.interventions}
-                  consentToken={claimsVisit.authorization_code}
-                />
-              )}
-            </div>
-          </div>
-          <div className={styles.cvRow}>
-            <div className={styles.cvRow}>
-              <h6>Diagnosis</h6>
-            </div>
-            <div className={styles.cvRow}>
-              {claimsVisit.claim_diagnoses && <ClaimDiagnosisDetails claimDiagnosiss={claimsVisit.claim_diagnoses} />}
-            </div>
-          </div>
-          <div className={styles.cvRow}>
-            <div className={styles.cvRow}>
-              <h6>Doctors</h6>
-            </div>
-            <div className={styles.cvRow}>{<ClaimDoctors claimDoctors={claimsVisit.claim_doctors ?? []} />}</div>
-          </div>
-          <div className={styles.cvRow}>
-            <div className={styles.cvRow}>
-              <h6>Attachments</h6>
-            </div>
-            <div className={styles.cvRow}>
-              {<ClaimDocuments claimAttachments={claimsVisit.claim_attachments ?? []} />}
-            </div>
-          </div>
+          ) : null}
         </div>
+
+        <section className={styles.card}>
+          <dl className={styles.detailsGrid}>
+            {!hidePatientIdentity ? (
+              <>
+                <div className={styles.detailRow}>
+                  <dt>Name</dt>
+                  <dd>{claimsVisit.patient_name}</dd>
+                </div>
+                <div className={styles.detailRow}>
+                  <dt>Member number</dt>
+                  <dd>{claimsVisit.member_number}</dd>
+                </div>
+              </>
+            ) : null}
+            <div className={styles.detailRow}>
+              <dt>Scheme code</dt>
+              <dd>{claimsVisit.scheme_code}</dd>
+            </div>
+            <div className={styles.detailRow}>
+              <dt>Service type</dt>
+              <dd>{claimsVisit.service_type}</dd>
+            </div>
+            <div className={styles.detailRow}>
+              <dt>Provider</dt>
+              <dd>{claimsVisit.provider_name}</dd>
+            </div>
+            <div className={styles.detailRow}>
+              <dt>Visit start</dt>
+              <dd>{formatDate(parseDate(claimsVisit.visit_start))}</dd>
+            </div>
+            <div className={styles.detailRow}>
+              <dt>Total amount</dt>
+              <dd>{money(claimsVisit.total_claim_amount)}</dd>
+            </div>
+            {/* Net only differs from the gross when a discount or co-pay applies; when
+                they match, one figure says it all — so the duplicate row is dropped. */}
+            {Number(claimsVisit.total_claim_net_amount ?? 0) !== Number(claimsVisit.total_claim_amount ?? 0) ? (
+              <div className={styles.detailRow}>
+                <dt>Net amount</dt>
+                <dd>{money(claimsVisit.total_claim_net_amount)}</dd>
+              </div>
+            ) : null}
+          </dl>
+        </section>
+
+        {/* Each category is its own section on its own row, all using the same grid
+            approach (fills the row when few, up to three across). */}
+        <section className={styles.section}>
+          <h5 className={styles.sectionTitle}>Invoices</h5>
+          <RecordCards
+            records={buildInvoiceRecords(
+              claimsVisit.invoices ?? [],
+              claimsVisit.authorization_code,
+              // Removing a line is a content edit, so it follows the same window as the
+              // diagnoses and the Switch Intervention action.
+              canSwitchIntervention,
+            )}
+            emptyMessage="No invoices on this claim."
+            layout="grid"
+          />
+        </section>
+
+        <section className={styles.section}>
+          <h5 className={styles.sectionTitle}>Interventions</h5>
+          <RecordCards
+            records={buildInterventionRecords(claimsVisit.interventions ?? [], {
+              consentToken: claimsVisit.authorization_code,
+              locationUuid,
+              claimAttachments: claimsVisit.claim_attachments ?? [],
+              bill: patientBillDetails,
+              // Attachments have their own window: wider than content edits, because
+              // DRAFT_RESUBMIT_DOCUMENTS exists purely so missing documents can be
+              // supplied. Outside it the rows are read-only.
+              isClaimDraft: canEditClaimDocuments(claimsVisit.workflow_state),
+            })}
+            emptyMessage="No interventions on this claim."
+            layout="grid"
+          />
+        </section>
+
+        <section className={styles.section}>
+          <h5 className={styles.sectionTitle}>Diagnosis</h5>
+          <RecordCards
+            records={buildDiagnosisRecords(claimsVisit.claim_diagnoses ?? [])}
+            emptyMessage="No diagnosis data."
+            layout="grid"
+          />
+        </section>
+
+        <section className={styles.section}>
+          <h5 className={styles.sectionTitle}>Doctors</h5>
+          <ClaimDoctors claimDoctors={claimsVisit.claim_doctors ?? []} />
+        </section>
       </div>
       {showCloseClaimModal && (
         <CloseClaimModal

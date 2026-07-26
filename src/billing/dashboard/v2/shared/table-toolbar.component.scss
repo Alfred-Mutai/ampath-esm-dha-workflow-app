@@ -23,6 +23,15 @@
   min-inline-size: 0;
 }
 
+/* Give the search a full border so it reads as a distinct field. */
+.search :global(.cds--search-input) {
+  border: 1px solid $ui-03;
+}
+.search :global(.cds--search-input:focus) {
+  outline: 2px solid $interactive-01;
+  outline-offset: -2px;
+}
+
 .date {
   flex: 1 1 0;
   min-inline-size: 0;

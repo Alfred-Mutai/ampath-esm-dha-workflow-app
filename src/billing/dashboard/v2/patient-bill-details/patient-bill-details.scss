@@ -1,20 +1,123 @@
-.bdLayout{
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    padding: 15px 15px;
-    row-gap: 5px;
+@use '@carbon/layout';
+@use '@openmrs/esm-styleguide/src/vars' as *;
+
+.bdLayout {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  row-gap: layout.$spacing-05;
 }
 
-.bdHeader{
-    display: flex;
-    flex-direction: row;
-    column-gap: 10px;
-    padding: 15px 15px;
-    background: #f4f4f4;
-    flex-wrap: wrap;
+/* Distinct Bills / Claims sections combined on one page. */
+.block {
+  background-color: $ui-02;
+  border: 1px solid $ui-03;
+  border-top: 3px solid var(--section-accent);
 }
-.pdCol{
-    padding: 5px 5px;
-    width: 30%;
+.blockBills {
+  --section-accent: #007d79; /* teal — bills */
+  --section-tint: #e5f6f5;
+  border: 1px solid #7fd1cb;
+  border-top: 4px solid var(--section-accent);
+}
+.blockClaims {
+  --section-accent: #0f62fe; /* blue — claims */
+  --section-tint: #edf5ff;
+  border: 1px solid #a6c8ff;
+  border-top: 4px solid var(--section-accent);
+}
+.blockHeader {
+  display: flex;
+  align-items: center;
+  gap: layout.$spacing-04;
+  padding: layout.$spacing-04 layout.$spacing-05;
+  border-bottom: 1px solid $ui-03;
+  background-color: var(--section-tint);
+}
+
+/* Load / last-refreshed indicator pinned to the right edge of the section header. */
+.blockHeaderStatus {
+  margin-left: auto;
+  flex-shrink: 0;
+  inline-size: max-content;
+  /* Timestamp and the manual refresh control sit on one line, vertically centred. */
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.lastRefreshed {
+  font-size: 0.75rem;
+  color: #6f6f6f;
+  white-space: nowrap;
+}
+.blockIcon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  background-color: $ui-02;
+  border: 1px solid $ui-03;
+  color: var(--section-accent);
+}
+.blockTitle {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #161616;
+}
+.blockSubtitle {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: #6f6f6f;
+}
+.blockBody {
+  padding: layout.$spacing-05;
+}
+
+/* Patient summary — a clean borderless row of fields. */
+.bdHeader {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: layout.$spacing-04 layout.$spacing-06;
+  margin: 0;
+  padding: layout.$spacing-04 0;
+  background-color: transparent;
+  border: none;
+}
+
+@media (max-width: 48rem) {
+  .bdHeader {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 30rem) {
+  .bdHeader {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pdCol {
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-02;
+  min-width: 0;
+
+  dt {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: #6f6f6f;
+  }
+  dd {
+    margin: 0;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: #161616;
+    overflow-wrap: anywhere;
+  }
 }

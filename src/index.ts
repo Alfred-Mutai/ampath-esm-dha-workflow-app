@@ -13,7 +13,6 @@ import { bookingsDashboardMeta } from './dashboard-meta/bookings-dashboard.meta'
 import { serviceQueueAdminDashboardMeta } from './dashboard-meta/service-queue-admin.meta';
 import { admissionsDashboardMeta } from './dashboard-meta/admissions-dashboard.meta';
 import { patientChartAdmissionsMetaData } from './dashboard-meta/inpatient-admissions.meta';
-import { billingDashboardMeta } from './dashboard-meta/billing-dashboard.meta';
 
 export const moduleName = '@ampath/esm-dha-workflow-app';
 
@@ -136,7 +135,7 @@ export const patientAdmissionSummary = getAsyncLifecycle(
   () => import('./admissions/inpatient/inpatient-admissions.component'),
   options,
 );
-export const billingDashboardLink = getSyncLifecycle(createDashboardLink(billingDashboardMeta), options);
+export const billingDashboardLink = getAsyncLifecycle(() => import('./billing/billing-dashboard-link.component'), options);
 
 export const billingDashboard = getAsyncLifecycle(
   () => import('./billing/dashboard/billingDashboard.component'),
@@ -174,6 +173,16 @@ export const uploadInterventionAttachmentsWorkspace = getAsyncLifecycle(
 
 export const generateInterventionAttachmentsWorkspace = getAsyncLifecycle(
   () => import('./billing/dashboard/v2/patient-bill-details/attachments/generate-attachments.component'),
+  options,
+);
+
+export const billItemPaymentWorkspace = getAsyncLifecycle(
+  () => import('./billing/dashboard/v2/patient-bill-details/workspaces/bill-item-payment/bill-item-payment.workspace'),
+  options,
+);
+
+export const addClaimLineWorkspace = getAsyncLifecycle(
+  () => import('./billing/dashboard/v2/patient-bill-details/workspaces/add-claim-line/add-claim-line.workspace'),
   options,
 );
 
