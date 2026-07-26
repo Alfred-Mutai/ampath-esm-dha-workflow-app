@@ -114,6 +114,16 @@
   color: #24a148;
 }
 
+/* Counterpart to .attached, for a document missing from a claim that is past draft and
+   can no longer take one. Muted rather than red — it states a fact, not an error. */
+.notAttached {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #6f6f6f;
+}
+
 .previewFrame {
   inline-size: 100%;
   block-size: 75vh;

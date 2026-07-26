@@ -43,17 +43,55 @@
 .cvMetaLabel::after {
   content: ':';
 }
+/* Stands in for the State tag until the live claim state arrives. Sized like the tag it
+   replaces so the header doesn't shift when they swap. */
+.cvStateLoading {
+  min-height: 1.25rem;
+
+  :global(.cds--inline-loading__text) {
+    font-size: 0.75rem;
+    color: #6f6f6f;
+  }
+}
+
 .cvActions {
   display: flex;
+  align-items: center;
   gap: 0.5rem;
   flex-shrink: 0;
 }
 
-/* Wrapper around the Submit claim button. When the button is disabled it stops
-   emitting pointer events, so hover falls through to this span and its title
-   tooltip (explaining why submission is blocked) can show. */
+/* Placeholders shown in place of the actions while the claim is still resolving. Same
+   flow and gap as the real row, so the header doesn't shift when they swap. */
+.cvActionsLoading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  /* Carbon's skeleton mixin strips the button's padding and it has no label to give it
+     height, so it can render shorter than the sm buttons it stands in for. Pin it to the
+     sm button height so the row is the same height loading or loaded. */
+  :global(.cds--btn.cds--skeleton) {
+    block-size: 2rem;
+    min-block-size: 2rem;
+    /* Roughly the width of the labels being replaced; the default skeleton is 150px,
+       which makes the row noticeably wider than it settles to. */
+    inline-size: 7rem;
+  }
+}
+
+/* Wrapper around the Submit claim button, used only while it is disabled. A disabled
+   button emits no pointer events, so hover would never reach it; dropping pointer
+   events on the button lets hover fall through to this span, which is what the Carbon
+   Tooltip explaining the block is attached to. */
 .submitClaimWrap {
   display: inline-flex;
+
+  /* The span is focusable (tabIndex) purely to carry the tooltip, so hide the
+     focus ring it would otherwise draw around the button. */
+  &:focus {
+    outline: none;
+  }
 
   :global(button:disabled) {
     pointer-events: none;

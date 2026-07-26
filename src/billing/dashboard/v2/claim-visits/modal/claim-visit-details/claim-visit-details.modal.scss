@@ -4,3 +4,10 @@
     width: 100%;
     row-gap: 10px;
 }
+
+/* Shown when the claim itself never arrived. */
+.cvModalMessage {
+    margin: 0;
+    font-size: 0.875rem;
+    color: #8e6a00;
+}

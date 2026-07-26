@@ -9,7 +9,7 @@ import { useInvalidateProviderClaimPreview } from '../../../../billing-claims.re
 import { sendClaimAttachment } from '../../../../../registry/hie.resource';
 import InvoiceComponent from '../../patient-bill-details/attachments/invoice.component';
 import FinalBillComponent from '../../patient-bill-details/attachments/final-bill.component';
-import DischargeSummaryComponent from '../../patient-bill-details/attachments/discharge-summary';
+import DischargeSummaryComponent from '../../patient-bill-details/attachments/discharge-summary/discharge-summary';
 import styles from './intervention-attachments.component.scss';
 
 // Document types the system can render from EMR data; everything else is uploaded by
@@ -28,6 +28,8 @@ export interface InterventionAttachmentsProps {
   locationUuid: string;
   claimAttachments: ClaimAttachment[];
   bill?: PatientFacilityBillDetails;
+  /** Only a draft claim accepts new documents; otherwise the rows are read-only. */
+  isClaimDraft?: boolean;
 }
 
 const generatePdfFile = async (element: HTMLElement, name: string): Promise<File> => {
@@ -51,6 +53,7 @@ const InterventionAttachments: React.FC<InterventionAttachmentsProps> = ({
   locationUuid,
   claimAttachments,
   bill,
+  isClaimDraft = false,
 }) => {
   const invalidate = useInvalidateProviderClaimPreview();
   const [busy, setBusy] = useState<Record<string, boolean>>({});
@@ -134,14 +137,37 @@ const InterventionAttachments: React.FC<InterventionAttachmentsProps> = ({
     }
     setBusy((b) => ({ ...b, [docType]: true }));
     try {
-      await sendClaimAttachment(consentToken, docType, intervention.intervention_code, item.file, locationUuid);
+      const response = await sendClaimAttachment(
+        consentToken,
+        docType,
+        intervention.intervention_code,
+        item.file,
+        locationUuid,
+      );
+      // This endpoint reports failure in the body of an otherwise successful response —
+      // a submitted or closed claim comes back as {error, message, code: 400} with HTTP
+      // 200. Taking the resolved promise as proof of success marked the document
+      // attached when the backend had in fact rejected it.
+      if (response?.error) {
+        showSnackbar({
+          kind: 'error',
+          title: response.error ?? `Could not attach ${humanize(docType)}`,
+          subtitle: response.message ?? 'Please try again or contact support.',
+        });
+        // Left staged deliberately, so the file survives for a retry.
+        return;
+      }
       setLocalUrls((u) => ({ ...u, [docType]: item.url }));
       setAttachedNow((s) => new Set(s).add(docType));
       unstage(docType);
       showSnackbar({ kind: 'success', title: `${docType} attached`, subtitle: `Attached to ${intervention.intervention_code}` });
       invalidate();
     } catch (error) {
-      showSnackbar({ kind: 'error', title: `Could not attach ${docType}`, subtitle: 'Please try again or contact support.' });
+      showSnackbar({
+        kind: 'error',
+        title: `Could not attach ${humanize(docType)}`,
+        subtitle: error?.message ?? 'Please try again or contact support.',
+      });
     } finally {
       setBusy((b) => ({ ...b, [docType]: false }));
     }
@@ -205,6 +231,10 @@ const InterventionAttachments: React.FC<InterventionAttachmentsProps> = ({
                       />
                     ) : null}
                   </>
+                ) : !isClaimDraft ? (
+                  // Past draft the claim takes no more documents, so an unattached one
+                  // is stated rather than offered — no generate, choose or upload path.
+                  <span className={styles.notAttached}>Not attached</span>
                 ) : stagedItem ? (
                   // Staged: review, remove, or attach.
                   <>
@@ -278,7 +308,7 @@ const InterventionAttachments: React.FC<InterventionAttachmentsProps> = ({
         <div className={styles.hiddenPdf} aria-hidden="true">
           <InvoiceComponent ref={invoiceRef} bill={bill} />
           <FinalBillComponent ref={finalBillRef} bill={bill} />
-          <DischargeSummaryComponent ref={dischargeRef} bill={bill} claimIntervention={[intervention]} />
+          <DischargeSummaryComponent ref={dischargeRef} bill={bill} claimIntervention={intervention} />
         </div>
       ) : null}
 

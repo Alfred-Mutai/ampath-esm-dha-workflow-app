@@ -1,13 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { type PatientPayment, type PatientFacilityBillDetails } from '../../types';
 import styles from './bill-details.scss';
-import { Button, DataTableSkeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tag } from '@carbon/react';
+import { Button, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tag } from '@carbon/react';
 import { Add, Money } from '@carbon/react/icons';
 import { formatDate, launchWorkspace, parseDate } from '@openmrs/esm-framework';
 import { type AmrsVisitDiagnosis } from '../../../../types';
 import AddClaimDiagnosisModal from '../modals/add-claim-diagnosis/add-claim-diagnosis.modal';
 import { addClaimDiagnosis, useInvalidateProviderClaimPreview, useProviderClaimPreview } from '../../../../billing-claims.resource';
-import RecordCards, { type RecordCardModel } from '../../claim-visits/shared/record-cards.component';
+import RecordCards, { RecordCardsSkeleton, type RecordCardModel } from '../../claim-visits/shared/record-cards.component';
+import { canEditClaimContent } from '../../claim-statuses';
 
 // Stable key for a patient diagnosis, used to track its claim-add attempt/state.
 const diagnosisKey = (d: AmrsVisitDiagnosis): string => d.uuid ?? `${d.encounter_id}-${d.icd11_code}`;
@@ -50,8 +51,11 @@ interface billDetailsProps {
   locationUuid: string;
   billLoading?: boolean;
   diagnosisLoading?: boolean;
+  /** Bumped by "Reload Bills"; clears the record of past auto-add attempts so a
+      reload retries any diagnosis that previously failed to reach the claim. */
+  refreshToken?: number;
 }
-const BillDetails: React.FC<billDetailsProps> = ({ patientBillDetails, patientPayments, amrsVisitDiagnosis, consentToken, locationUuid, billLoading, diagnosisLoading }) => {
+const BillDetails: React.FC<billDetailsProps> = ({ patientBillDetails, patientPayments, amrsVisitDiagnosis, consentToken, locationUuid, billLoading, diagnosisLoading, refreshToken }) => {
   const setDiagnosisInterventionCode = useMemo(()=>getConsultationBillIntervantionCode(),[patientBillDetails]);
   const invalidateProviderClaimPreview = useInvalidateProviderClaimPreview();
   const [selectedDiagnosis, setSelectedDiagnosis] = useState<AmrsVisitDiagnosis | null>(null);
@@ -63,14 +67,34 @@ const BillDetails: React.FC<billDetailsProps> = ({ patientBillDetails, patientPa
 
   // The live claim, so we can tell which patient diagnoses are already on it. SWR
   // shares this request with the Claim Details section, so it's not a second fetch.
-  const { claimVisit } = useProviderClaimPreview(consentToken, locationUuid);
+  const { claimVisit, isLoading: claimLoading } = useProviderClaimPreview(consentToken, locationUuid);
   const claimDiagnosisCodes = useMemo(
     () => new Set((claimVisit?.claim_diagnoses ?? []).map((cd) => cd.diagnosis_code).filter(Boolean)),
     [claimVisit],
   );
-  // Only a draft claim can still take new diagnoses; once submitted/authorised it's
-  // locked, so auto-add is gated on the draft state.
-  const isClaimDraft = (claimVisit?.workflow_state ?? '').trim().toLowerCase() === 'draft';
+  // Diagnoses and billing lines are the claim's content, so they follow the content
+  // window grouped in ../../claim-statuses: DRAFT, plus DRAFT_RESUBMIT once a claim has
+  // been pulled back to answer a payer clarification. Anything else — submitted,
+  // dispatched, closed — is read-only and the backend would refuse the write.
+  const isClaimDraft = canEditClaimContent(claimVisit?.workflow_state);
+
+  // Until the claim has actually arrived its state is unknown, and the permissive
+  // default above would offer actions that vanish the moment it resolves to SUBMITTED.
+  // Withhold them until we know. A bill carrying no consent token has no claim to wait
+  // on, so it isn't held back by this.
+  const claimPending = Boolean(consentToken) && (claimLoading || !claimVisit);
+  const canActOnClaim = !claimPending && isClaimDraft;
+
+  // Each diagnosis is auto-added at most once, so a failed attempt would otherwise stay
+  // failed for as long as this stays mounted. "Reload Bills" is an explicit ask for a
+  // fresh attempt: forget which ones were tried and drop the recorded errors, and the
+  // effect below picks them up again once the reloaded diagnoses arrive.
+  useEffect(() => {
+    if (refreshToken) {
+      autoAddAttempted.current.clear();
+      setDiagnosisAddState({});
+    }
+  }, [refreshToken]);
 
   // On load, push any patient diagnosis that isn't on the claim yet — each attempted
   // once. Failures surface a manual "Add to claim" button; successes refresh the claim
@@ -143,7 +167,7 @@ const BillDetails: React.FC<billDetailsProps> = ({ patientBillDetails, patientPa
     return <>No Data</>;
   }
   function handleAddClaimDiagnosis(diagnosis: AmrsVisitDiagnosis) {
-    // Defensive: a submitted/authorised claim can't take new diagnoses.
+    // Only a draft claim accepts a diagnosis; the backend rejects the rest outright.
     if (!isClaimDraft) {
       return;
     }
@@ -158,12 +182,18 @@ const BillDetails: React.FC<billDetailsProps> = ({ patientBillDetails, patientPa
     invalidateProviderClaimPreview();
   }
   function handleBillItemPayment(patientBillDetail: PatientFacilityBillDetails){
+      if (!isClaimDraft) {
+        return;
+      }
       launchWorkspace('bill-item-payment-workspace', {
         billItem: patientBillDetail,
         onPay: invalidateProviderClaimPreview,
       });
   }
   function handleClaimLineAddition(patientBillDetail: PatientFacilityBillDetails){
+    if (!isClaimDraft) {
+      return;
+    }
     launchWorkspace('add-claim-line-workspace', {
       billItem: patientBillDetail,
       locationUuid,
@@ -183,11 +213,14 @@ const BillDetails: React.FC<billDetailsProps> = ({ patientBillDetails, patientPa
       return patientBillDetails[0].intervention_code ?? '';
     }
   }
+  // Every action on this page settles against a claim that is still being assembled, so
+  // all of them follow the one rule: offered while the claim is a draft, withdrawn once
+  // it has been submitted or closed and the backend will only refuse them.
   function canPay(b: PatientFacilityBillDetails): boolean {
-    return b.payment_status !== 'PAID';
+    return canActOnClaim && b.payment_status !== 'PAID';
   }
   function canAddClaimLine(b: PatientFacilityBillDetails): boolean {
-    return Boolean(b.intervention_code) && b.has_claim_line === 0;
+    return canActOnClaim && Boolean(b.intervention_code) && b.has_claim_line === 0;
   }
   // SHA items aren't paid in cash — they're settled via the SHA claim. Default a
   // sensible status when the backend leaves it blank.
@@ -275,7 +308,10 @@ const BillDetails: React.FC<billDetailsProps> = ({ patientBillDetails, patientPa
         },
         { label: 'Encounter date', value: d.encounter_datetime ? formatDate(parseDate(d.encounter_datetime)) : '' },
       ],
-      // Only offer the manual add when the automatic one couldn't place it.
+      // Every diagnosis is mirrored onto the claim automatically; the button is the
+      // fallback for the ones that didn't make it. Only 'error' qualifies, and only a
+      // draft claim can reach it — a claim past draft resolves to 'locked' above, where
+      // there is nothing the user could do but be refused by the backend.
       actions:
         state === 'error' ? (
           <Button kind="tertiary" size="sm" renderIcon={Add} onClick={() => handleAddClaimDiagnosis(d)}>
@@ -292,9 +328,7 @@ const BillDetails: React.FC<billDetailsProps> = ({ patientBillDetails, patientPa
         <section className={styles.billRow}>
           <h6 className={styles.sectionTitle}>Bill items</h6>
           {billLoading ? (
-            <div className={styles.tableCard}>
-              <DataTableSkeleton role="progressbar" showHeader={false} showToolbar={false} />
-            </div>
+            <RecordCardsSkeleton count={3} fields={4} layout="grid" columns={3} tone="teal" />
           ) : (
             <RecordCards records={billItemCards} emptyMessage="No bill items for this patient." layout="grid" columns={3} />
           )}
@@ -303,9 +337,9 @@ const BillDetails: React.FC<billDetailsProps> = ({ patientBillDetails, patientPa
         <section className={styles.billRow}>
           <h6 className={styles.sectionTitle}>Patient diagnosis</h6>
           {diagnosisLoading ? (
-            <div className={styles.tableCard}>
-              <DataTableSkeleton role="progressbar" showHeader={false} showToolbar={false} />
-            </div>
+            // Two fields per diagnosis card (ICD code, encounter date), unlike the
+            // four on a bill item.
+            <RecordCardsSkeleton count={2} fields={2} layout="grid" columns={3} tone="amber" />
           ) : (
             <RecordCards records={diagnosisCards} emptyMessage="No diagnosis recorded for this visit." layout="grid" columns={3} />
           )}

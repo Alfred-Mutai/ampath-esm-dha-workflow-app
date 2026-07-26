@@ -10,19 +10,35 @@ import RecordCards, { YesNo, type RecordCardModel } from '../shared/record-cards
 interface claimLineDetailsProps {
   claimInvoiceLines: ClaimInvoiceLine[];
   consentToken: string;
+  /** Removing a line edits the claim, so it is offered only while the claim is open to
+      content changes. Defaults to read-only rather than assuming permission. */
+  canEditLines?: boolean;
 }
 
 const money = (n: number | string) => `KES ${Number(n ?? 0).toLocaleString('en-KE')}`;
 
-const ClaimInvoiceLineDetails: React.FC<claimLineDetailsProps> = ({ claimInvoiceLines, consentToken }) => {
+const ClaimInvoiceLineDetails: React.FC<claimLineDetailsProps> = ({
+  claimInvoiceLines,
+  consentToken,
+  canEditLines = false,
+}) => {
   const sessionLocation = useSession();
   const invalidateProviderClaimPreview = useInvalidateProviderClaimPreview();
   // Line the user has asked to remove, awaiting confirmation.
   const [lineToRemove, setLineToRemove] = useState<ClaimInvoiceLine | null>(null);
   const [removing, setRemoving] = useState(false);
 
+  // Guarded as well as hidden: a claim that moved on mid-session shouldn't leave a
+  // stale button able to open the confirmation.
+  const requestRemoveLine = (line: ClaimInvoiceLine) => {
+    if (!canEditLines) {
+      return;
+    }
+    setLineToRemove(line);
+  };
+
   const confirmRemoveClaimLine = async () => {
-    if (!lineToRemove) {
+    if (!lineToRemove || !canEditLines) {
       return;
     }
     setRemoving(true);
@@ -62,11 +78,11 @@ const ClaimInvoiceLineDetails: React.FC<claimLineDetailsProps> = ({ claimInvoice
       { label: 'Return', value: <YesNo value={ci.is_return} /> },
       { label: 'UHC exceeded', value: <YesNo value={ci.uhc_exceeded} /> },
     ],
-    actions: (
-      <Button kind="danger--tertiary" size="sm" renderIcon={TrashCan} onClick={() => setLineToRemove(ci)}>
+    actions: canEditLines ? (
+      <Button kind="danger--tertiary" size="sm" renderIcon={TrashCan} onClick={() => requestRemoveLine(ci)}>
         Remove line
       </Button>
-    ),
+    ) : undefined,
   }));
 
   return (

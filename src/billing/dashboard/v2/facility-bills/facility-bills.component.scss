@@ -53,6 +53,21 @@
   text-align: center;
 }
 
+/* Says whether the claim statuses on screen are still being confirmed against the HIE,
+   and admits it when some of them couldn't be. */
+.statusNotice {
+  display: flex;
+  align-items: center;
+  gap: layout.$spacing-03;
+  margin-top: layout.$spacing-03;
+  font-size: 0.75rem;
+  color: #525252;
+}
+
+.statusNoticeWarning {
+  color: #8e6a00;
+}
+
 /* Matches the other billing tables (clearance / active visits). */
 .tableCard {
   overflow-x: auto;

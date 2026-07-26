@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import styles from './claim-visits.component.scss';
-import { fetchFacilityClaimVisits, fetchProviderClaimPreview, useProviderClaimPreview } from '../../../billing-claims.resource';
-import { type ProviderClaimPreviewDto, type ClaimsVisit, type ClaimVisitReponse, type ClaimVisitsDto } from '../types';
+import { fetchFacilityClaimVisits } from '../../../billing-claims.resource';
+import { type ClaimVisitReponse, type ClaimVisitsDto } from '../types';
 import { formatDate, parseDate, showSnackbar } from '@openmrs/esm-framework';
 import {
   Button,
@@ -26,7 +26,8 @@ const ClaimVisits: React.FC<claimVisitsProps> = ({ locationUuid, billingDate, on
   const [loading, setLoading] = useState<boolean>(false);
   const [consentToken, setConsentToken] = useState<string>();
   const [search, setSearch] = useState<string>('');
-  const { claimVisit, isLoading } = useProviderClaimPreview(consentToken, locationUuid);
+  // The modal loads the claim from the token itself — including the wait, and the guard
+  // against SWR serving the claim opened before this one.
   useEffect(() => {
     if (locationUuid && billingDate) {
       getFacilityClaimVisits();
@@ -114,20 +115,13 @@ const ClaimVisits: React.FC<claimVisitsProps> = ({ locationUuid, billingDate, on
               })}
           </TableBody>
         </Table>
-        {
-          showClaimsVisitModal && !claimVisit && isLoading && (
-            <InlineLoading description="Loading claim visit" />
-          )
-        }
-        {showClaimsVisitModal && claimVisit ? (
-          <>
-            <ClaimVisitDetailsModal
-              open={showClaimsVisitModal}
-              claimsVisit={claimVisit}
-              handleClose={handleCloseClaimsModal}
-              locationUuid={locationUuid}
-            />
-          </>
+        {showClaimsVisitModal && consentToken ? (
+          <ClaimVisitDetailsModal
+            open={showClaimsVisitModal}
+            consentToken={consentToken}
+            handleClose={handleCloseClaimsModal}
+            locationUuid={locationUuid}
+          />
         ) : (
           <></>
         )}

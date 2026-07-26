@@ -66,6 +66,8 @@ export type PatientFacilityBillDetailsResponse = {
 export enum BillingView {
   Bills = 'BILLS',
   BillDetails = 'Details',
+  /** A claim opened on its own, without a bill behind it. */
+  ClaimDetails = 'ClaimDetails',
 }
 
 export type ClaimVisitsDto = {
@@ -224,6 +226,10 @@ export type ClaimVisitReponse = {
   authorizationCode: string;
   authorizationGuid: string;
   visitResponse: ClaimsVisit;
+  createdBy?: string | null;
+  /** When this snapshot of the claim was recorded locally. The same claim is returned
+      once per local visit, so this is what tells the snapshots apart. */
+  dateCreated?: string | null;
 };
 
 export type ProviderClaimPreviewDto = {

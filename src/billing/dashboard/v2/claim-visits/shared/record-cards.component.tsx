@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Tag } from '@carbon/react';
+import { SkeletonText, Tag } from '@carbon/react';
 import { ChevronDown, DocumentBlank } from '@carbon/react/icons';
 import styles from './record-cards.component.scss';
 
@@ -180,3 +180,66 @@ const RecordCards: React.FC<RecordCardsProps> = ({ records, emptyMessage, number
 };
 
 export default RecordCards;
+
+interface RecordCardsSkeletonProps {
+  /** Placeholder cards to draw. Pick roughly what the section usually holds. */
+  count?: number;
+  /** Field rows per card. */
+  fields?: number;
+  /** Match the RecordCards call this stands in for, so the grid lines up. */
+  layout?: 'stack' | 'grid';
+  gridFill?: 'fit' | 'fill';
+  columns?: 2 | 3;
+  tone?: CardTone;
+}
+
+/**
+ * Loading placeholder for a RecordCards section. It reuses the same grid, card and
+ * field classes as the real thing, so the section reserves the layout it will settle
+ * into instead of swapping a differently-shaped block for a card grid once loaded.
+ */
+export const RecordCardsSkeleton: React.FC<RecordCardsSkeletonProps> = ({
+  count = 3,
+  fields = 4,
+  layout = 'grid',
+  gridFill = 'fit',
+  columns = 2,
+  tone,
+}) => (
+  <div
+    className={`${styles.cards} ${layout === 'grid' ? styles.cardsGrid : ''} ${
+      layout === 'grid' && gridFill === 'fill' ? styles.cardsGridFill : ''
+    } ${layout === 'grid' && columns === 3 ? styles.cardsGridThree : ''}`}
+    aria-busy="true"
+    aria-label="Loading records"
+  >
+    {Array.from({ length: count }).map((_, index) => (
+      <article className={`${styles.card} ${tone ? toneClass[tone] : ''}`} key={index}>
+        <header className={styles.cardHead}>
+          <div className={styles.cardHeadText}>
+            <span className={styles.cardKind}>
+              <SkeletonText width="4rem" />
+            </span>
+            <div className={styles.cardHeadMain}>
+              <span className={styles.cardTitle}>
+                <SkeletonText width="9rem" />
+              </span>
+            </div>
+          </div>
+        </header>
+        <dl className={styles.fieldGrid}>
+          {Array.from({ length: fields }).map((__, field) => (
+            <div className={styles.field} key={field}>
+              <dt className={styles.fieldLabel}>
+                <SkeletonText width="70%" />
+              </dt>
+              <dd className={styles.fieldValue}>
+                <SkeletonText width="85%" />
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </article>
+    ))}
+  </div>
+);

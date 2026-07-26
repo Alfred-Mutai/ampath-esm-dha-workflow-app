@@ -40,6 +40,10 @@
   margin-left: auto;
   flex-shrink: 0;
   inline-size: max-content;
+  /* Timestamp and the manual refresh control sit on one line, vertically centred. */
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 
 .lastRefreshed {

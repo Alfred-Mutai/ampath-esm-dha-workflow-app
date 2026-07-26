@@ -16,6 +16,8 @@ export interface InterventionAttachmentOpts {
   locationUuid: string;
   claimAttachments: ClaimAttachment[];
   bill?: PatientFacilityBillDetails;
+  /** Only a draft claim accepts new documents; otherwise the rows are read-only. */
+  isClaimDraft?: boolean;
 }
 
 // Builder so the cards can be merged into a shared grid with the invoices. When `opts`
@@ -57,7 +59,9 @@ export function buildInterventionRecords(
         ? {
             label: (open: boolean) => `${open ? 'Hide' : 'Show'} required claim documents (${requiredDocs.length})`,
             content: <InterventionAttachments intervention={ci} {...opts} />,
-            defaultOpen: true,
+            // Nothing to show when the intervention requires no documents, so start
+            // collapsed rather than expanding onto an empty state.
+            defaultOpen: requiredDocs.length > 0,
           }
         : undefined,
     };

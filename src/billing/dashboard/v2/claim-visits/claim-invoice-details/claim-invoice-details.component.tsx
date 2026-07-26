@@ -4,6 +4,7 @@ import { Tag } from '@carbon/react';
 import { formatDate, parseDate } from '@openmrs/esm-framework';
 import ClaimInvoiceLineDetails from '../claim-invoice-line-details/claim-invoice-line-details.component';
 import RecordCards, { type RecordCardModel } from '../shared/record-cards.component';
+import { claimStatusTagType as stateTagType } from '../../claim-statuses';
 
 interface claimInvoiceDetailsProps {
   claimInvoices: ClaimVisitInvoince[];
@@ -12,16 +13,14 @@ interface claimInvoiceDetailsProps {
 
 const money = (n: number | string) => Number(n ?? 0).toLocaleString('en-KE');
 
-const stateTagType = (value?: string): 'green' | 'red' | 'blue' | 'gray' => {
-  const s = (value ?? '').toUpperCase();
-  if (s === 'VALID' || s === 'DISPATCHED' || s === 'PAID') return 'green';
-  if (s === 'INVALID' || s === 'REJECTED' || s === 'FAILED') return 'red';
-  if (s === 'SUBMITTED' || s === 'PENDING' || s === 'DRAFT') return 'blue';
-  return 'gray';
-};
-
 // Builder so the cards can be merged into a shared grid with the interventions.
-export function buildInvoiceRecords(claimInvoices: ClaimVisitInvoince[], consentToken: string): RecordCardModel[] {
+// `canEditLines` follows the claim's content window — see ../../claim-statuses — and
+// decides whether each line offers a Remove action.
+export function buildInvoiceRecords(
+  claimInvoices: ClaimVisitInvoince[],
+  consentToken: string,
+  canEditLines = false,
+): RecordCardModel[] {
   return (claimInvoices ?? []).map((ci) => {
     const lineCount = ci.lines?.length ?? 0;
     return {
@@ -57,7 +56,13 @@ export function buildInvoiceRecords(claimInvoices: ClaimVisitInvoince[], consent
         lineCount > 0
           ? {
               label: (open: boolean) => `${open ? 'Hide' : 'Show'} line items (${lineCount})`,
-              content: <ClaimInvoiceLineDetails claimInvoiceLines={ci.lines} consentToken={consentToken} />,
+              content: (
+                <ClaimInvoiceLineDetails
+                  claimInvoiceLines={ci.lines}
+                  consentToken={consentToken}
+                  canEditLines={canEditLines}
+                />
+              ),
             }
           : undefined,
     };
