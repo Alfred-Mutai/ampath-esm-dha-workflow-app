@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import styles from './claim-visit-details.component.scss';
-import { type PatientFacilityBillDetails, type ClaimsVisit, ApplicableDocumentType } from '../../types';
+import { type PatientFacilityBillDetails, type ClaimsVisit, type VisitIntervention, ApplicableDocumentType } from '../../types';
 import { buildInvoiceRecords } from '../claim-invoice-details/claim-invoice-details.component';
 import { buildInterventionRecords } from '../claim-intervention-details/claim-intervention-details.component';
 import { buildDiagnosisRecords } from '../claim-diagnosis-details/claim-diagnosis-details.component';
@@ -139,13 +139,17 @@ const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({
     setShowAddDoctorModal(false);
   }
 
-  const handleSwitchIntervention = () => {
+  // Scoped to a single intervention: the workspace defaults its "switch FROM"
+  // selection to the sole ACTIVE entry in `currentInterventions` and only shows
+  // a from-picker when more than one is passed, so a one-item array is enough
+  // to target this specific card's intervention.
+  const handleSwitchIntervention = (intervention: VisitIntervention) => {
     if (!canSwitchIntervention) {
       return;
     }
     launchWorkspace('switch-intervention-workspace', {
       consentToken: claimsVisit.authorization_code,
-      currentInterventions: claimsVisit.interventions,
+      currentInterventions: [intervention],
       patientId: patientBillDetails?.cr_no ?? claimsVisit.patient_number,
       patientUuid: patientBillDetails?.patient_uuid,
       visitUuid: activeVisit?.uuid,
@@ -236,17 +240,6 @@ const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({
                 </span>
               ) : (
                 <>
-                  <Button
-                    kind="tertiary"
-                    size="sm"
-                    onClick={handleSwitchIntervention}
-                    disabled={
-                      !canSwitchIntervention ||
-                      !claimsVisit.interventions?.some((iv) => (iv.workflow_state ?? '').toUpperCase() === 'ACTIVE')
-                    }
-                  >
-                    Switch Intervention
-                  </Button>
                   <Button
                     kind="danger--tertiary"
                     size="sm"
@@ -348,6 +341,8 @@ const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({
               // DRAFT_RESUBMIT_DOCUMENTS exists purely so missing documents can be
               // supplied. Outside it the rows are read-only.
               isClaimDraft: canEditClaimDocuments(claimsVisit.workflow_state),
+              canSwitchIntervention,
+              onSwitchIntervention: handleSwitchIntervention,
             })}
             emptyMessage="No interventions on this claim."
             layout="grid"

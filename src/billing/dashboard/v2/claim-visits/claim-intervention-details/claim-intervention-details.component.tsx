@@ -1,5 +1,5 @@
 import React from 'react';
-import { Tag } from '@carbon/react';
+import { Button, Tag } from '@carbon/react';
 import { type ClaimAttachment, type PatientFacilityBillDetails, type VisitIntervention } from '../../types';
 import RecordCards, { YesNo, type RecordCardModel } from '../shared/record-cards.component';
 import InterventionAttachments from './intervention-attachments.component';
@@ -18,7 +18,17 @@ export interface InterventionAttachmentOpts {
   bill?: PatientFacilityBillDetails;
   /** Only a draft claim accepts new documents; otherwise the rows are read-only. */
   isClaimDraft?: boolean;
+  /** Whether the claim is currently open to content edits (gates the per-card
+      Switch Intervention button, same window as removing an invoice line). */
+  canSwitchIntervention?: boolean;
+  /** Launches the switch workflow scoped to this card's intervention. Omit to
+      leave the button off entirely (e.g. read-only contexts). */
+  onSwitchIntervention?: (intervention: VisitIntervention) => void;
 }
+
+// A claim intervention is switchable only while its workflow_state is ACTIVE;
+// one already switched out (INACTIVE) has nothing left to switch.
+const isActiveIntervention = (iv: VisitIntervention) => (iv.workflow_state ?? '').toUpperCase() === 'ACTIVE';
 
 // Builder so the cards can be merged into a shared grid with the invoices. When `opts`
 // is given, each card gets an expandable "required documents" region driven by that
@@ -64,6 +74,16 @@ export function buildInterventionRecords(
             defaultOpen: requiredDocs.length > 0,
           }
         : undefined,
+      actions: opts?.onSwitchIntervention ? (
+        <Button
+          kind="tertiary"
+          size="sm"
+          onClick={() => opts.onSwitchIntervention(ci)}
+          disabled={!opts.canSwitchIntervention || !isActiveIntervention(ci)}
+        >
+          Switch Intervention
+        </Button>
+      ) : undefined,
     };
   });
 }
