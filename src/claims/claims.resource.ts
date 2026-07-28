@@ -9,6 +9,7 @@ import {
   VisitType,
   type ClientSubBenefit,
   PomsfBalance,
+  PreExistingIntervention,
 } from './index';
 import { fetchUrl, getHieBaseUrl, getUrl, useHie } from './utils';
 import { openmrsFetch, restBaseUrl, useSession, Visit } from '@openmrs/esm-framework';
@@ -59,7 +60,7 @@ export const useBenefitUtilizations = (clientRegistryId: string, interventionCod
 
   const results = data?.data;
 
-   if (results && 'error' in results && 'message' in results) {
+  if (results && 'error' in results && 'message' in results) {
     return {
       benefitUtilizations: null,
       error,
@@ -85,7 +86,7 @@ export const usePomsfBalance = (clientRegistryId: string, isPomsf: boolean) => {
 
   const results = data?.data;
 
-   if (results && 'error' in results && 'message' in results) {
+  if (results && 'error' in results && 'message' in results) {
     return {
       pomsfBalance: null,
       error,
@@ -148,6 +149,51 @@ export async function createClaimsVisit(
   return result.data;
 }
 
+export const usePreExistingIntervention = (patientUuid: string) => {
+  const { hieBaseUrl } = useHie();
+  const url = patientUuid
+    ? `${hieBaseUrl}/bill-order/patient-claim-bill-order?patient_uuid=${patientUuid}`
+    : null;
+
+  const { data, error, isLoading } = useSWR<{ data: PreExistingIntervention }>(url, openmrsFetch);
+
+  const results = data?.data;
+
+  return {
+    preExistingIntervention: results,
+    error,
+    isLoadingPreExistingIntervention: isLoading,
+  };
+};
+
+export async function updateBillOrderConsentToken(
+  id: number,
+  consentToken: string,
+) {
+  const { hieBaseUrl } = await getHieBaseUrl();
+  const url = `${hieBaseUrl}/bill-order/${id}/consent-token`;
+
+  let payload = {
+    consent_token: consentToken
+  };
+
+  const result = await openmrsFetch<any>(url, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: payload,
+  }).catch((error) => {
+    const message = error?.responseBody?.message ?? '';
+    if (typeof message === 'object') {
+      throw `${message?.join(',')}`;
+    }
+    throw message;
+  });
+
+  return result.data;
+}
+
 export const usePatientVisit = (patientUuid: string) => {
   console.log('patientUuid');
   console.log(patientUuid);
@@ -172,7 +218,7 @@ export const usePatientVisit = (patientUuid: string) => {
 };
 
 // Preauths
-export async function createPreauth() {}
+export async function createPreauth() { }
 
 const generatePreauthFormData = (payload: any, intervention: Intervention, consentToken: string) => {
   const formData = new FormData();

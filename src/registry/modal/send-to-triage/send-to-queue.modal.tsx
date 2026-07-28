@@ -49,7 +49,7 @@ import { type QueueEntry } from '../../../types/types';
 import { getActiveQueueEntryByPatientUuid } from '../../../service-queues/service-queues.resource';
 import { createOrderEncounter, getOrder } from '../../../shared/services/encounters.resource';
 import { type ConfigObject } from '../../../config-schema';
-import { type ClaimResult, type Intervention, type VisitType } from '../../../claims';
+import { ClientSubBenefit, type ClaimResult, type Intervention, type VisitType } from '../../../claims';
 import { getServiceType } from '../../../shared/services/claims.resource';
 import PaymentMethodComponent from './payment-method.component';
 import ClaimsConsentExtension from '../otp-verification-modal/extension/claims-consent.extension';
@@ -83,6 +83,7 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
   const [loading, setLoading] = useState<boolean>(false);
   const [claimResult, setClaimResult] = useState<ClaimResult>();
   const [intervention, setIntervention] = useState<Intervention>();
+  const [selectedSubBenefit, setSelectedSubBenefit] = useState<ClientSubBenefit>();
   const [triggerCreateVisit, setTriggerCreateVisit] = useState<boolean>(false);
   const session = useSession();
   const locationUuid = session?.sessionLocation?.uuid;
@@ -199,9 +200,14 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
     return <>No Client data</>;
   }
 
-  function onClaimsVisitStart(payload: ClaimResult, selectedIntervention: Intervention) {
+  function onClaimsVisitStart(payload: ClaimResult, selectedIntervention: Intervention, subBenefit: ClientSubBenefit, usePreselectedIntervention: boolean) {
+    if(usePreselectedIntervention) {
+      setBillCreated(true);
+      showAlert('success', 'Bill succesfully updated', '');
+    }
     setClaimResult(payload);
     setIntervention(selectedIntervention);
+    setSelectedSubBenefit(subBenefit);
   }
 
   function onInterventionChange(selectedIntervention: Intervention) {
@@ -553,6 +559,7 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
           const applicableDocumentTypes = interventionResult.applicableDocumentTypes;
 
           let interventionPayload = {
+            sub_benefit_code: selectedSubBenefit ? selectedSubBenefit.code : "",
             intervention_code: interventionResult.code,
             consent_token: claimResult.authorization_code,
             service_type: getServiceType(interventionResult, visitType),
@@ -560,6 +567,10 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
             normal_preauth: requiresPreauth && !electivePreauth,
             elective_preauth: interventionResult.needsManualPreauthApproval && electivePreauth,
           };
+
+          if (patientUuid) {
+            intervention["patient_uuid"] = patientUuid;
+          }
 
           if (applicableDocumentTypes && applicableDocumentTypes.length) {
             interventionPayload['applicable_document_types'] = applicableDocumentTypes.join(',');

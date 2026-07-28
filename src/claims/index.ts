@@ -118,6 +118,27 @@ export interface ClaimIntervention {
   needs_preauth: boolean;
 }
 
+export interface PreExistingIntervention {
+  id: number;
+  bill_uuid: string;
+  patient_uuid: string;
+  order_no: string;
+  line_item_uuid: string;
+  sub_benefit_code: string;
+  intervention_code: string;
+  consent_token: string | null;
+  service_type: string | null;
+  requires_preauth: boolean;
+  normal_preauth: boolean;
+  elective_preauth: boolean;
+  preauth_approved: boolean;
+  required_documents: unknown | null;
+  applicable_document_types: unknown | null;
+  required_preauth_document_types: unknown | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface InvoiceLine {
   [key: string]: unknown;
 }

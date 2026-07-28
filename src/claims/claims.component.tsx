@@ -7,9 +7,11 @@ import {
   getServiceType,
   useBenefitUtilizations,
   useClientSubBenefits,
+  usePreExistingIntervention,
   useInterventions,
   usePatientVisit,
   usePomsfBalance,
+  updateBillOrderConsentToken,
 } from './claims.resource';
 import {
   type BenefitUtilization,
@@ -34,8 +36,8 @@ interface ClaimsComponentProps {
   otp?: string;
   authGuid?: string;
   onSelectChange: (key, value) => void;
-  onClaimsVisitStart?: (payload: ClaimResult, intervention: Intervention) => void;
-  onAddIntervention?: (intervention: any) => void;
+  onClaimsVisitStart?: (payload: ClaimResult, intervention: Intervention, subBenefit: ClientSubBenefit, usePreselectedIntervention: boolean) => void;
+  onAddIntervention?: (intervention: any, subBenefit?: ClientSubBenefit) => void;
   onInterventionChange?: (intervention: Intervention | undefined) => void;
 }
 
@@ -60,6 +62,7 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
 
   const { clientSubBenefits, isLoadingClientSubBenefits } = useClientSubBenefits(clientRegistryId);
   const { interventions, isLoadingInterventions } = useInterventions(clientRegistryId, selectedSubBenefitCode?.code);
+  const { preExistingIntervention, isLoadingPreExistingIntervention } = usePreExistingIntervention(patientUuid);
   const { sessionLocation } = useSession();
   const { t } = useTranslation();
 
@@ -70,7 +73,7 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
     return false;
   }, [selectedSubBenefitCode]);
 
-   const { benefitUtilizations, isLoadingBenefitUtilization } = useBenefitUtilizations(
+  const { benefitUtilizations, isLoadingBenefitUtilization } = useBenefitUtilizations(
     clientRegistryId,
     selectedIntervention?.code,
     selectedIntervention?.paymentMechanism?.toUpperCase() === 'CAPITATION',
@@ -118,6 +121,23 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
     }
   }, [triggerAddIntervention]);
 
+  useEffect(() => {
+    if (!isLoadingPreExistingIntervention && preExistingIntervention && (clientSubBenefits || interventions)) {
+      if (clientSubBenefits) {
+        let preSelected = clientSubBenefits.find(v => v.code === preExistingIntervention.sub_benefit_code);
+        if (preSelected) {
+          setSelectedSubBenefitCode(preSelected);
+        }
+      }
+      if (interventions) {
+        let preSelected = interventions.find(v => v.code === preExistingIntervention.intervention_code);
+        if (preSelected) {
+          setSelectedIntervention(preSelected);
+        }
+      }
+    }
+  }, [preExistingIntervention, isLoadingPreExistingIntervention, clientSubBenefits, interventions]);
+
   const launchPreauthsModal = useCallback(() => {
     const dispose = showModal('preauths-modal', {
       closeModal: () => dispose(),
@@ -138,7 +158,14 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
         sessionLocation?.uuid,
         { otp, auth_guid: authGuid },
       );
-      onClaimsVisitStart(claimVisit, selectedIntervention);
+
+      // update the existing bill order if the interventions match
+      if(preExistingIntervention && preExistingIntervention.intervention_code === selectedIntervention.code) {
+        await updateBillOrderConsentToken(preExistingIntervention.id, claimVisit.authorization_code);
+        onClaimsVisitStart(claimVisit, selectedIntervention, selectedSubBenefitCode, true);
+      } else {
+        onClaimsVisitStart(claimVisit, selectedIntervention, selectedSubBenefitCode, false);
+      }
 
       showSnackbar({
         title: t('startClaimVisitSuccess', 'Claim visit started successfully'),
@@ -232,6 +259,12 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
         return;
       }
       const consentToken = getConsentToken();
+      // check if consent token exists to enable creation of bill order in:
+      // lab, procedures, radiology and pharmacy.
+      if (!consentToken) {
+        onAddIntervention(mapIntervention(selectedIntervention), selectedSubBenefitCode);
+        return;
+      }
       // Check if intervention exists
       const interventionExists = await checkInterventionExists(consentToken, selectedIntervention.code);
       if (interventionExists) {
