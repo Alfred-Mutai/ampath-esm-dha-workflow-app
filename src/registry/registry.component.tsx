@@ -53,7 +53,7 @@ import { formatPhoneNumberForOTP } from './utils/phone-number-formatter';
 import { usePatient } from '../context/patient-context';
 import FacilityAndWorkerSlot from '../shared/ui/facility-worker-slot/facility-worker.component-slot.component';
 import RegistrationList from './registration-list/registration-list.component';
-import { ConfigObject } from '../config-schema';
+import { type ConfigObject } from '../config-schema';
 
 interface RegistryComponentProps {}
 const RegistryComponent: React.FC<RegistryComponentProps> = () => {
@@ -386,6 +386,7 @@ const RegistryComponent: React.FC<RegistryComponentProps> = () => {
       // SHA/insurance patients are cleared through the SHA claim (their real
       // active visit is the source of truth under "Pending clearance"), so we
       // don't raise a cash clearance record for them.
+      /*
       const client = getPatient();
       const isCash = details.method !== 'insurance';
       if (isCash) {
@@ -406,10 +407,12 @@ const RegistryComponent: React.FC<RegistryComponentProps> = () => {
           fulfillPrepaidService(prepaid.id);
         }
       }
+      */
+    
 
       showAlert('success', 'Patient sent to the triage queue, awaiting clearance', '');
       // Land on the accounting Pending clearance section so the new patient can be cleared.
-      window.location.href = `${window.spaBase}/home/billing`;
+      // window.location.href = `${window.spaBase}/home/billing`;
     } catch (e) {
       const errorResp = e['responseBody'] ?? e.message;
       showAlert('error', 'Error creating visit', '');
