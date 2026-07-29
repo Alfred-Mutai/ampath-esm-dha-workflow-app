@@ -19,7 +19,8 @@ import {
   MetricsCardItem,
 } from '../../../service-queues/metrics/metrics-cards/metrics-card.component';
 import FacilityAndWorkerSlot from '../../../shared/ui/facility-worker-slot/facility-worker.component-slot.component';
-interface billingClaimsDashboardProps { }
+import ActiveVisitsComponent from './active-visits.component';
+interface billingClaimsDashboardProps {}
 
 const today = () => new Date().toLocaleDateString('en-CA');
 
@@ -124,12 +125,7 @@ const BillingClaimsDashboard: React.FC<billingClaimsDashboardProps> = () => {
     },
   ];
 
-  const handleTileClick = (s: {
-    tab: number;
-    clearKey?: string;
-    billsPayerTab?: number;
-    billsStatusKey?: string;
-  }) => {
+  const handleTileClick = (s: { tab: number; clearKey?: string; billsPayerTab?: number; billsStatusKey?: string }) => {
     setSelectedTab(s.tab);
     if (s.clearKey) {
       setClearanceNav((p) => ({ key: s.clearKey, nonce: p.nonce + 1 }));
@@ -185,9 +181,7 @@ const BillingClaimsDashboard: React.FC<billingClaimsDashboardProps> = () => {
                 dateFormat="Y-m-d"
                 value={billingDate}
                 maxDate={today()}
-                onChange={(dates) =>
-                  handleDateChange(dates?.[0] ? (dates[0] as Date).toLocaleDateString('en-CA') : '')
-                }
+                onChange={(dates) => handleDateChange(dates?.[0] ? (dates[0] as Date).toLocaleDateString('en-CA') : '')}
               >
                 <DatePickerInput id="billing-date" labelText="" placeholder="yyyy-mm-dd" size="sm" />
               </DatePicker>
@@ -199,6 +193,7 @@ const BillingClaimsDashboard: React.FC<billingClaimsDashboardProps> = () => {
                 <Tab>Pending clearance</Tab>
                 <Tab>Facility bills</Tab>
                 <Tab>Preauthorizations</Tab>
+                <Tab>Active Visits</Tab>
                 {/* <Tab>Claims</Tab> */}
               </TabList>
               <TabPanels>
@@ -236,6 +231,9 @@ const BillingClaimsDashboard: React.FC<billingClaimsDashboardProps> = () => {
                     billingDate={billingDate}
                     onDateChange={handleDateChange} />
                 </TabPanel> */}
+                <TabPanel>
+                  <ActiveVisitsComponent billingDate={billingDate} />
+                </TabPanel>
               </TabPanels>
             </Tabs>
           </div>

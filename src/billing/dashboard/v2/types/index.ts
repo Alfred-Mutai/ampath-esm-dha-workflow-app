@@ -380,3 +380,16 @@ export type SwitchInterventionDto = {
   locationUuid: string;
   billedAmount: string;
 };
+
+export interface ActiveVisit {
+  identifiers: string;
+  patient_name: string;
+  payment_method: string;
+  payment_method_uuid: string;
+  payment_status: 'CLEARED' | 'PENDING' | string;
+  person_id: number;
+  visit_date: string; // ISO date string
+  visit_id: number;
+  visit_type: string;
+  visit_uuid: string;
+}

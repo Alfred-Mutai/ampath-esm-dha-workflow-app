@@ -24,7 +24,14 @@ import {
   type SwitchInterventionDto,
 } from './dashboard/v2/types';
 import { getHieBaseUrl } from '../claims/utils';
-import { type AmrsMaternityDiagnosis, type AmrsMaternityDiagnosisDto, type AmrsMaternityDiagnosisResponse, type AmrsVisitDiagnosis, type AmrsVisitDiagnosisDto, type AmrsVisitDiagnosisResponse } from './types';
+import {
+  type AmrsMaternityDiagnosis,
+  type AmrsMaternityDiagnosisDto,
+  type AmrsMaternityDiagnosisResponse,
+  type AmrsVisitDiagnosis,
+  type AmrsVisitDiagnosisDto,
+  type AmrsVisitDiagnosisResponse,
+} from './types';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import useSWR, { mutate } from 'swr';
 
@@ -72,9 +79,9 @@ export async function fetchProviderClaimPreview(
   const response = await openmrsFetch(providerClaimPreviewUrl, {
     method: 'POST',
     headers: {
-      'content-type': 'application/json'
+      'content-type': 'application/json',
     },
-    body: JSON.stringify(providerClaimPreviewDto)
+    body: JSON.stringify(providerClaimPreviewDto),
   });
   const data = (await response.json()) as ClaimsVisit;
   return data ?? null;
@@ -103,14 +110,11 @@ export function useProviderClaimPreview(consentToken: string, locationUuid: stri
   const { hieBaseUrl } = useConfig({
     externalModuleName: '@ampath/esm-dha-workflow-app',
   });
-  const url = consentToken ? `${hieBaseUrl}/claim-preview/provider?consentToken=${consentToken}&locationUuid=${locationUuid}` : null;
+  const url = consentToken
+    ? `${hieBaseUrl}/claim-preview/provider?consentToken=${consentToken}&locationUuid=${locationUuid}`
+    : null;
 
-  const {
-    data,
-    error,
-    isLoading,
-    isValidating
-  } = useSWR(url, openmrsFetch, {
+  const { data, error, isLoading, isValidating } = useSWR(url, openmrsFetch, {
     keepPreviousData: true,
     // This preview is an expensive round trip to the HIE, so it is fetched only when
     // something actually asks for it: the first load of a claim, a mutation that
@@ -136,7 +140,7 @@ export function useProviderClaimPreview(consentToken: string, locationUuid: stri
     claimVisit: results,
     error,
     isLoading,
-    isValidating
+    isValidating,
   };
 }
 
@@ -374,9 +378,7 @@ export function useClaimChanged(onClaimChanged: () => void) {
   }, []);
 }
 
-export async function fetchPatientClaimVisit(
-  claimVisitsDto: ClaimVisitsDto,
-): Promise<ClaimVisitReponse[]> {
+export async function fetchPatientClaimVisit(claimVisitsDto: ClaimVisitsDto): Promise<ClaimVisitReponse[]> {
   const claimVisitsFilter: ClaimVisitsDto = {};
   if (claimVisitsDto.consentToken) {
     claimVisitsFilter['consentToken'] = claimVisitsDto.consentToken;
@@ -397,9 +399,7 @@ export async function fetchPatientClaimVisit(
   return data ?? [];
 }
 
-export async function fetchPatientBillPayments(
-  patientPaymentsDto: PatientPaymentsDto,
-): Promise<PatientPayment[]> {
+export async function fetchPatientBillPayments(patientPaymentsDto: PatientPaymentsDto): Promise<PatientPayment[]> {
   const etlBaseUrl = await getEtlBaseUrl();
   const patientPaymentsUrl = `${etlBaseUrl}/bill/patient/payment?billingDate=${patientPaymentsDto.billingDate}&patientUuid=${patientPaymentsDto.patientUuid}`;
   const response = await openmrsFetch(patientPaymentsUrl);
@@ -412,9 +412,9 @@ export async function payBillItem(billUuid: string, billPaymentDto: BillPaymentD
   const response = await openmrsFetch(billPaymentUrl, {
     method: 'POST',
     headers: {
-      'content-type': 'application/json'
+      'content-type': 'application/json',
     },
-    body: JSON.stringify(billPaymentDto)
+    body: JSON.stringify(billPaymentDto),
   });
   const data = (await response.json()) as BillPaymentResponse;
   return data ?? null;
@@ -426,11 +426,11 @@ export async function addClaimItem(addClaimLineDto: AddClaimLineDto) {
   const response = await openmrsFetch(addClaimLineUrl, {
     method: 'POST',
     headers: {
-      'content-type': 'application/json'
+      'content-type': 'application/json',
     },
-    body: JSON.stringify(addClaimLineDto)
+    body: JSON.stringify(addClaimLineDto),
   });
-  const data = (await response.json());
+  const data = await response.json();
   return data ?? null;
 }
 
@@ -440,19 +440,19 @@ export async function removeClaimItem(removeClaimLineDto: RemoveClaimLineDto) {
   const result = await openmrsFetch(url, {
     method: 'DELETE',
     headers: {
-      'content-type': 'application/json'
+      'content-type': 'application/json',
     },
-    body: JSON.stringify(removeClaimLineDto)
+    body: JSON.stringify(removeClaimLineDto),
   }).catch((error) => {
-    const message = error?.responseBody?.message ?? "";
-    if (typeof message === "object") {
-      throw `${message?.join(",")}`;
+    const message = error?.responseBody?.message ?? '';
+    if (typeof message === 'object') {
+      throw `${message?.join(',')}`;
     }
     throw message;
   });
 
-  if (result?.data && "error" in result.data && "message" in result.data) {
-    const message = result.data.message ?? "";
+  if (result?.data && 'error' in result.data && 'message' in result.data) {
+    const message = result.data.message ?? '';
     throw message;
   }
   return result?.data;
@@ -470,19 +470,19 @@ export async function switchClaimIntervention(switchInterventionDto: SwitchInter
   const result = await openmrsFetch(url, {
     method: 'POST',
     headers: {
-      'content-type': 'application/json'
+      'content-type': 'application/json',
     },
-    body: JSON.stringify(switchInterventionDto)
+    body: JSON.stringify(switchInterventionDto),
   }).catch((error) => {
-    const message = error?.responseBody?.message ?? "";
-    if (typeof message === "object") {
-      throw `${message?.join(",")}`;
+    const message = error?.responseBody?.message ?? '';
+    if (typeof message === 'object') {
+      throw `${message?.join(',')}`;
     }
     throw message;
   });
 
-  if (result?.data && "error" in result.data && "message" in result.data) {
-    const message = result.data.message ?? "";
+  if (result?.data && 'error' in result.data && 'message' in result.data) {
+    const message = result.data.message ?? '';
     throw message;
   }
   return result?.data;
@@ -494,27 +494,27 @@ export async function closeClaim(closeClaimDto: CloseClaimDto) {
   const response = await openmrsFetch(addClaimLineUrl, {
     method: 'POST',
     headers: {
-      'content-type': 'application/json'
+      'content-type': 'application/json',
     },
-    body: JSON.stringify(closeClaimDto)
+    body: JSON.stringify(closeClaimDto),
   });
   const data = (await response.json()) as ClaimVisitReponse;
   return data ?? null;
 }
 
-export async function submitClaim(submitClaimDto: SubmitClaimDto, visitType: string = "INPATIENT") {
+export async function submitClaim(submitClaimDto: SubmitClaimDto, visitType: string = 'INPATIENT') {
   const { hieBaseUrl } = await getHieBaseUrl();
   let claimUrl = `${hieBaseUrl}/claim-submission`;
-  if (visitType === "INPATIENT") {
-    submitClaimDto["dischargeDate"] = new Date().toISOString();
+  if (visitType === 'INPATIENT') {
+    submitClaimDto['dischargeDate'] = new Date().toISOString();
     claimUrl = `${hieBaseUrl}/claim-submission/inpatient`;
   }
   const response = await openmrsFetch(claimUrl, {
     method: 'POST',
     headers: {
-      'content-type': 'application/json'
+      'content-type': 'application/json',
     },
-    body: JSON.stringify(submitClaimDto)
+    body: JSON.stringify(submitClaimDto),
   });
   const data = (await response.json()) as ClaimVisitReponse;
   return data ?? null;
@@ -546,11 +546,11 @@ export async function addClaimDiagnosis(addClaimDiagnosisDto: AddClaimDiagnosisD
   const response = await openmrsFetch(addClaimDiagnosisUrl, {
     method: 'POST',
     headers: {
-      'content-type': 'application/json'
+      'content-type': 'application/json',
     },
-    body: JSON.stringify(addClaimDiagnosisDto)
+    body: JSON.stringify(addClaimDiagnosisDto),
   });
-  const data = (await response.json());
+  const data = await response.json();
   return data ?? null;
 }
 
@@ -567,6 +567,15 @@ export const endVisit = async (visitUuid: string) => {
     },
     body: JSON.stringify(body),
   });
+
+  return response.json();
+};
+
+export const getActiveVisits = async (locationUuid: string, billDate: string) => {
+  const etlBaseUrl = await getEtlBaseUrl();
+  const url = `${etlBaseUrl}/facility/active-bill-visits?locationUuid=${locationUuid}&billingDate=${billDate}`;
+
+  const response = await openmrsFetch(url);
 
   return response.json();
 };
