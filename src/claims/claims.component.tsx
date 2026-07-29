@@ -1,4 +1,4 @@
-import { Button, ComboBox, InlineLoading, Loading, Tag, TextInput } from '@carbon/react';
+import { Button, ComboBox, InlineLoading, Loading, Tag, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TextInput } from '@carbon/react';
 import styles from './claims.component.scss';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -19,12 +19,14 @@ import {
   type ClientSubBenefitResults,
   type Intervention,
   type ClientSubBenefit,
+  type PreExistingIntervention,
   VisitType,
   type ClaimResult,
 } from './index';
 import { addIntervention, checkInterventionExists } from './interventions.resource';
 import { showModal, showSnackbar, useSession, useVisit, Visit } from '@openmrs/esm-framework';
 import { useTranslation } from 'react-i18next';
+import { useProviderClaimPreview } from '../billing/billing-claims.resource';
 
 interface ClaimsComponentProps {
   clientRegistryId: string;
@@ -62,9 +64,34 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
 
   const { clientSubBenefits, isLoadingClientSubBenefits } = useClientSubBenefits(clientRegistryId);
   const { interventions, isLoadingInterventions } = useInterventions(clientRegistryId, selectedSubBenefitCode?.code);
-  const { preExistingIntervention, isLoadingPreExistingIntervention } = usePreExistingIntervention(patientUuid);
+  const { preExistingInterventions, isLoadingPreExistingIntervention } = usePreExistingIntervention(patientUuid);
   const { sessionLocation } = useSession();
+
+  const loadedConsentToken = useMemo(() => {
+    if (activeVisit) {
+      const consentToken =
+        activeVisit.attributes?.find((atr) => atr?.attributeType?.uuid === '4962a633-c4f8-474c-857c-5c68c72fbbe3')
+          ?.value ?? '';
+      return consentToken;
+    }
+  }, [activeVisit]);
+
+  const { claimVisit: existingClaimVisit } = useProviderClaimPreview(loadedConsentToken, sessionLocation?.uuid);
   const { t } = useTranslation();
+
+  const formatPreauthType = (intervention: PreExistingIntervention) => {
+    if (intervention.normal_preauth) {
+      return t('normalPreauth', 'Normal');
+    }
+    if (intervention.elective_preauth) {
+      return t('electivePreauth', 'Elective');
+    }
+    return t('noPreauth', 'None');
+  };
+
+  const formatDate = (value: string) => {
+    return value ? new Date(value).toLocaleDateString() : '-';
+  };
 
   const isPmsf = useMemo(() => {
     if (selectedSubBenefitCode) {
@@ -122,7 +149,8 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
   }, [triggerAddIntervention]);
 
   useEffect(() => {
-    if (!isLoadingPreExistingIntervention && preExistingIntervention && (clientSubBenefits || interventions)) {
+    if (!isLoadingPreExistingIntervention && preExistingInterventions && preExistingInterventions.length && (clientSubBenefits || interventions)) {
+      const preExistingIntervention = preExistingInterventions[0];
       if (clientSubBenefits) {
         let preSelected = clientSubBenefits.find(v => v.code === preExistingIntervention.sub_benefit_code);
         if (preSelected) {
@@ -136,7 +164,7 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
         }
       }
     }
-  }, [preExistingIntervention, isLoadingPreExistingIntervention, clientSubBenefits, interventions]);
+  }, [preExistingInterventions, isLoadingPreExistingIntervention, clientSubBenefits, interventions]);
 
   const launchPreauthsModal = useCallback(() => {
     const dispose = showModal('preauths-modal', {
@@ -151,6 +179,17 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
         return;
       }
       const serviceType = getServiceType(selectedIntervention, visitType);
+      let interventionCodes = [];
+      if (selectedIntervention) {
+        interventionCodes.push(selectedIntervention.code);
+      }
+      if (preExistingInterventions && preExistingInterventions.length) {
+        const preExistingCodes = preExistingInterventions.map(v => v.intervention_code);
+        interventionCodes.push(...preExistingCodes);
+      }
+
+      interventionCodes = Array.from(new Set(interventionCodes));
+
       const claimVisit = await createClaimsVisit(
         selectedIntervention.code,
         clientRegistryId,
@@ -159,10 +198,49 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
         { otp, auth_guid: authGuid },
       );
 
-      // update the existing bill order if the interventions match
-      if(preExistingIntervention && preExistingIntervention.intervention_code === selectedIntervention.code) {
-        await updateBillOrderConsentToken(preExistingIntervention.id, claimVisit.authorization_code);
-        onClaimsVisitStart(claimVisit, selectedIntervention, selectedSubBenefitCode, true);
+      // update the existing bill orders if the interventions match
+      if (preExistingInterventions && preExistingInterventions.length) {
+        // Check if the selected intervention is in preExistingInterventions
+        const consentToken = claimVisit.authorization_code;
+
+        const promises = [];
+        const existsInPreExistingInterventions = preExistingInterventions.some(v => v.intervention_code === selectedIntervention.code);
+        if (existsInPreExistingInterventions) {
+          promises.push(
+            ...preExistingInterventions.map((intervention) =>
+              updateBillOrderConsentToken(intervention.id, claimVisit.authorization_code),
+            ),
+          );
+        } else {
+          const filteredPreExistingInterventions = preExistingInterventions.filter(v => v.intervention_code != selectedIntervention.code);
+          promises.push(
+            ...filteredPreExistingInterventions.map((intervention) =>
+              updateBillOrderConsentToken(intervention.id, claimVisit.authorization_code),
+            ),
+          );
+        }
+
+        if (consentToken) {
+          promises.push(
+            interventionCodes.map((intervention) => {
+              const interventionExistsInProviderPreview = claimVisit?.interventions?.some(i => i?.intervention_code === intervention);
+              if (interventionExistsInProviderPreview) {
+                return;
+              }
+              return addIntervention(consentToken, intervention, sessionLocation?.uuid);
+            },
+            ),
+          );
+        }
+
+        await Promise.all(promises);
+
+        const selectedInterventionPreExists = preExistingInterventions.some(p => p.intervention_code === selectedIntervention.code);
+        if (!selectedInterventionPreExists) {
+          onClaimsVisitStart(claimVisit, selectedIntervention, selectedSubBenefitCode, false);
+        } else {
+          onClaimsVisitStart(claimVisit, null, null, true);
+        }
       } else {
         onClaimsVisitStart(claimVisit, selectedIntervention, selectedSubBenefitCode, false);
       }
@@ -267,7 +345,8 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
       }
       // Check if intervention exists
       const interventionExists = await checkInterventionExists(consentToken, selectedIntervention.code);
-      if (interventionExists) {
+      const interventionExistsInProviderPreview = existingClaimVisit?.interventions?.some(i => i?.intervention_code === selectedIntervention.code);
+      if (interventionExists || interventionExistsInProviderPreview) {
         onAddIntervention(mapIntervention(selectedIntervention));
       } else {
         const intervention = await addIntervention(consentToken, selectedIntervention.code, sessionLocation?.uuid);
@@ -322,121 +401,159 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
   };
 
   return (
-    <div className={styles.claimFields}>
-      {/* Benefits — searchable */}
-      <div className={styles.field} onKeyDownCapture={lockSelection(selectedSubBenefitCode, clearSubBenefit)}>
-        <ComboBox
-          id="client-sub-benefits"
-          titleText="Client sub benefits"
-          placeholder={isLoadingClientSubBenefits ? 'Loading sub-benefits…' : 'Search sub-benefit'}
-          disabled={isLoadingClientSubBenefits}
-          items={clientSubBenefits ?? []}
-          itemToString={(item) => (item ? `${item.name} (${item.code})` : '')}
-          shouldFilterItem={({ item, inputValue }) => {
-            const selectedLabel = selectedSubBenefitCode
-              ? `${selectedSubBenefitCode.name} (${selectedSubBenefitCode.code})`
-              : '';
-            // Reopening on a selection (input still equals the label) lists all
-            // options again; only a fresh typed query narrows the list.
-            if (!inputValue || inputValue === selectedLabel) {
-              return true;
-            }
-            return `${item?.name ?? ''} ${item?.code ?? ''}`.toLowerCase().includes(inputValue.toLowerCase());
-          }}
-          selectedItem={selectedSubBenefitCode ?? null}
-          onChange={({ selectedItem }) => {
-            setSelectedSubBenefitCode(selectedItem ?? undefined);
-            // Reset the dependent intervention whenever the sub-benefit changes.
-            setSelectedIntervention(undefined);
-            onInterventionChange?.(undefined);
-            return onSelectChange('client-sub-benefits', selectedItem?.code ?? '');
-          }}
-        />
-        {isLoadingClientSubBenefits ? (
-          <Loading small withOverlay={false} className={styles.fieldSpinner} description="Loading sub-benefits" />
-        ) : null}
-      </div>
-      {/* Interventions — searchable, disabled until a sub-benefit is picked, and
-          loads inline within the field while its options are fetched. */}
-      <div className={styles.interventionRow}>
-        <div className={styles.field} onKeyDownCapture={lockSelection(selectedIntervention, clearIntervention)}>
+    <>
+      {
+        isLoadingPreExistingIntervention ?
+          <InlineLoading className={styles.checkingEligibility} description="Loading existing interventions" /> :
+          preExistingInterventions && preExistingInterventions.length ?
+            <div className={styles.claimFields}>
+              <div className={styles.preExistingInterventionsHeader}>
+                <h6>{t('preExistingInterventionsHeading', 'Existing interventions')}</h6>
+              </div>
+              <div className={styles.tableWrapper}>
+                <Table size="sm">
+                  <TableHead>
+                    <TableRow>
+                      <TableHeader>{t('orderNumber', 'Order #')}</TableHeader>
+                      <TableHeader>{t('subBenefit', 'Sub-benefit')}</TableHeader>
+                      <TableHeader>{t('interventionCode', 'Intervention')}</TableHeader>
+                      <TableHeader>{t('preauthRequired', 'Preauth')}</TableHeader>
+                      <TableHeader>{t('createdAt', 'Created')}</TableHeader>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {preExistingInterventions.map((intervention) => (
+                      <TableRow key={intervention.id}>
+                        <TableCell>{intervention.order_no || '-'}</TableCell>
+                        <TableCell>{intervention.sub_benefit_code || '-'}</TableCell>
+                        <TableCell>{intervention.intervention_code || '-'}</TableCell>
+                        <TableCell>{formatPreauthType(intervention)}</TableCell>
+                        <TableCell>{formatDate(intervention.createdAt)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+            : <></>
+      }
+
+      <div className={styles.claimFields}>
+        {/* Benefits — searchable */}
+        <div className={styles.field} onKeyDownCapture={lockSelection(selectedSubBenefitCode, clearSubBenefit)}>
           <ComboBox
-            id="interventions"
-            titleText="Interventions"
-            placeholder={
-              !selectedSubBenefitCode
-                ? 'Select a sub-benefit first'
-                : isLoadingInterventions
-                  ? 'Loading interventions…'
-                  : 'Search intervention'
-            }
-            disabled={!selectedSubBenefitCode || isLoadingInterventions}
-            items={interventions ?? []}
+            id="client-sub-benefits"
+            titleText="Client sub benefits"
+            placeholder={isLoadingClientSubBenefits ? 'Loading sub-benefits…' : 'Search sub-benefit'}
+            disabled={isLoadingClientSubBenefits}
+            items={clientSubBenefits ?? []}
             itemToString={(item) => (item ? `${item.name} (${item.code})` : '')}
             shouldFilterItem={({ item, inputValue }) => {
-              const selectedLabel = selectedIntervention
-                ? `${selectedIntervention.name} (${selectedIntervention.code})`
+              const selectedLabel = selectedSubBenefitCode
+                ? `${selectedSubBenefitCode.name} (${selectedSubBenefitCode.code})`
                 : '';
+              // Reopening on a selection (input still equals the label) lists all
+              // options again; only a fresh typed query narrows the list.
               if (!inputValue || inputValue === selectedLabel) {
                 return true;
               }
               return `${item?.name ?? ''} ${item?.code ?? ''}`.toLowerCase().includes(inputValue.toLowerCase());
             }}
-            selectedItem={selectedIntervention ?? null}
+            selectedItem={selectedSubBenefitCode ?? null}
             onChange={({ selectedItem }) => {
-              setSelectedIntervention(selectedItem ?? undefined);
-              onInterventionChange?.(selectedItem ?? undefined);
-              return onSelectChange('interventions', selectedItem?.code ?? '');
+              setSelectedSubBenefitCode(selectedItem ?? undefined);
+              // Reset the dependent intervention whenever the sub-benefit changes.
+              setSelectedIntervention(undefined);
+              onInterventionChange?.(undefined);
+              return onSelectChange('client-sub-benefits', selectedItem?.code ?? '');
             }}
           />
-          {isLoadingInterventions ? (
-            <Loading small withOverlay={false} className={styles.fieldSpinner} description="Loading interventions" />
+          {isLoadingClientSubBenefits ? (
+            <Loading small withOverlay={false} className={styles.fieldSpinner} description="Loading sub-benefits" />
           ) : null}
         </div>
+        {/* Interventions — searchable, disabled until a sub-benefit is picked, and
+          loads inline within the field while its options are fetched. */}
+        <div className={styles.interventionRow}>
+          <div className={styles.field} onKeyDownCapture={lockSelection(selectedIntervention, clearIntervention)}>
+            <ComboBox
+              id="interventions"
+              titleText="Interventions"
+              placeholder={
+                !selectedSubBenefitCode
+                  ? 'Select a sub-benefit first'
+                  : isLoadingInterventions
+                    ? 'Loading interventions…'
+                    : 'Search intervention'
+              }
+              disabled={!selectedSubBenefitCode || isLoadingInterventions}
+              items={interventions ?? []}
+              itemToString={(item) => (item ? `${item.name} (${item.code})` : '')}
+              shouldFilterItem={({ item, inputValue }) => {
+                const selectedLabel = selectedIntervention
+                  ? `${selectedIntervention.name} (${selectedIntervention.code})`
+                  : '';
+                if (!inputValue || inputValue === selectedLabel) {
+                  return true;
+                }
+                return `${item?.name ?? ''} ${item?.code ?? ''}`.toLowerCase().includes(inputValue.toLowerCase());
+              }}
+              selectedItem={selectedIntervention ?? null}
+              onChange={({ selectedItem }) => {
+                setSelectedIntervention(selectedItem ?? undefined);
+                onInterventionChange?.(selectedItem ?? undefined);
+                return onSelectChange('interventions', selectedItem?.code ?? '');
+              }}
+            />
+            {isLoadingInterventions ? (
+              <Loading small withOverlay={false} className={styles.fieldSpinner} description="Loading interventions" />
+            ) : null}
+          </div>
 
-        {isLoadingBenefitUtilization && !isPmsf ? (
-          <InlineLoading className={styles.checkingEligibility} description="Checking eligibility" />
-        ) : benefitUtilizations?.length ? (
-          isBenefitEligible ? (
-            <Tag size="sm" type="green">
-              Eligible
-            </Tag>
-          ) : (
-            <Tag size="sm" type="red">
-              Not Eligible
-            </Tag>
-          )
-        ) : (
-          <></>
-        )}
-
-        {isLoadingPomsfBalances && isPmsf ? (
-          <InlineLoading className={styles.checkingEligibility} description="Loading POMSF balance" />
-        ) : (
-          pmfBalance ? (
-            <Tag size="sm" type="green">
-              {pmfBalance}
-            </Tag>
-          ) : <></>
-        )}
-
-        {selectedIntervention ? (
-          selectedIntervention.needsPreauth && !selectedIntervention.needsManualPreauthApproval ? (
-            <Tag size="sm" type="blue" onClick={launchPreauthsModal}>
-              Needs Preauth
-            </Tag>
-          ) : selectedIntervention.needsPreauth && selectedIntervention.needsManualPreauthApproval ? (
-            <Tag size="sm" type="blue" onClick={launchPreauthsModal}>
-              Needs Elective Preauth
-            </Tag>
+          {isLoadingBenefitUtilization && !isPmsf ? (
+            <InlineLoading className={styles.checkingEligibility} description="Checking eligibility" />
+          ) : benefitUtilizations?.length ? (
+            isBenefitEligible ? (
+              <Tag size="sm" type="green">
+                Eligible
+              </Tag>
+            ) : (
+              <Tag size="sm" type="red">
+                Not Eligible
+              </Tag>
+            )
           ) : (
             <></>
-          )
-        ) : (
-          <></>
-        )}
+          )}
+
+          {isLoadingPomsfBalances && isPmsf ? (
+            <InlineLoading className={styles.checkingEligibility} description="Loading POMSF balance" />
+          ) : (
+            pmfBalance ? (
+              <Tag size="sm" type="green">
+                {pmfBalance}
+              </Tag>
+            ) : <></>
+          )}
+
+          {selectedIntervention ? (
+            selectedIntervention.needsPreauth && !selectedIntervention.needsManualPreauthApproval ? (
+              <Tag size="sm" type="blue" onClick={launchPreauthsModal}>
+                Needs Preauth
+              </Tag>
+            ) : selectedIntervention.needsPreauth && selectedIntervention.needsManualPreauthApproval ? (
+              <Tag size="sm" type="blue" onClick={launchPreauthsModal}>
+                Needs Elective Preauth
+              </Tag>
+            ) : (
+              <></>
+            )
+          ) : (
+            <></>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

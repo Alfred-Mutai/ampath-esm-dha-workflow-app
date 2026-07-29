@@ -25,6 +25,7 @@ import {
 } from './dashboard/v2/types';
 import { getHieBaseUrl } from '../claims/utils';
 import {
+  FacilityPreauthsResponse,
   type AmrsMaternityDiagnosis,
   type AmrsMaternityDiagnosisDto,
   type AmrsMaternityDiagnosisResponse,
@@ -579,3 +580,21 @@ export const getActiveVisits = async (locationUuid: string, billDate: string) =>
 
   return response.json();
 };
+
+export const useFacilityPreauths = (locationUuid: string, billingDate: string) => {
+  const { etlBaseUrl } = useConfig({
+    externalModuleName: '@ampath/esm-dha-workflow-app',
+  });
+
+  const url = `${etlBaseUrl}/facility/pre-auth-bills?billingDate=${billingDate}&locationUuid=${locationUuid}`;
+  const { data, error, isLoading, isValidating } = useSWR<{
+    data: FacilityPreauthsResponse
+  }>(url, openmrsFetch);
+
+  return {
+    facilityPreauths: data?.data?.results,
+    error,
+    isLoading,
+    isValidating,
+  };
+}

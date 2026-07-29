@@ -5,6 +5,16 @@
   gap: 1rem;
 }
 
+.preExistingInterventionsHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.tableWrapper {
+  overflow-x: auto;
+}
+
 .field {
   position: relative;
 }

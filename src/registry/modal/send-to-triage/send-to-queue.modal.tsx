@@ -204,6 +204,7 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
     if(usePreselectedIntervention) {
       setBillCreated(true);
       showAlert('success', 'Bill succesfully updated', '');
+      onModalClose({ success: true });
     }
     setClaimResult(payload);
     setIntervention(selectedIntervention);
@@ -600,7 +601,7 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
   };
 
   const handleSendClientToTriage = async () => {
-    if (hasSelectedPaymentMode('SHA')) {
+    if (isSha) {
       if (claimResult) {
         await sendToTriage();
       } else {
@@ -628,7 +629,7 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
   // eslint-disable-next-line no-console
   console.log('PARENT PARENT: ', authGuid);
 
-  const isSha = hasSelectedPaymentMode('SHA');
+  const isSha = true; //hasSelectedPaymentMode('SHA');
   const patientName = patient?.name?.[0]?.text ?? '';
   const crNumber = patientIdentifiers?.crIdentifierId ?? '';
   const consentSatisfied = otpVerified || !!authGuid;

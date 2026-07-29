@@ -3,6 +3,7 @@ import { Tab, TabList, TabPanel, TabPanels, Tabs } from '@carbon/react';
 import EmptyState from '../shared/empty-state.component';
 import { PREAUTH_BUCKETS, type StatusBucket } from './claim-status';
 import styles from './facility-bills.component.scss';
+import PendingPreauths from './preauths-datatables/pending-preauths.component';
 
 // Open on the Pending bucket, matching the other payers' default behaviour.
 const defaultBucketKey = (buckets: StatusBucket[]): string =>
@@ -13,7 +14,12 @@ const defaultBucketKey = (buckets: StatusBucket[]): string =>
  * bucket shows a placeholder; the sub-tabs mirror the SHA claims / cash bills layout so
  * the panel stays consistent once real preauth data starts flowing.
  */
-const Preauths: React.FC = () => {
+interface PreauthsProps {
+  locationUuid: string,
+  billingDate: string
+}
+
+const Preauths: React.FC<PreauthsProps> = (props) => {
   const [statusFilter, setStatusFilter] = useState<string>(() => defaultBucketKey(PREAUTH_BUCKETS));
 
   const statusTabItems: StatusBucket[] = [...PREAUTH_BUCKETS, { key: '', label: 'All', statuses: [] }];
@@ -48,7 +54,12 @@ const Preauths: React.FC = () => {
             <TabPanel key={bucket.key || 'all'}>
               {statusFilter === bucket.key ? (
                 <div className={styles.tableCard}>
-                  <EmptyState message={emptyMessage} />
+                  {
+                    bucket.key === "pending" ?
+                      <PendingPreauths locationUuid={props.locationUuid}
+                        billingDate={props.billingDate} />
+                      : <EmptyState message={emptyMessage} />
+                  }
                 </div>
               ) : null}
             </TabPanel>

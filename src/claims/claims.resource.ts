@@ -155,12 +155,12 @@ export const usePreExistingIntervention = (patientUuid: string) => {
     ? `${hieBaseUrl}/bill-order/patient-claim-bill-order?patient_uuid=${patientUuid}`
     : null;
 
-  const { data, error, isLoading } = useSWR<{ data: PreExistingIntervention }>(url, openmrsFetch);
+  const { data, error, isLoading } = useSWR<{ data: PreExistingIntervention[] }>(url, openmrsFetch);
 
   const results = data?.data;
 
   return {
-    preExistingIntervention: results,
+    preExistingInterventions: results,
     error,
     isLoadingPreExistingIntervention: isLoading,
   };

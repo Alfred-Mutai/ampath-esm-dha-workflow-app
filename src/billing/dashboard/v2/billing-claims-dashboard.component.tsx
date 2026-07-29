@@ -20,7 +20,7 @@ import {
 } from '../../../service-queues/metrics/metrics-cards/metrics-card.component';
 import FacilityAndWorkerSlot from '../../../shared/ui/facility-worker-slot/facility-worker.component-slot.component';
 import ActiveVisitsComponent from './active-visits.component';
-interface billingClaimsDashboardProps {}
+interface billingClaimsDashboardProps { }
 
 const today = () => new Date().toLocaleDateString('en-CA');
 
@@ -101,29 +101,29 @@ const BillingClaimsDashboard: React.FC<billingClaimsDashboardProps> = () => {
     billsPayerTab?: number;
     billsStatusKey?: string;
   }[] = [
-    { key: 'awaiting', label: 'Awaiting clearance', unit: 'Patients', value: awaiting, tab: 0, clearKey: 'pending' },
-    { key: 'cashdue', label: 'Facility bills', unit: 'Patients', value: cashDue, tab: 1, billsPayerTab: 0 },
-    // Straight to the bucket being counted: the SHA claims tab, Drafts / Rejected.
-    {
-      key: 'draft',
-      label: 'Draft claims',
-      unit: 'Claims',
-      value: claimTileValue('draft'),
-      tab: 1,
-      billsPayerTab: 1,
-      billsStatusKey: 'draft',
-    },
-    {
-      key: 'rejected',
-      label: 'Rejected claims',
-      unit: 'Claims',
-      value: claimTileValue('rejected'),
-      color: 'red',
-      tab: 1,
-      billsPayerTab: 1,
-      billsStatusKey: 'rejected',
-    },
-  ];
+      { key: 'awaiting', label: 'Awaiting clearance', unit: 'Patients', value: awaiting, tab: 0, clearKey: 'pending' },
+      { key: 'cashdue', label: 'Facility bills', unit: 'Patients', value: cashDue, tab: 1, billsPayerTab: 0 },
+      // Straight to the bucket being counted: the SHA claims tab, Drafts / Rejected.
+      {
+        key: 'draft',
+        label: 'Draft claims',
+        unit: 'Claims',
+        value: claimTileValue('draft'),
+        tab: 1,
+        billsPayerTab: 1,
+        billsStatusKey: 'draft',
+      },
+      {
+        key: 'rejected',
+        label: 'Rejected claims',
+        unit: 'Claims',
+        value: claimTileValue('rejected'),
+        color: 'red',
+        tab: 1,
+        billsPayerTab: 1,
+        billsStatusKey: 'rejected',
+      },
+    ];
 
   const handleTileClick = (s: { tab: number; clearKey?: string; billsPayerTab?: number; billsStatusKey?: string }) => {
     setSelectedTab(s.tab);
@@ -224,7 +224,10 @@ const BillingClaimsDashboard: React.FC<billingClaimsDashboardProps> = () => {
                   />
                 </TabPanel>
                 <TabPanel>
-                  <Preauths />
+                  <Preauths
+                    locationUuid={locationUuid}
+                    billingDate={billingDate}
+                  />
                 </TabPanel>
                 {/* <TabPanel>
                   <ClaimsAccounting initialTabKey={claimsNav.key} navNonce={claimsNav.nonce} locationUuid={locationUuid}

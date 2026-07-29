@@ -139,3 +139,28 @@ export type AmrsMaternityDiagnosisDto = {
 export type AmrsMaternityDiagnosisResponse = {
   results: AmrsMaternityDiagnosis[];
 }
+
+export interface FacilityPreauth {
+  cash_point: string;
+  bill_date: string;
+  patient_name: string;
+  patient_uuid: string;
+  status: string;
+  cr_no: string;
+  amrs_universal_id: string;
+  intervention_code: string;
+  consent_token: string | null;
+  order_no: string;
+  service_type: string;
+  requires_preauth: number;
+  normal_preauth: number;
+  elective_preauth: number;
+  preauth_approved: number;
+  required_documents: string | null;
+  applicable_document_types: string;
+  required_preauth_document_types: string;
+}
+
+export interface FacilityPreauthsResponse {
+  results: FacilityPreauth[];
+}
