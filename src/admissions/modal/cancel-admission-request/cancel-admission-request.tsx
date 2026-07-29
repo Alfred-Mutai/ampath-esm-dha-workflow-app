@@ -1,20 +1,20 @@
 import React, { useRef } from 'react';
 import styles from './cancel-admission-request.scss';
 import { Modal, ModalBody, TextArea } from '@carbon/react';
-import { type CancelAdmissionDto, type Disposition } from '../../types';
+import { type FacilityAdmissionRequest, type CancelAdmissionDto, type Disposition } from '../../types';
 import { showSnackbar, useSession } from '@openmrs/esm-framework';
 import { AdmissionConcepts, AdmissionEncounterTypeUuids } from '../../constants';
 import { cancelAdmissionRequest } from '../../admissions.resource';
 
 interface CancelAdmissionRequestModalProps {
   open: boolean;
-  admissionRequest: Disposition;
+  facilityAdmissionRequest: FacilityAdmissionRequest;
   onModalClose: () => void;
   onCancelAdmission: () => void;
 }
 const CancelAdmissionRequestModal: React.FC<CancelAdmissionRequestModalProps> = ({
   open,
-  admissionRequest,
+  facilityAdmissionRequest,
   onCancelAdmission,
   onModalClose,
 }) => {
@@ -46,11 +46,11 @@ const CancelAdmissionRequestModal: React.FC<CancelAdmissionRequestModalProps> = 
   };
   const generateCancelAdmissionRequestDto = (): CancelAdmissionDto => {
     return {
-      patient: admissionRequest.patient.uuid,
+      patient: facilityAdmissionRequest.patient_uuid,
       encounterType: {
         uuid: AdmissionEncounterTypeUuids.CANCEL_ADT_ENCOUNTER_TYPE_UUID,
       },
-      location: location.uuid,
+      location: facilityAdmissionRequest.location_uuid,
       obs: [
         {
           concept: AdmissionConcepts.CLINICAL_NOTES_UUID,
@@ -63,7 +63,7 @@ const CancelAdmissionRequestModal: React.FC<CancelAdmissionRequestModalProps> = 
           },
         },
       ],
-      visit: admissionRequest.visit.uuid,
+      visit: facilityAdmissionRequest.visit_uuid,
     };
   };
 

@@ -1,39 +1,31 @@
 import React, { useState } from 'react';
 import { Button, OverflowMenu, OverflowMenuItem, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@carbon/react';
-import { BedLayout, Disposition } from '../types';
+import { type FacilityAdmissionRequest, type BedLayout, type Disposition } from '../types';
 import AdmitPatientModal from '../modal/admit-patient/admit-patient.modal';
-import { formatDate, Patient } from '@openmrs/esm-framework';
+import { formatDate, type Patient } from '@openmrs/esm-framework';
 import CancelAdmissionRequestModal from '../modal/cancel-admission-request/cancel-admission-request';
 import AdmitElsewhereModal from '../modal/admit-elsewhere/admit-elsewhere.modal';
 
 interface AdmissionListProps {
-  admissionListData: Disposition[];
+  admissionRequests: FacilityAdmissionRequest[];
   bedLayouts: BedLayout[];
   refresh: () => void;
 }
 
-const AdmissionsRequestList: React.FC<AdmissionListProps> = ({ admissionListData, bedLayouts, refresh }) => {
-  const [selectedPatient, setSelectedPatient] = useState<Patient>();
-  const [selectedDisposition, setSelectedDisposition] = useState<Disposition>();
+const AdmissionsRequestList: React.FC<AdmissionListProps> = ({ admissionRequests, bedLayouts, refresh }) => {
+  const [selectedAdmissionRequest,setSelectedAdmissionRequest] = useState<FacilityAdmissionRequest>();
   const [showAdmitModal, setShowAdmitModal] = useState<boolean>(false);
-  const [showAdmitElsewhereModal, setShowAdmitElsewhereModal] = useState<boolean>(false);
   const [showCancelAdmissionModal, setShowCancelAdmissionModal] = useState<boolean>(false);
-  if (!admissionListData || admissionListData.length === 0) {
+  if (!admissionRequests || admissionRequests.length === 0) {
     return <>No Data</>;
   }
-  const handleCancelRequest = (disposition: Disposition) => {
-    setSelectedDisposition(disposition);
+  const handleCancelRequest = (disposition: FacilityAdmissionRequest) => {
+    setSelectedAdmissionRequest(disposition);
     setShowCancelAdmissionModal(true);
   };
-  const handleAdmitPatient = (disposition: Disposition) => {
+  const handleAdmitPatient = (admissionRequest: FacilityAdmissionRequest) => {
     setShowAdmitModal(true);
-    setSelectedPatient(disposition.patient);
-    setSelectedDisposition(disposition);
-  };
-  const handleAdmitElsewhere = (disposition: Disposition) => {
-    setSelectedPatient(disposition.patient);
-    setSelectedDisposition(disposition);
-    setShowAdmitElsewhereModal(true);
+    setSelectedAdmissionRequest(admissionRequest);
   };
   const handleAdmitModalClose = () => {
     setShowAdmitModal(false);
@@ -49,13 +41,6 @@ const AdmissionsRequestList: React.FC<AdmissionListProps> = ({ admissionListData
   const handleCancelAdmissionSuccess = () => {
     handleCancelAdmissionClose();
   };
-  const handleCancelAdmitElsewhere = () => {
-    setShowAdmitElsewhereModal(false);
-  };
-  const handleSuccessfullTransfer = () => {
-    handleCancelAdmitElsewhere();
-    refresh();
-  }
   return (
     <>
       <Table>
@@ -71,20 +56,19 @@ const AdmissionsRequestList: React.FC<AdmissionListProps> = ({ admissionListData
         </TableHead>
 
         <TableBody>
-          {admissionListData &&
-            admissionListData.map((val, index) => (
-              <TableRow key={val.dispositionLocation.uuid ?? index}>
+          {admissionRequests &&
+            admissionRequests.map((val, index) => (
+              <TableRow key={val.patient_uuid ?? index}>
                 <TableCell>{index + 1}</TableCell>
-                <TableCell>{formatDate(new Date(val.dispositionEncounter.encounterDatetime))}</TableCell>
-                <TableCell>{val.patient.person.display}</TableCell>
-                <TableCell>{val.patient.person.gender}</TableCell>
-                <TableCell>{val.patient.person.age}</TableCell>
+                <TableCell>{formatDate(new Date(val.admission_request_date))}</TableCell>
+                <TableCell>{val.patient_name}</TableCell>
+                <TableCell>{val.gender}</TableCell>
+                <TableCell>{val.age}</TableCell>
                 <TableCell>
                   <>
                     <OverflowMenu aria-label="overflow-menu">
                       <OverflowMenuItem itemText="Cancel" onClick={() => handleCancelRequest(val)} />
                       <OverflowMenuItem itemText="Admit" onClick={() => handleAdmitPatient(val)} />
-                      <OverflowMenuItem itemText="Admit Elsewhere" onClick={() => handleAdmitElsewhere(val)} />
                     </OverflowMenu>
                   </>
                 </TableCell>
@@ -93,37 +77,26 @@ const AdmissionsRequestList: React.FC<AdmissionListProps> = ({ admissionListData
         </TableBody>
       </Table>
       {
-        showAdmitModal ? (<>
+        showAdmitModal && selectedAdmissionRequest ? (<>
           <AdmitPatientModal
             onModalClose={handleAdmitModalClose}
             open={showAdmitModal}
             onSuccessfullAdmission={handeSuccessfullAdmission}
-            disposition={selectedDisposition}
+            facilityAdmissionRequest={selectedAdmissionRequest}
             bedLayouts={bedLayouts}
           />
         </>) : (<></>)
       }
       {
-        showCancelAdmissionModal ? (<>
+        showCancelAdmissionModal && selectedAdmissionRequest ? (<>
           <CancelAdmissionRequestModal
             open={showCancelAdmissionModal}
             onModalClose={handleCancelAdmissionClose}
             onCancelAdmission={handleCancelAdmissionSuccess}
-            admissionRequest={selectedDisposition}
+            facilityAdmissionRequest={selectedAdmissionRequest}
 
           />
         </>) : (<></>)
-      }
-      {
-        showAdmitElsewhereModal ? (<>
-          <AdmitElsewhereModal
-            open={showAdmitElsewhereModal}
-            onModalClose={handleCancelAdmitElsewhere}
-            patient={selectedPatient}
-            visit={selectedDisposition.visit}
-            onSuccessfullTransfer={handleSuccessfullTransfer} />
-        </>) : (<></>)
-
       }
 
     </>

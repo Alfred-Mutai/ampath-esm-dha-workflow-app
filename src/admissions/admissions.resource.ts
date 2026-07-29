@@ -43,6 +43,14 @@ export async function getAdmissionRequests(locationUuid: string): Promise<Dispos
   return result.results ?? null;
 }
 
+export async function fetchFacilityAdmissionRequests(locationUuid: string): Promise<[]> {
+  const etlBaseUrl = await getEtlBaseUrl();
+  const admissionRequestsUrl = `${etlBaseUrl}/admissions/requests?locationUuid=${locationUuid}`;
+  const response = await openmrsFetch(admissionRequestsUrl);
+  const result = await response.json();
+  return result.results ?? [];
+}
+
 export async function getAdmittedPatientsData(locationUuid: string): Promise<BedLayout[]> {
   const admissionLocationData = await getAdmissionLoactionData(locationUuid);
   if (admissionLocationData.bedLayouts && admissionLocationData.bedLayouts.length > 0) {

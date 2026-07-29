@@ -9,6 +9,7 @@ import {
   getAdmissionRequests,
   getAdmittedPatientsData,
   getDichargedEncounters,
+  fetchFacilityAdmissionRequests,
 } from './admissions.resource';
 import {
   type Disposition,
@@ -17,6 +18,7 @@ import {
   type FhirEncounter,
   type FhirEncounterBundle,
   type FacilityEncounterBill,
+  type FacilityAdmissionRequest,
 } from './types';
 import AdmittedPatientsList from './admitted-list/admitted-patients-list';
 import AdmissionsRequestList from './admission-request-list/admission-request-list';
@@ -29,6 +31,7 @@ import FacilityAndWorkerSlot from '../shared/ui/facility-worker-slot/facility-wo
 
 const AdmissionsDashboard: React.FC = () => {
   const [dashboardData, setDashboardData] = useState<AdmissionLocationData>(null);
+  const [admissionRequests,setAdmissionRequests] = useState<FacilityAdmissionRequest[]>([]);
   const [admissionListData, setAdmissionListData] = useState<Disposition[]>([]);
   const [admittedPatientsData, setAdmittedPatientsData] = useState<BedLayout[]>([]);
   const [facilityBills, setFacilityBills] = useState<FacilityEncounterBill[]>([]);
@@ -78,8 +81,9 @@ const AdmissionsDashboard: React.FC = () => {
   const fetchData = () => {
     setLoading(true);
     getDashboardData();
+    getAdmissionRequests(),
     getFacilityEncounterBills();
-    getAdmissionListData();
+    // getAdmissionListData();
     getAwaitingDischargeEncounters();
     getAdmittedPatients();
     getDisachargedEncounters();
@@ -94,11 +98,6 @@ const AdmissionsDashboard: React.FC = () => {
   };
   const getBedOccupancy = (dashboardData: AdmissionLocationData): number => {
     return parseFloat(((dashboardData?.occupiedBeds / dashboardData.totalBeds) * 100).toFixed(2));
-  };
-  const getAdmissionListData = async () => {
-    const res = await getAdmissionRequests(locationUuid);
-    setAdmissionListData(res);
-    setLoading(false);
   };
   const getAdmittedPatients = async () => {
     const res = await getAdmittedPatientsData(locationUuid);
@@ -138,6 +137,14 @@ const AdmissionsDashboard: React.FC = () => {
     setFacilityBills(res);
     setLoading(false);
   };
+  const getAdmissionRequests = async()=>{
+     const admissionRequests = await fetchFacilityAdmissionRequests(locationUuid);
+     if(admissionRequests){
+        setAdmissionRequests(admissionRequests);
+     }else{
+        setAdmissionRequests([]);
+     }
+  }
   const handleRefresh = () => {
     fetchData();
   };
@@ -180,9 +187,9 @@ const AdmissionsDashboard: React.FC = () => {
                 </TabList>
                 <TabPanels>
                   <TabPanel>
-                    {admissionListData ? (
+                    {admissionRequests ? (
                       <AdmissionsRequestList
-                        admissionListData={admissionListData}
+                        admissionRequests={admissionRequests}
                         bedLayouts={admittedPatientsData}
                         refresh={handleRefresh}
                       />

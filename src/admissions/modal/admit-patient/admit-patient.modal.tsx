@@ -1,18 +1,18 @@
 import React, { useState } from "react";
-import { AdmitPatientDto, AssignBedToPatientDto, BedLayout, Disposition } from "../../types";
+import { type FacilityAdmissionRequest, type AdmitPatientDto, type AssignBedToPatientDto, type BedLayout, type Disposition } from "../../types";
 import { Modal, ModalBody, Select, SelectItem } from "@carbon/react";
-import { Encounter, Patient, showSnackbar, useSession } from "@openmrs/esm-framework";
+import { type Encounter, Patient, showSnackbar, useSession } from "@openmrs/esm-framework";
 import styles from './admit-patient.modal.scss';
 import { AdmissionEncounterTypeUuids } from "../../constants";
 import { admitPatientToWard, assignBedToPatient } from "../../admissions.resource";
 interface AdmitPatientModalProps {
     open: boolean;
-    disposition: Disposition;
+    facilityAdmissionRequest: FacilityAdmissionRequest;
     onModalClose: () => void;
     bedLayouts: BedLayout[];
     onSuccessfullAdmission: () => void;
 }
-const AdmitPatientModal: React.FC<AdmitPatientModalProps> = ({ onModalClose, open, disposition, bedLayouts, onSuccessfullAdmission }) => {
+const AdmitPatientModal: React.FC<AdmitPatientModalProps> = ({ onModalClose, open, facilityAdmissionRequest, bedLayouts, onSuccessfullAdmission }) => {
     const [selectedBedId, setSelectedBedId] = useState<number>();
     const session = useSession();
     const location = session.sessionLocation;
@@ -30,7 +30,10 @@ const AdmitPatientModal: React.FC<AdmitPatientModalProps> = ({ onModalClose, ope
     
             //assign bed to patient
             const assignBedDto = generateAssignBedPayload(resp);
-            await assignBedToPatient(selectedBedId,assignBedDto);
+            if(selectedBedId){
+               await assignBedToPatient(selectedBedId,assignBedDto);
+            }
+            
 
             showSnackbar({
                 kind: 'success',
@@ -40,8 +43,7 @@ const AdmitPatientModal: React.FC<AdmitPatientModalProps> = ({ onModalClose, ope
 
             onSuccessfullAdmission();
             
-        }catch(error){
-            console.log({error});
+        }catch(error: any){
             showSnackbar({
                 kind: 'error',
                 title: 'Bed Assignment failed',
@@ -56,18 +58,18 @@ const AdmitPatientModal: React.FC<AdmitPatientModalProps> = ({ onModalClose, ope
     };
     const generateAdmitPatientPayload = (): AdmitPatientDto=>{
       return {
-        patient: disposition.patient.uuid,
+        patient: facilityAdmissionRequest.patient_uuid,
         encounterType: {
             uuid: AdmissionEncounterTypeUuids.ADMIT_ENCOUNTER_TYPE_UUID
         },
-        location: location.uuid,
+        location: location?.uuid ?? '',
         obs: [],
-        visit: disposition.visit.uuid
+        visit: facilityAdmissionRequest.visit_uuid
       }
     }
     const generateAssignBedPayload = (admissionEncounter: Encounter): AssignBedToPatientDto=>{
         return {
-            patientUuid: disposition.patient.uuid,
+            patientUuid: facilityAdmissionRequest.patient_uuid,
             encounterUuid: admissionEncounter.uuid
         }
     }
