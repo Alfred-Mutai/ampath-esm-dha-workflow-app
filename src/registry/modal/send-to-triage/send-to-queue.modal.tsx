@@ -629,7 +629,7 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
   // eslint-disable-next-line no-console
   console.log('PARENT PARENT: ', authGuid);
 
-  const isSha = true; //hasSelectedPaymentMode('SHA');
+  const isSha = hasSelectedPaymentMode('SHA');
   const patientName = patient?.name?.[0]?.text ?? '';
   const crNumber = patientIdentifiers?.crIdentifierId ?? '';
   const consentSatisfied = otpVerified || !!authGuid;
