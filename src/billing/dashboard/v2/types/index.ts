@@ -57,6 +57,21 @@ export type PatientFacilityBillDetails = {
   order_no: string;
   service_type: string;
   has_claim_line: number;
+  /** From bill_orders when ETL returns them */
+  requires_preauth?: boolean | number | string;
+  normal_preauth?: boolean | number | string;
+  elective_preauth?: boolean | number | string;
+  preauth_approved?: boolean | number | string;
+  required_preauth_document_types?: string;
+  applicable_document_types?: string;
+  required_documents?: string | null;
+  /** ETL pre-auth-bills may use `status` instead of paid_status */
+  status?: string;
+  requires_surgical_preauth?: boolean | number | string;
+  requires_renal_preauth?: boolean | number | string;
+  requires_oncology_preauth?: boolean | number | string;
+  requires_radiology_preauth?: boolean | number | string;
+  requires_optical_preauth?: boolean | number | string;
 };
 
 export type PatientFacilityBillDetailsResponse = {
@@ -288,6 +303,8 @@ export type AddClaimLineDto = {
   unitPrice: string;
   quantity: string;
   locationUuid: string;
+  /** Best-effort; hie-saf may not forward yet */
+  preauthCode?: string;
 };
 
 export type RemoveClaimLineDto = {

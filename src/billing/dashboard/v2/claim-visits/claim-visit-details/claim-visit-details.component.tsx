@@ -11,6 +11,7 @@ import { Button, ButtonSkeleton, InlineLoading, Tag, Tooltip } from '@carbon/rea
 import CloseClaimModal from '../modal/close-claim/close-claim.modal';
 import SubmitClaimModal from '../modal/submit-claim/submit-claim.modal';
 import { endVisit, useInvalidateProviderClaimPreview } from '../../../../billing-claims.resource';
+import { invalidatePreauthPreview } from '../../../../../claims/claims.resource';
 import AddClaimDoctorModal from '../modal/claim-doctors/add-claim-doctor/add-claim-doctor.modal';
 import { VisitTypeUuids } from '../../../../../shared/constants/visit-types';
 import { VisitType } from '../../../../../claims';
@@ -20,6 +21,7 @@ import {
   canEditClaimDocuments,
   claimStatusTagType,
 } from '../../claim-statuses';
+import { parseDocTypes, readSpecialtyFlags } from '../../preauth/preauth.resource';
 const money = (n: number | string) => `KES ${Number(n ?? 0).toLocaleString('en-KE')}`;
 
 interface claimVisitDetailsProps {
@@ -155,6 +157,68 @@ const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({
       visitUuid: activeVisit?.uuid,
       billDate: patientBillDetails?.bill_date ?? claimsVisit.visit_start,
       onSwitchSuccess: () => {
+        invalidateProviderClaimPreview();
+      },
+    });
+  };
+
+  const handleRaisePreauth = (intervention: VisitIntervention) => {
+    if (!canSwitchIntervention) {
+      return;
+    }
+    const consentToken = claimsVisit.authorization_code;
+    if (!consentToken) {
+      showSnackbar({
+        kind: 'error',
+        title: 'No claim token',
+        subtitle: 'This claim visit has no consent token.',
+      });
+      return;
+    }
+    if (!intervention.needs_preauth) {
+      return;
+    }
+    if (intervention.preauth_exist) {
+      showSnackbar({
+        kind: 'info',
+        title: 'Preauth already exists',
+        subtitle: 'A preauth is already recorded for this intervention.',
+      });
+      return;
+    }
+
+    const requiredDocs = parseDocTypes(
+      Array.isArray(intervention.required_preauth_document_types)
+        ? (intervention.required_preauth_document_types as string[]).join(',')
+        : (intervention.required_preauth_document_types as string | null | undefined),
+    );
+    const applicableDocs = Array.isArray(intervention.applicable_document_types)
+      ? intervention.applicable_document_types.map(String)
+      : parseDocTypes(intervention.applicable_document_types as string | null | undefined);
+
+    launchWorkspace('preauth-form-workspace', {
+      consentToken,
+      patientUuid: patientBillDetails?.patient_uuid,
+      locationUuid,
+      billItem: {
+        intervention_code: intervention.intervention_code,
+        patient_uuid: patientBillDetails?.patient_uuid,
+        patient_name: claimsVisit.patient_name ?? patientBillDetails?.patient_name,
+        cr_no: patientBillDetails?.cr_no ?? claimsVisit.patient_number,
+        billable_service: intervention.intervention_name,
+        item_price: Number(intervention.keph_level_tarrif) || patientBillDetails?.item_price || 0,
+        item_quantity: patientBillDetails?.item_quantity ?? 1,
+        consent_token: consentToken,
+      },
+      intervention: {
+        code: intervention.intervention_code,
+        name: intervention.intervention_name,
+        ...readSpecialtyFlags(intervention),
+        requiredPreauthDocumentTypes: requiredDocs,
+        applicableDocumentTypes: applicableDocs,
+      },
+      onSuccess: async () => {
+        await invalidatePreauthPreview(consentToken, locationUuid);
         invalidateProviderClaimPreview();
       },
     });
@@ -343,6 +407,7 @@ const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({
               isClaimDraft: canEditClaimDocuments(claimsVisit.workflow_state),
               canSwitchIntervention,
               onSwitchIntervention: handleSwitchIntervention,
+              onRaisePreauth: handleRaisePreauth,
             })}
             emptyMessage="No interventions on this claim."
             layout="grid"

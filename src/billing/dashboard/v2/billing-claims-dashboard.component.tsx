@@ -20,6 +20,7 @@ import {
 } from '../../../service-queues/metrics/metrics-cards/metrics-card.component';
 import FacilityAndWorkerSlot from '../../../shared/ui/facility-worker-slot/facility-worker.component-slot.component';
 import ActiveVisitsComponent from './active-visits.component';
+import PreauthList from './preauth/preauth-list.component';
 interface billingClaimsDashboardProps { }
 
 const today = () => new Date().toLocaleDateString('en-CA');
@@ -227,6 +228,13 @@ const BillingClaimsDashboard: React.FC<billingClaimsDashboardProps> = () => {
                   <Preauths
                     locationUuid={locationUuid}
                     billingDate={billingDate}
+                  />
+                </TabPanel>
+                <TabPanel>
+                  <PreauthList
+                    locationUuid={locationUuid}
+                    billingDate={billingDate}
+                    onDateChange={handleDateChange}
                   />
                 </TabPanel>
                 {/* <TabPanel>

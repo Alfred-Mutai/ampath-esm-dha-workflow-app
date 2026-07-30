@@ -1,9 +1,9 @@
 import React from 'react';
 import { Button, Tag } from '@carbon/react';
 import { type ClaimAttachment, type PatientFacilityBillDetails, type VisitIntervention } from '../../types';
+import { asBool } from '../../preauth/preauth.resource';
 import RecordCards, { YesNo, type RecordCardModel } from '../shared/record-cards.component';
 import InterventionAttachments from './intervention-attachments.component';
-import { launchWorkspace } from '@openmrs/esm-framework';
 
 interface claimInterventionDetailsProps {
   claimInterventions: VisitIntervention[];
@@ -18,16 +18,16 @@ export interface InterventionAttachmentOpts {
   bill?: PatientFacilityBillDetails;
   /** Only a draft claim accepts new documents; otherwise the rows are read-only. */
   isClaimDraft?: boolean;
-  /** Whether the claim is currently open to content edits (gates the per-card
-      Switch Intervention button, same window as removing an invoice line). */
+  /** Whether the claim is currently open to content edits (gates Switch / Raise preauth). */
   canSwitchIntervention?: boolean;
-  /** Launches the switch workflow scoped to this card's intervention. Omit to
-      leave the button off entirely (e.g. read-only contexts). */
+  /** Launches the switch workflow scoped to this card's intervention. */
   onSwitchIntervention?: (intervention: VisitIntervention) => void;
+  /** Opens the normal preauth workspace for this intervention. */
+  onRaisePreauth?: (intervention: VisitIntervention) => void;
 }
 
-// A claim intervention is switchable only while its workflow_state is ACTIVE;
-// one already switched out (INACTIVE) has nothing left to switch.
+// A claim intervention is actionable only while its workflow_state is ACTIVE;
+// one already switched out (INACTIVE) has nothing left to change.
 const isActiveIntervention = (iv: VisitIntervention) => (iv.workflow_state ?? '').toUpperCase() === 'ACTIVE';
 
 // Builder so the cards can be merged into a shared grid with the invoices. When `opts`
@@ -39,6 +39,11 @@ export function buildInterventionRecords(
 ): RecordCardModel[] {
   return (claimInterventions ?? []).map((ci) => {
     const requiredDocs = Array.from(new Set(ci.applicable_document_types ?? []));
+    const canAct = Boolean(opts?.canSwitchIntervention) && isActiveIntervention(ci);
+    const canRaisePreauth =
+      canAct && Boolean(ci.needs_preauth) && !Boolean(ci.preauth_exist);
+    const hasActions = Boolean(opts?.onSwitchIntervention || opts?.onRaisePreauth);
+
     return {
       tone: 'purple',
       kind: 'Intervention',
@@ -59,11 +64,11 @@ export function buildInterventionRecords(
         { label: 'Accrued per diem days', value: ci.accrued_per_diem_days },
         { label: 'Active for UHC', value: <YesNo value={ci.active_for_uhc} /> },
         { label: 'Needs preauth', value: <YesNo value={ci.needs_preauth} /> },
-        { label: 'Surgical preauth', value: <YesNo value={ci.requires_surgical_preauth} /> },
-        { label: 'Renal preauth', value: <YesNo value={ci.requires_renal_preauth} /> },
-        { label: 'Oncology preauth', value: <YesNo value={ci.requires_oncology_preauth} /> },
-        { label: 'Radiology preauth', value: <YesNo value={ci.requires_radiology_preauth} /> },
-        { label: 'Optical preauth', value: <YesNo value={ci.requires_optical_preauth} /> },
+        { label: 'Surgical preauth', value: <YesNo value={asBool(ci.requires_surgical_preauth ?? (ci as any).requiresSurgicalPreauth)} /> },
+        { label: 'Renal preauth', value: <YesNo value={asBool(ci.requires_renal_preauth ?? (ci as any).requiresRenalPreauth)} /> },
+        { label: 'Oncology preauth', value: <YesNo value={asBool(ci.requires_oncology_preauth ?? (ci as any).requiresOncologyPreauth)} /> },
+        { label: 'Radiology preauth', value: <YesNo value={asBool(ci.requires_radiology_preauth ?? (ci as any).requiresRadiologyPreauth)} /> },
+        { label: 'Optical preauth', value: <YesNo value={asBool(ci.requires_optical_preauth ?? (ci as any).requiresOpticalPreauth)} /> },
       ],
       expandable: opts
         ? {
@@ -74,15 +79,36 @@ export function buildInterventionRecords(
             defaultOpen: requiredDocs.length > 0,
           }
         : undefined,
-      actions: opts?.onSwitchIntervention ? (
-        <Button
-          kind="tertiary"
-          size="sm"
-          onClick={() => opts.onSwitchIntervention(ci)}
-          disabled={!opts.canSwitchIntervention || !isActiveIntervention(ci)}
-        >
-          Switch Intervention
-        </Button>
+      actions: hasActions ? (
+        <>
+          {opts?.onSwitchIntervention ? (
+            <Button
+              kind="tertiary"
+              size="sm"
+              onClick={() => opts.onSwitchIntervention!(ci)}
+              disabled={!canAct}
+            >
+              Switch Intervention
+            </Button>
+          ) : null}
+          {opts?.onRaisePreauth ? (
+            <Button
+              kind="tertiary"
+              size="sm"
+              onClick={() => opts.onRaisePreauth!(ci)}
+              disabled={!canRaisePreauth}
+              title={
+                !ci.needs_preauth
+                  ? 'This intervention does not need preauth'
+                  : ci.preauth_exist
+                    ? 'Preauth already exists for this intervention'
+                    : 'Raise normal preauth for this intervention'
+              }
+            >
+              Raise preauth
+            </Button>
+          ) : null}
+        </>
       ) : undefined,
     };
   });
@@ -98,4 +124,3 @@ const ClaimInterventionDetails: React.FC<claimInterventionDetailsProps> = ({ cla
 );
 
 export default ClaimInterventionDetails;
-

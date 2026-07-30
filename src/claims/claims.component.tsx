@@ -1,6 +1,6 @@
 import { Button, ComboBox, InlineLoading, Loading, Tag, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TextInput } from '@carbon/react';
 import styles from './claims.component.scss';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   createClaimsVisit,
   fetchConsentToken,
@@ -24,9 +24,10 @@ import {
   type ClaimResult,
 } from './index';
 import { addIntervention, checkInterventionExists } from './interventions.resource';
-import { showModal, showSnackbar, useSession, useVisit, Visit } from '@openmrs/esm-framework';
+import { launchWorkspace, showSnackbar, useSession, useVisit, Visit } from '@openmrs/esm-framework';
 import { useTranslation } from 'react-i18next';
 import { useProviderClaimPreview } from '../billing/billing-claims.resource';
+import { getConsentToken as getVisitConsentToken } from '../shared/services/claims.resource';
 
 interface ClaimsComponentProps {
   clientRegistryId: string;
@@ -61,6 +62,9 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
   const [selectedIntervention, setSelectedIntervention] = useState<Intervention>();
   const [selectedSubBenefitCode, setSelectedSubBenefitCode] = useState<ClientSubBenefit>();
   const [isBenefitEligible, setIsBenefitEligible] = useState(false);
+  // Preselect from bill-order only once — re-running when interventions reload was
+  // forcing the first preexisting code back whenever the user picked another.
+  const didAutoPreselect = useRef(false);
 
   const { clientSubBenefits, isLoadingClientSubBenefits } = useClientSubBenefits(clientRegistryId);
   const { interventions, isLoadingInterventions } = useInterventions(clientRegistryId, selectedSubBenefitCode?.code);
@@ -149,29 +153,98 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
   }, [triggerAddIntervention]);
 
   useEffect(() => {
-    if (!isLoadingPreExistingIntervention && preExistingInterventions && preExistingInterventions.length && (clientSubBenefits || interventions)) {
-      const preExistingIntervention = preExistingInterventions[0];
-      if (clientSubBenefits) {
-        let preSelected = clientSubBenefits.find(v => v.code === preExistingIntervention.sub_benefit_code);
-        if (preSelected) {
-          setSelectedSubBenefitCode(preSelected);
-        }
+    if (didAutoPreselect.current) {
+      return;
+    }
+    if (isLoadingPreExistingIntervention || !preExistingInterventions?.length) {
+      return;
+    }
+    if (!clientSubBenefits && !interventions) {
+      return;
+    }
+
+    const preExistingIntervention = preExistingInterventions[0];
+    if (clientSubBenefits) {
+      const preSelected = clientSubBenefits.find((v) => v.code === preExistingIntervention.sub_benefit_code);
+      if (preSelected) {
+        setSelectedSubBenefitCode(preSelected);
       }
-      if (interventions) {
-        let preSelected = interventions.find(v => v.code === preExistingIntervention.intervention_code);
-        if (preSelected) {
-          setSelectedIntervention(preSelected);
-        }
+    }
+    if (interventions) {
+      const preSelected = interventions.find((v) => v.code === preExistingIntervention.intervention_code);
+      if (preSelected) {
+        setSelectedIntervention(preSelected);
       }
+      // Interventions for the (auto) sub-benefit have arrived — stop re-applying so the
+      // user can clear or pick a different intervention without being overwritten.
+      didAutoPreselect.current = true;
     }
   }, [preExistingInterventions, isLoadingPreExistingIntervention, clientSubBenefits, interventions]);
 
   const launchPreauthsModal = useCallback(() => {
-    const dispose = showModal('preauths-modal', {
-      closeModal: () => dispose(),
-      intervention: selectedIntervention,
+    if (!selectedIntervention) return;
+
+    // Elective preauth is on hold — keep tag visual only for elective.
+    if (selectedIntervention.needsPreauth && selectedIntervention.needsManualPreauthApproval) {
+      showSnackbar({
+        kind: 'info',
+        title: t('electivePreauthOnHold', 'Elective preauth'),
+        subtitle: t(
+          'electivePreauthOnHoldDetail',
+          'Elective preauth is not available yet. Use the Preauth tab for normal preauths after a claim visit exists.',
+        ),
+      });
+      return;
+    }
+
+    const token = getVisitConsentToken(activeVisit);
+    if (!token) {
+      showSnackbar({
+        kind: 'error',
+        title: t('missingConsentToken', 'No claim token on visit'),
+        subtitle: t(
+          'missingConsentTokenDetail',
+          'Start a claim visit first, then raise normal preauth from the Preauth tab or here.',
+        ),
+      });
+      return;
+    }
+
+    launchWorkspace('preauth-form-workspace', {
+      consentToken: token,
+      patientUuid,
+      locationUuid: sessionLocation?.uuid,
+      billItem: {
+        patient_uuid: patientUuid,
+        patient_name: '',
+        intervention_code: selectedIntervention.code,
+        billable_service: selectedIntervention.name,
+        item_price: Number(selectedIntervention.overallTariff) || 0,
+        item_quantity: 1,
+        cr_no: clientRegistryId,
+        requires_preauth: true,
+        normal_preauth: true,
+        required_preauth_document_types: (selectedIntervention.requiredPreauthDocumentTypes ?? []).join(','),
+        applicable_document_types: (selectedIntervention.applicableDocumentTypes ?? []).join(','),
+        requires_surgical_preauth: selectedIntervention.requiresSurgicalPreauth,
+        requires_renal_preauth: selectedIntervention.requiresRenalPreauth,
+        requires_oncology_preauth: selectedIntervention.requiresOncologyPreauth,
+        requires_radiology_preauth: selectedIntervention.requiresRadiologyPreauth,
+        requires_optical_preauth: selectedIntervention.requiresOpticalPreauth,
+      },
+      intervention: {
+        code: selectedIntervention.code,
+        name: selectedIntervention.name,
+        requiresSurgicalPreauth: selectedIntervention.requiresSurgicalPreauth,
+        requiresRenalPreauth: selectedIntervention.requiresRenalPreauth,
+        requiresOncologyPreauth: selectedIntervention.requiresOncologyPreauth,
+        requiresRadiologyPreauth: selectedIntervention.requiresRadiologyPreauth,
+        requiresOpticalPreauth: selectedIntervention.requiresOpticalPreauth,
+        requiredPreauthDocumentTypes: selectedIntervention.requiredPreauthDocumentTypes ?? [],
+        applicableDocumentTypes: selectedIntervention.applicableDocumentTypes ?? [],
+      },
     });
-  }, [selectedIntervention]);
+  }, [selectedIntervention, activeVisit, patientUuid, sessionLocation, clientRegistryId, t]);
 
   const handleStartVisit = async () => {
     try {
@@ -259,12 +332,7 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
     }
   };
 
-  const getConsentToken = () => {
-    const consentToken =
-      activeVisit.attributes?.find((atr) => atr?.attributeType?.uuid === '4962a633-c4f8-474c-857c-5c68c72fbbe3')
-        ?.value ?? '';
-    return consentToken;
-  };
+  const getConsentToken = () => getVisitConsentToken(activeVisit);
 
   const mapIntervention = (intervention: any) => {
     if (!intervention) return undefined;
@@ -347,10 +415,10 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
       const interventionExists = await checkInterventionExists(consentToken, selectedIntervention.code);
       const interventionExistsInProviderPreview = existingClaimVisit?.interventions?.some(i => i?.intervention_code === selectedIntervention.code);
       if (interventionExists || interventionExistsInProviderPreview) {
-        onAddIntervention(mapIntervention(selectedIntervention));
+        onAddIntervention(mapIntervention(selectedIntervention), selectedSubBenefitCode);
       } else {
         const intervention = await addIntervention(consentToken, selectedIntervention.code, sessionLocation?.uuid);
-        onAddIntervention(intervention);
+        onAddIntervention(intervention ?? mapIntervention(selectedIntervention), selectedSubBenefitCode);
       }
 
       showSnackbar({

@@ -328,6 +328,15 @@
       "canHide": true,
       "canMaximize": true,
       "width": "narrow"
+    },
+    {
+      "name": "preauth-form-workspace",
+      "title": "Raise Preauth",
+      "component": "preauthFormWorkspace",
+      "type": "preauth-form",
+      "canHide": true,
+      "canMaximize": true,
+      "width": "wider"
     }
   ],
   "workspaces2": [

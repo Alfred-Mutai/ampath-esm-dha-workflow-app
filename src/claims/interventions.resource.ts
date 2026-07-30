@@ -37,10 +37,60 @@ export async function addIntervention(consentToken: string, interventionCode: st
 
 export async function checkInterventionExists(consentToken: string, interventionCode: string): Promise<boolean> {
     const { hieBaseUrl } = await getHieBaseUrl();
-    const url = `${hieBaseUrl}/interventions/check-intervention-exists?consentToken=${consentToken}&interventionCode=${interventionCode}`;
-    const response = await openmrsFetch<boolean>(url);
-    const data = await response.json();
-    return data;
+    const url = `${hieBaseUrl}/interventions/check-intervention-exists?consentToken=${encodeURIComponent(consentToken)}&interventionCode=${encodeURIComponent(interventionCode)}`;
+    const response = await openmrsFetch(url);
+    const data = response?.data;
+    if (typeof data === 'boolean') {
+        return data;
+    }
+    if (data && typeof data === 'object' && 'exists' in data) {
+        return Boolean((data as { exists: boolean }).exists);
+    }
+    return Boolean(data);
+}
+
+/**
+ * Ensure the intervention is on the HIE claim visit for this consent token.
+ * Preauth and claim-line both require this — SHA rejects otherwise with
+ * "intervention … is not in the visit for consent token …".
+ */
+export async function ensureInterventionOnVisit(
+    consentToken: string,
+    interventionCode: string,
+    locationUuid: string,
+    options?: { alreadyOnVisit?: boolean },
+): Promise<'added' | 'exists'> {
+    if (!consentToken || !interventionCode || !locationUuid) {
+        throw 'Missing consent token, intervention code, or location.';
+    }
+    if (options?.alreadyOnVisit) {
+        return 'exists';
+    }
+
+    // Local bill-order may already list the code, but HIE visit can still lack it —
+    // always POST add when not confirmed on the visit. Treat "already present" as OK.
+    try {
+        await addIntervention(consentToken, interventionCode, locationUuid);
+        return 'added';
+    } catch (err) {
+        const msg = String(err ?? '').toLowerCase();
+        if (
+            msg.includes('already') ||
+            msg.includes('exist') ||
+            msg.includes('duplicate')
+        ) {
+            return 'exists';
+        }
+        // If local check says it exists, continue — caller can still fail later with a clear HIE error
+        try {
+            if (await checkInterventionExists(consentToken, interventionCode)) {
+                return 'exists';
+            }
+        } catch {
+            // ignore
+        }
+        throw err;
+    }
 }
 
 export async function switchIntervention(consentToken: string, existingInterventionCode: string, newInterventionCode: string) {

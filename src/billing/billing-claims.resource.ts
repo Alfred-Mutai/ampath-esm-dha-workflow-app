@@ -54,6 +54,20 @@ export async function fetchPatientFacilityBillDetails(
   return data.results ?? [];
 }
 
+/** Bill lines that need normal preauth for the facility/date (ETL pre-filters). */
+export async function fetchFacilityPreauthBills(
+  facilityBillsDto: FacilityBillsDto,
+): Promise<PatientFacilityBillDetails[]> {
+  const etlBaseUrl = await getEtlBaseUrl();
+  const url = `${etlBaseUrl}/facility/pre-auth-bills?locationUuid=${facilityBillsDto.locationUuid}&billingDate=${facilityBillsDto.billingDate}`;
+  const response = await openmrsFetch(url);
+  const data = await response.json();
+  if (Array.isArray(data)) {
+    return data as PatientFacilityBillDetails[];
+  }
+  return (data as PatientFacilityBillDetailsResponse)?.results ?? [];
+}
+
 export async function fetchFacilityClaimVisits(claimVisitsDto: ClaimVisitsDto): Promise<ClaimVisitReponse[]> {
   const claimVisitsFilter: ClaimVisitsDto = {};
   if (claimVisitsDto.consentToken) {
@@ -424,15 +438,25 @@ export async function payBillItem(billUuid: string, billPaymentDto: BillPaymentD
 export async function addClaimItem(addClaimLineDto: AddClaimLineDto) {
   const { hieBaseUrl } = await getHieBaseUrl();
   const addClaimLineUrl = `${hieBaseUrl}/claim-line`;
-  const response = await openmrsFetch(addClaimLineUrl, {
+  const result = await openmrsFetch(addClaimLineUrl, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
     },
     body: JSON.stringify(addClaimLineDto),
+  }).catch((error) => {
+    const message = error?.responseBody?.message ?? error?.message ?? '';
+    if (typeof message === 'object') {
+      throw `${message?.join(',')}`;
+    }
+    throw message || 'Failed to add claim line';
   });
-  const data = await response.json();
-  return data ?? null;
+
+  if (result?.data && 'error' in result.data && 'message' in result.data) {
+    const message = result.data.message ?? '';
+    throw typeof message === 'object' ? `${(message as string[]).join(',')}` : message;
+  }
+  return result?.data ?? null;
 }
 
 export async function removeClaimItem(removeClaimLineDto: RemoveClaimLineDto) {
@@ -485,6 +509,37 @@ export async function switchClaimIntervention(switchInterventionDto: SwitchInter
   if (result?.data && 'error' in result.data && 'message' in result.data) {
     const message = result.data.message ?? '';
     throw message;
+  }
+  return result?.data;
+}
+
+/** Retire (remove) an intervention from the claim visit.
+ * @see https://hie-docs.dha.go.ke/docs/claims/process/interventions/retireIntervention
+ */
+export async function retireClaimIntervention(dto: {
+  consentToken: string;
+  interventionCode: string;
+  locationUuid: string;
+}) {
+  const { hieBaseUrl } = await getHieBaseUrl();
+  const url = `${hieBaseUrl}/interventions/retire`;
+  const result = await openmrsFetch(url, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify(dto),
+  }).catch((error) => {
+    const message = error?.responseBody?.message ?? error?.message ?? '';
+    if (typeof message === 'object') {
+      throw `${(message as string[]).join(',')}`;
+    }
+    throw message || 'Failed to remove intervention';
+  });
+
+  if (result?.data && 'error' in result.data && 'message' in result.data) {
+    const message = result.data.message ?? '';
+    throw typeof message === 'object' ? `${(message as string[]).join(',')}` : message;
   }
   return result?.data;
 }

@@ -260,9 +260,18 @@ const CreateOrderBillForm: React.FC<CreateOrderBillFormProps> = ({
                 const requiresPreauth = interventionResult.needs_preauth;
                 const requiredPreauthDocumentTypes = interventionResult.required_preauth_document_types;
                 const applicableDocumentTypes = interventionResult.applicable_document_types;
+                const subBenefitCode =
+                    (selectedSubBenefit?.code ?? '').trim() ||
+                    (interventionResult.sub_benefit_code ?? '').trim();
+
+                if (!subBenefitCode) {
+                    throw new Error(
+                        'Select a client sub-benefit before saving an SHA bill. Sub-benefit code is required.',
+                    );
+                }
 
                 let intervention = {
-                    sub_benefit_code: selectedSubBenefit ? selectedSubBenefit.code : "",
+                    sub_benefit_code: subBenefitCode,
                     intervention_code: interventionResult.intervention_code,
                     service_type: getServiceType(interventionResult, visitType),
                     requires_preauth: requiresPreauth,

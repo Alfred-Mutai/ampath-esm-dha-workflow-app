@@ -190,3 +190,8 @@ export const switchInterventionWorkspace = getAsyncLifecycle(
   () => import('./billing/dashboard/v2/claim-visits/switch-intervention/switch-intervention.workspace'),
   options,
 );
+
+export const preauthFormWorkspace = getAsyncLifecycle(
+  () => import('./billing/dashboard/v2/preauth/preauth.workspace'),
+  options,
+);

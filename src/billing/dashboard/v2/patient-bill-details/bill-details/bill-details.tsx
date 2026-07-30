@@ -2,13 +2,24 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { type PatientPayment, type PatientFacilityBillDetails } from '../../types';
 import styles from './bill-details.scss';
 import { Button, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tag } from '@carbon/react';
-import { Add, Money } from '@carbon/react/icons';
-import { formatDate, launchWorkspace, parseDate } from '@openmrs/esm-framework';
+import { Add, DocumentTasks, Money } from '@carbon/react/icons';
+import { formatDate, launchWorkspace, parseDate, showSnackbar } from '@openmrs/esm-framework';
 import { type AmrsVisitDiagnosis } from '../../../../types';
 import AddClaimDiagnosisModal from '../modals/add-claim-diagnosis/add-claim-diagnosis.modal';
 import { addClaimDiagnosis, useInvalidateProviderClaimPreview, useProviderClaimPreview } from '../../../../billing-claims.resource';
+import { invalidatePreauthPreview } from '../../../../../claims/claims.resource';
+import { ensureInterventionOnVisit } from '../../../../../claims/interventions.resource';
 import RecordCards, { RecordCardsSkeleton, type RecordCardModel } from '../../claim-visits/shared/record-cards.component';
 import { canEditClaimContent } from '../../claim-statuses';
+import {
+  asBool,
+  fetchActiveVisitForPatient,
+  interventionFlagsFromBillItem,
+  needsNormalPreauth,
+  resolveConsentTokenForVisit,
+  resolveNormalPreauthForBillItem,
+  type ShaInterventionPreauthFlags,
+} from '../../preauth/preauth.resource';
 
 // Stable key for a patient diagnosis, used to track its claim-add attempt/state.
 const diagnosisKey = (d: AmrsVisitDiagnosis): string => d.uuid ?? `${d.encounter_id}-${d.icd11_code}`;
@@ -84,6 +95,77 @@ const BillDetails: React.FC<billDetailsProps> = ({ patientBillDetails, patientPa
   // on, so it isn't held back by this.
   const claimPending = Boolean(consentToken) && (claimLoading || !claimVisit);
   const canActOnClaim = !claimPending && isClaimDraft;
+
+  // SHA interventions coverage by intervention_code — facility bill lines often omit
+  // requires_preauth, so we look up needsPreauth from HIE for each distinct code.
+  const [shaPreauthByCode, setShaPreauthByCode] = useState<Record<string, ShaInterventionPreauthFlags>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    const codes = [
+      ...new Set(
+        (patientBillDetails ?? [])
+          .map((b) => (b.intervention_code ?? '').trim())
+          .filter(Boolean),
+      ),
+    ];
+    if (!locationUuid || codes.length === 0) {
+      setShaPreauthByCode({});
+      return;
+    }
+
+    const claimByCode = new Map(
+      (claimVisit?.interventions ?? []).map((iv) => [(iv.intervention_code ?? '').trim(), iv] as const),
+    );
+
+    (async () => {
+      const next: Record<string, ShaInterventionPreauthFlags> = {};
+      await Promise.all(
+        codes.map(async (code) => {
+          const sample = patientBillDetails.find((b) => (b.intervention_code ?? '').trim() === code);
+          if (!sample) return;
+          // Skip HIE lookup when ETL already answered
+          if (sample.requires_preauth != null || sample.normal_preauth != null) {
+            next[code] = {
+              needsPreauth: needsNormalPreauth(sample),
+              needsManualPreauthApproval: asBool(sample.elective_preauth),
+            };
+            return;
+          }
+          // Prefer claim-visit intervention flags when the code is already on the claim
+          const onClaim = claimByCode.get(code);
+          if (onClaim) {
+            const elective =
+              asBool(onClaim.requires_surgical_preauth) ||
+              asBool(onClaim.requires_renal_preauth) ||
+              asBool(onClaim.requires_oncology_preauth) ||
+              asBool(onClaim.requires_radiology_preauth) ||
+              asBool(onClaim.requires_optical_preauth);
+            next[code] = {
+              needsPreauth: Boolean(onClaim.needs_preauth),
+              needsManualPreauthApproval: elective && Boolean(onClaim.needs_preauth),
+            };
+            return;
+          }
+          const resolved = await resolveNormalPreauthForBillItem(
+            sample,
+            locationUuid,
+            undefined,
+          );
+          if (resolved) {
+            next[code] = resolved;
+          }
+        }),
+      );
+      if (!cancelled) {
+        setShaPreauthByCode(next);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [patientBillDetails, locationUuid, claimVisit?.interventions]);
 
   // Each diagnosis is auto-added at most once, so a failed attempt would otherwise stay
   // failed for as long as this stays mounted. "Reload Bills" is an explicit ask for a
@@ -197,7 +279,76 @@ const BillDetails: React.FC<billDetailsProps> = ({ patientBillDetails, patientPa
     launchWorkspace('add-claim-line-workspace', {
       billItem: patientBillDetail,
       locationUuid,
+      consentToken: consentToken || patientBillDetail.consent_token || '',
       onSuccess: invalidateProviderClaimPreview,
+    });
+  }
+  async function handleRaisePreauth(patientBillDetail: PatientFacilityBillDetails) {
+    if (!canRaisePreauth(patientBillDetail)) {
+      return;
+    }
+    let token = consentToken || patientBillDetail.consent_token || '';
+    if (!token && patientBillDetail.patient_uuid) {
+      const visit = await fetchActiveVisitForPatient(patientBillDetail.patient_uuid, locationUuid);
+      token = resolveConsentTokenForVisit(visit) || '';
+    }
+    if (!token) {
+      showSnackbar({
+        kind: 'error',
+        title: 'No claim token on visit',
+        subtitle: 'Start a claim visit for this patient before raising a normal preauth.',
+      });
+      return;
+    }
+
+    const interventionCode = (patientBillDetail.intervention_code ?? '').trim();
+    const alreadyOnVisit = (claimVisit?.interventions ?? []).some(
+      (iv) => (iv.intervention_code ?? '').trim() === interventionCode,
+    );
+
+    try {
+      await ensureInterventionOnVisit(token, interventionCode, locationUuid, { alreadyOnVisit });
+      if (!alreadyOnVisit) {
+        invalidateProviderClaimPreview();
+      }
+    } catch (err) {
+      showSnackbar({
+        kind: 'error',
+        title: 'Could not add intervention to visit',
+        subtitle: String(err ?? 'Add the intervention to the claim visit before raising preauth.'),
+      });
+      return;
+    }
+
+    const flags = interventionFlagsFromBillItem(patientBillDetail);
+    const sha = shaPreauthByCode[interventionCode];
+    const shaIv = sha?.intervention;
+    launchWorkspace('preauth-form-workspace', {
+      consentToken: token,
+      patientUuid: patientBillDetail.patient_uuid,
+      locationUuid,
+      billItem: patientBillDetail,
+      intervention: {
+        code: flags.code,
+        name: patientBillDetail.billable_service || shaIv?.name || flags.code,
+        requiresSurgicalPreauth: flags.requiresSurgicalPreauth || !!shaIv?.requiresSurgicalPreauth,
+        requiresRenalPreauth: flags.requiresRenalPreauth || !!shaIv?.requiresRenalPreauth,
+        requiresOncologyPreauth: flags.requiresOncologyPreauth || !!shaIv?.requiresOncologyPreauth,
+        requiresRadiologyPreauth: flags.requiresRadiologyPreauth || !!shaIv?.requiresRadiologyPreauth,
+        requiresOpticalPreauth: flags.requiresOpticalPreauth || !!shaIv?.requiresOpticalPreauth,
+        requiredPreauthDocumentTypes:
+          flags.requiredPreauthDocumentTypes?.length
+            ? flags.requiredPreauthDocumentTypes
+            : shaIv?.requiredPreauthDocumentTypes ?? [],
+        applicableDocumentTypes:
+          flags.applicableDocumentTypes?.length
+            ? flags.applicableDocumentTypes
+            : shaIv?.applicableDocumentTypes ?? [],
+      },
+      onSuccess: async () => {
+        await invalidatePreauthPreview(token, locationUuid);
+        invalidateProviderClaimPreview();
+      },
     });
   }
   function getConsultationBillIntervantionCode(){
@@ -221,6 +372,11 @@ const BillDetails: React.FC<billDetailsProps> = ({ patientBillDetails, patientPa
   }
   function canAddClaimLine(b: PatientFacilityBillDetails): boolean {
     return canActOnClaim && Boolean(b.intervention_code) && b.has_claim_line === 0;
+  }
+  function canRaisePreauth(b: PatientFacilityBillDetails): boolean {
+    const code = (b.intervention_code ?? '').trim();
+    const sha = code ? shaPreauthByCode[code] : undefined;
+    return canActOnClaim && needsNormalPreauth(b, sha);
   }
   // SHA items aren't paid in cash — they're settled via the SHA claim. Default a
   // sensible status when the backend leaves it blank.
@@ -253,7 +409,7 @@ const BillDetails: React.FC<billDetailsProps> = ({ patientBillDetails, patientPa
       { label: 'Total', value: `Ksh ${b.item_total_price}` },
     ],
     actions:
-      canPay(b) || canAddClaimLine(b) ? (
+      canPay(b) || canAddClaimLine(b) || canRaisePreauth(b) ? (
         <>
           {canPay(b) && (
             <Button kind="primary" size="sm" renderIcon={Money} onClick={() => handleBillItemPayment(b)}>
@@ -263,6 +419,11 @@ const BillDetails: React.FC<billDetailsProps> = ({ patientBillDetails, patientPa
           {canAddClaimLine(b) && (
             <Button kind="tertiary" size="sm" renderIcon={Add} onClick={() => handleClaimLineAddition(b)}>
               Add claim line
+            </Button>
+          )}
+          {canRaisePreauth(b) && (
+            <Button kind="tertiary" size="sm" renderIcon={DocumentTasks} onClick={() => handleRaisePreauth(b)}>
+              Raise preauth
             </Button>
           )}
         </>

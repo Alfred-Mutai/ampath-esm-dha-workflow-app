@@ -103,15 +103,58 @@ export const CLAIM_BUCKETS: StatusBucket[] = [
   },
 ];
 
-// Preauthorisation buckets — shown under the Preauths tab.
+// Preauthorisation buckets — shown under the Preauths tab (HIE preview statuses).
 export const PREAUTH_BUCKETS: StatusBucket[] = [
-  { key: 'pending', label: 'Pending', statuses: ['PREAUTH_PENDING'] },
-  { key: 'submitted', label: 'Submitted', statuses: ['SUBMITTED'] },
-  { key: 'approved', label: 'Approved', statuses: ['APPROVED'] },
-  { key: 'rejected', label: 'Rejected', statuses: ['REJECTED'] },
-  { key: 'resubmission', label: 'Needs resubmission', statuses: ['RECALLED'] },
-  { key: 'closed', label: 'Closed', statuses: ['CANCELLED', 'EXPIRED'] },
+  {
+    key: 'pending',
+    label: 'Pending',
+    // Awaiting doctor SMS approval (and other not-yet-payer-review states).
+    statuses: [
+      'PENDING_DOCTOR_APPROVAL',
+      'DOCTOR_REQUEST_SENT',
+      'DOCTOR_REQUEST_FAILED',
+      'DRAFT',
+      'PREAUTH_PENDING',
+    ],
+  },
+  {
+    key: 'submitted',
+    label: 'Submitted',
+    // Doctor approved; with payer for review.
+    statuses: ['ACTIVE', 'SUBMITTED', 'PENDING'],
+  },
+  {
+    key: 'approved',
+    label: 'Approved',
+    statuses: ['FINALISED', 'FINALIZED', 'APPROVED'],
+  },
+  {
+    key: 'rejected',
+    label: 'Rejected',
+    statuses: ['REJECTED', 'DECLINED', 'FAILED'],
+  },
+  {
+    key: 'resubmission',
+    label: 'Needs resubmission',
+    statuses: ['RECALLED', 'PENDING_CLARIFICATION'],
+  },
+  {
+    key: 'closed',
+    label: 'Closed',
+    statuses: ['CANCELLED', 'EXPIRED'],
+  },
 ];
+
+/** Which Preauthorizations bucket a HIE preview status belongs to. */
+export function preauthBucketKeyForStatus(status: string): string {
+  const s = (status || '').trim().toUpperCase();
+  for (const bucket of PREAUTH_BUCKETS) {
+    if (bucket.statuses.some((x) => x.toUpperCase() === s)) {
+      return bucket.key;
+    }
+  }
+  return 'pending';
+}
 
 // Cash-side payment buckets. Partially paid bills sit under Pending (still owing).
 export const PAYMENT_BUCKETS: StatusBucket[] = [

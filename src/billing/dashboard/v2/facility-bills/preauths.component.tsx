@@ -1,40 +1,95 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from '@carbon/react';
-import EmptyState from '../shared/empty-state.component';
-import { PREAUTH_BUCKETS, type StatusBucket } from './claim-status';
+import { claimVisitToken, useFacilityClaimVisits } from '../../../billing-claims.resource';
+import {
+  fetchPreauthPreviewRowsForTokens,
+  type PreauthPreviewRow,
+} from '../../../../claims/claims.resource';
+import { PREAUTH_BUCKETS, preauthBucketKeyForStatus, type StatusBucket } from './claim-status';
+import PreauthPreviewTable from './preauths-datatables/preauth-preview-table.component';
 import styles from './facility-bills.component.scss';
-import PendingPreauths from './preauths-datatables/pending-preauths.component';
 
-// Open on the Pending bucket, matching the other payers' default behaviour.
 const defaultBucketKey = (buckets: StatusBucket[]): string =>
   (buckets.find((b) => b.key === 'pending') ?? buckets[0])?.key ?? '';
 
-/**
- * Preauthorisations tab. The eClaims preauth feed isn't connected yet, so each status
- * bucket shows a placeholder; the sub-tabs mirror the SHA claims / cash bills layout so
- * the panel stays consistent once real preauth data starts flowing.
- */
 interface PreauthsProps {
-  locationUuid: string,
-  billingDate: string
+  locationUuid: string;
+  billingDate: string;
 }
 
-const Preauths: React.FC<PreauthsProps> = (props) => {
+/**
+ * Preauthorisations tab — lists HIE preauths from GET /pre-auth/preview
+ * (one call per claim-visit consent token for the selected date).
+ * Pending rows that need doctor SMS approval can resend doctor consent.
+ */
+const Preauths: React.FC<PreauthsProps> = ({ locationUuid, billingDate }) => {
   const [statusFilter, setStatusFilter] = useState<string>(() => defaultBucketKey(PREAUTH_BUCKETS));
+  const [rows, setRows] = useState<PreauthPreviewRow[]>([]);
+  const [loadingPreview, setLoadingPreview] = useState(false);
+
+  const { claimVisits, loading: visitsLoading, reload: reloadVisits } = useFacilityClaimVisits(
+    locationUuid,
+    billingDate,
+  );
+
+  const loadPreviews = useCallback(async () => {
+    if (!locationUuid) return;
+    const tokens = (claimVisits ?? []).map(claimVisitToken).filter(Boolean);
+    if (!tokens.length) {
+      setRows([]);
+      return;
+    }
+    setLoadingPreview(true);
+    try {
+      const previewRows = await fetchPreauthPreviewRowsForTokens(tokens, locationUuid);
+      setRows(previewRows);
+    } finally {
+      setLoadingPreview(false);
+    }
+  }, [claimVisits, locationUuid]);
+
+  useEffect(() => {
+    if (visitsLoading) return;
+    loadPreviews();
+  }, [visitsLoading, loadPreviews]);
+
+  const handleRefresh = useCallback(() => {
+    reloadVisits();
+    loadPreviews();
+  }, [reloadVisits, loadPreviews]);
+
+  const counts = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const bucket of PREAUTH_BUCKETS) {
+      map[bucket.key] = 0;
+    }
+    for (const row of rows) {
+      const key = preauthBucketKeyForStatus(row.status);
+      map[key] = (map[key] ?? 0) + 1;
+    }
+    return map;
+  }, [rows]);
+
+  const filteredRows = useMemo(() => {
+    if (!statusFilter) return rows;
+    return rows.filter((r) => preauthBucketKeyForStatus(r.status) === statusFilter);
+  }, [rows, statusFilter]);
 
   const statusTabItems: StatusBucket[] = [...PREAUTH_BUCKETS, { key: '', label: 'All', statuses: [] }];
   const statusTabIndex = Math.max(0, statusTabItems.findIndex((b) => b.key === statusFilter));
-  const countPill = (value: number) => <span className={styles.pill}>{value}</span>;
+  const countPill = (key: string) => (
+    <span className={styles.pill}>{key ? (counts[key] ?? 0) : rows.length}</span>
+  );
 
-  const emptyMessage = 'Preauthorisations will appear here once the eClaims preauth feed is connected.';
+  const loading = visitsLoading || loadingPreview;
 
   return (
     <div className={styles.panel}>
       <div className={styles.intro}>
         <h4 className={styles.introTitle}>Preauthorizations</h4>
         <p className={styles.introText}>
-          Requests for prior approval of planned services under SHA. Once granted, a preauthorisation clears the way
-          for the associated claim to be submitted.
+          Live preauths from SHA for claim visits on this date. When a preauth is waiting on doctor SMS
+          approval, use Resend doctor consent if the doctor did not receive the request.
         </p>
       </div>
       <Tabs
@@ -45,7 +100,7 @@ const Preauths: React.FC<PreauthsProps> = (props) => {
           {statusTabItems.map((bucket) => (
             <Tab key={bucket.key || 'all'}>
               {bucket.label}
-              {countPill(0)}
+              {countPill(bucket.key)}
             </Tab>
           ))}
         </TabList>
@@ -54,12 +109,12 @@ const Preauths: React.FC<PreauthsProps> = (props) => {
             <TabPanel key={bucket.key || 'all'}>
               {statusFilter === bucket.key ? (
                 <div className={styles.tableCard}>
-                  {
-                    bucket.key === "pending" ?
-                      <PendingPreauths locationUuid={props.locationUuid}
-                        billingDate={props.billingDate} />
-                      : <EmptyState message={emptyMessage} />
-                  }
+                  <PreauthPreviewTable
+                    rows={filteredRows}
+                    locationUuid={locationUuid}
+                    loading={loading}
+                    onRefresh={handleRefresh}
+                  />
                 </div>
               ) : null}
             </TabPanel>
