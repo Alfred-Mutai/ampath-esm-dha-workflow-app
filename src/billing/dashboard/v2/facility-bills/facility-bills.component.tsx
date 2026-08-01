@@ -1,5 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { type FacilityBillsDto, type FacilityBill, type ClaimVisitReponse, BillingView } from '../types';
+import {
+  type FacilityBillsDto,
+  type FacilityBill,
+  type ClaimVisitReponse,
+  BillingView,
+  type PatientBill,
+} from '../types';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -55,7 +61,7 @@ const crKey = (value?: string | null): string => {
 
 // The bills endpoint carries no payment mode; a consent token means the visit was
 // authorised through SHA/HIE, anything else is settled at the cash point.
-const paymentMode = (bill: FacilityBill): string => ((bill.consent_token ?? '').trim() ? 'SHA' : 'Cash');
+const paymentMode = (bill: PatientBill): string => ((bill.consent_token ?? '').trim() ? 'SHA' : 'Cash');
 
 // Claim visits are listed with the time of day, not just the date: the same claim can be
 // recorded against several visits on one day, and the start time is what tells those
@@ -114,12 +120,12 @@ interface BillRow {
   searchText: string;
 }
 
-const billRow = (fb: FacilityBill): BillRow => {
-  const status = formatStatusColumn(fb.paid_status);
+const billRow = (fb: PatientBill): BillRow => {
+  const status = formatStatusColumn(fb.bill_status);
   return {
     id: `bill-${fb.bill_uuid}`,
     patientName: fb.patient_name,
-    crNumber: formatCr(fb.cr_id),
+    crNumber: formatCr(fb.identifiers),
     visitType: fb.visit_type || '—',
     status,
     billDate: fb.bill_date || '—',
@@ -127,7 +133,7 @@ const billRow = (fb: FacilityBill): BillRow => {
     consentToken: (fb.consent_token ?? '').trim(),
     // The cash point is no longer a column but is still searchable — it's how a cashier
     // finds their own bills.
-    searchText: `${fb.patient_name} ${formatCr(fb.cr_id)} ${fb.national_id ?? ''} ${fb.receipt_number ?? ''} ${
+    searchText: `${fb.patient_name} ${formatCr(fb.identifiers)}  ${fb.receipt_number ?? ''} ${
       fb.visit_type ?? ''
     } ${status} ${fb.cash_point ?? ''}`.toLowerCase(),
   };
@@ -180,7 +186,7 @@ const FacilityBills: React.FC<facilityBillsProps> = ({
   navStatusKey,
   navNonce,
 }) => {
-  const [facilityBills, setFacilityBills] = useState<FacilityBill[]>([]);
+  const [facilityBills, setFacilityBills] = useState<PatientBill[]>([]);
   // The SHA claims themselves, straight from /claims-visit — the rows of the SHA tab and
   // the source of every claim status shown on this page. Shared with the dashboard tiles,
   // so a tile and this table can't disagree about which claims exist.
@@ -277,8 +283,24 @@ const FacilityBills: React.FC<facilityBillsProps> = ({
     }
   }
   // Split the bills by payer so each tab shows only its own.
-  const cashBills = useMemo(() => (facilityBills ?? []).filter((fb) => paymentMode(fb) === 'Cash'), [facilityBills]);
-  const shaBills = useMemo(() => (facilityBills ?? []).filter((fb) => paymentMode(fb) === 'SHA'), [facilityBills]);
+  // const cashBills = useMemo(() => (facilityBills ?? []).filter((fb) => paymentMode(fb) === 'Cash'), [facilityBills]);
+  // const shaBills = useMemo(() => (facilityBills ?? []).filter((fb) => paymentMode(fb) === 'SHA'), [facilityBills]);
+  const shaBills = useMemo(
+    () =>
+      (facilityBills ?? []).filter((bill) => bill.bill_items.some((item) => item.price_name?.toUpperCase() === 'SHA')),
+    [facilityBills],
+  );
+  const cashBills = useMemo(
+    () =>
+      (facilityBills ?? []).filter((bill) => {
+        const hasSha = bill.bill_items.some((item) => item.price_name?.toUpperCase() === 'SHA');
+
+        const hasCash = bill.bill_items.some((item) => item.price_name?.toUpperCase() === 'CASH');
+
+        return hasCash && !hasSha;
+      }),
+    [facilityBills],
+  );
 
   // Every claim listed for this date, by consent token, so its live state can be
   // resolved. Only the tabs that show claim statuses ask for them — the cash tab never
@@ -304,14 +326,14 @@ const FacilityBills: React.FC<facilityBillsProps> = ({
    * are tried before giving up.
    */
   const { claimRows, matchedBillIds } = useMemo(() => {
-    const byToken = new Map<string, FacilityBill>();
-    const byCr = new Map<string, FacilityBill>();
+    const byToken = new Map<string, PatientBill>();
+    const byCr = new Map<string, PatientBill>();
     shaBills.forEach((fb) => {
       const token = (fb.consent_token ?? '').trim().toUpperCase();
       if (token && !byToken.has(token)) {
         byToken.set(token, fb);
       }
-      const cr = crKey(fb.cr_id);
+      const cr = crKey(fb.identifiers);
       if (cr && !byCr.has(cr)) {
         byCr.set(cr, fb);
       }
@@ -345,10 +367,9 @@ const FacilityBills: React.FC<facilityBillsProps> = ({
         billDate: formatVisitDate(cv.visitStart || claim?.visit_start) || bill?.bill_date || '—',
         patientUuid: bill?.patient_uuid ?? '',
         consentToken,
-        searchText:
-          `${patientName} ${crNumber} ${visitType} ${status} ${visitNumber} ${token} ${
-            claim?.invoice_number ?? ''
-          } ${bill?.cash_point ?? ''}`.toLowerCase(),
+        searchText: `${patientName} ${crNumber} ${visitType} ${status} ${visitNumber} ${token} ${
+          claim?.invoice_number ?? ''
+        } ${bill?.cash_point ?? ''}`.toLowerCase(),
       } as BillRow;
     });
     return { claimRows: rows, matchedBillIds: matched };
@@ -629,8 +650,8 @@ const FacilityBills: React.FC<facilityBillsProps> = ({
           <div className={styles.intro}>
             <h4 className={styles.introTitle}>Facility bills</h4>
             <p className={styles.introText}>
-              Consultation and service bills raised at this facility for the selected date. Select a patient to view
-              the itemised bill, payments received and the outstanding balance.
+              Consultation and service bills raised at this facility for the selected date. Select a patient to view the
+              itemised bill, payments received and the outstanding balance.
             </p>
           </div>
           {loading ? (

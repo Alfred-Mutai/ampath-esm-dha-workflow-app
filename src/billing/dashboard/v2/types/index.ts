@@ -21,6 +21,12 @@ export type FacilityBill = {
   national_id: string | null;
   cr_id: string | null;
   visit_type: string | null;
+  identifiers: string;
+  patient_id: string;
+  bill_id: string;
+  bill_status: string;
+  location_id: string;
+  bill_items: BillLineItem[];
   /** SHA claim lifecycle status for this bill, when the eClaims status feed provides
       it. Absent until the backend supplies it — used by the SHA-bills claim-status
       filter. */
@@ -404,9 +410,53 @@ export interface ActiveVisit {
   payment_method: string;
   payment_method_uuid: string;
   payment_status: 'CLEARED' | 'PENDING' | string;
-  person_id: number;
-  visit_date: string; // ISO date string
-  visit_id: number;
+  person_id: string;
+  person_uuid: string;
+  visit_date: string;
+  visit_id: string;
   visit_type: string;
   visit_uuid: string;
+  visit_type_uuid: string;
+}
+
+export type ActiveCashVisit = {
+  patient_name: string;
+  patient_uuid: string;
+  identifiers: string;
+  payment_method: string;
+  visit_id: string;
+  visit_uuid: string;
+  date_started: string;
+  date_stopped: string | null;
+  location_id: string;
+  value_reference: string | null;
+  visit_type: string;
+  visit_type_uuid: string;
+};
+
+export interface BillLineItem {
+  line_item_id: number;
+  line_item_order: number;
+  price_name: string;
+  quantity: number;
+  price: number;
+  status: string;
+  date_created: string;
+}
+
+export interface PatientBill {
+  patient_id: number;
+  patient_uuid: string;
+  patient_name: string;
+  receipt_number: string;
+  cash_point: string;
+  identifiers: string;
+  bill_id: number;
+  bill_date: string;
+  bill_status: string;
+  bill_uuid: string;
+  bill_items: BillLineItem[];
+  location_id: string;
+  consent_token: string;
+  visit_type: string;
 }

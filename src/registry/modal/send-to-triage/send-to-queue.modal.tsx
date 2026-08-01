@@ -59,6 +59,8 @@ interface SendToQueueModalProps {
   visitUuid: string;
   visitTypeUuid: string;
   onModalClose?: (modalCloseResp?: { success: boolean }) => void;
+  addSHAClaimVisit?: boolean;
+  isCash?: boolean;
 }
 
 // Select the field's text on focus so typing replaces the (preselected) value.
@@ -69,7 +71,14 @@ const selectInputText = (e: React.FocusEvent<HTMLElement>) => {
   }
 };
 
-const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitUuid, visitTypeUuid, onModalClose }) => {
+const SendToQueueModal: React.FC<SendToQueueModalProps> = ({
+  patientUuid,
+  visitUuid,
+  visitTypeUuid,
+  onModalClose,
+  addSHAClaimVisit,
+  isCash,
+}) => {
   const { patient } = usePatient(patientUuid);
   const [selectedPatientType, setSelectedPatientType] = useState<string>();
   const [cashPoints, setCashPoints] = useState<CashPoint[]>([]);
@@ -99,7 +108,7 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
     outPatientCareSettingUuid,
     orderEncounterTypeUuid,
     registrationServicequeues,
-    shaPaymentModeUuid
+    shaPaymentModeUuid,
   } = useConfig<ConfigObject>();
 
   const facilityCashPoints = useMemo(() => getfacilityCashpoints(), [cashPoints, locationUuid]);
@@ -200,8 +209,13 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
     return <>No Client data</>;
   }
 
-  function onClaimsVisitStart(payload: ClaimResult, selectedIntervention: Intervention, subBenefit: ClientSubBenefit, usePreselectedIntervention: boolean) {
-    if(usePreselectedIntervention) {
+  function onClaimsVisitStart(
+    payload: ClaimResult,
+    selectedIntervention: Intervention,
+    subBenefit: ClientSubBenefit,
+    usePreselectedIntervention: boolean,
+  ) {
+    if (usePreselectedIntervention) {
       setBillCreated(true);
       showAlert('success', 'Bill succesfully updated', '');
       onModalClose({ success: true });
@@ -560,7 +574,7 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
           const applicableDocumentTypes = interventionResult.applicableDocumentTypes;
 
           let interventionPayload = {
-            sub_benefit_code: selectedSubBenefit ? selectedSubBenefit.code : "",
+            sub_benefit_code: selectedSubBenefit ? selectedSubBenefit.code : '',
             intervention_code: interventionResult.code,
             consent_token: claimResult.authorization_code,
             service_type: getServiceType(interventionResult, visitType),
@@ -570,7 +584,7 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
           };
 
           if (patientUuid) {
-            intervention["patient_uuid"] = patientUuid;
+            intervention['patient_uuid'] = patientUuid;
           }
 
           if (applicableDocumentTypes && applicableDocumentTypes.length) {
@@ -629,7 +643,7 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
   // eslint-disable-next-line no-console
   console.log('PARENT PARENT: ', authGuid);
 
-  const isSha = hasSelectedPaymentMode('SHA');
+  const isSha = hasSelectedPaymentMode('SHA') || addSHAClaimVisit;
   const patientName = patient?.name?.[0]?.text ?? '';
   const crNumber = patientIdentifiers?.crIdentifierId ?? '';
   const consentSatisfied = otpVerified || !!authGuid;
@@ -772,7 +786,9 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
               {selectedPaymentDetail === PaymentDetail.Paying && isSha && (
                 <section className={styles.drawerSection}>
                   <h5 className={styles.drawerSectionTitle}>SHA claim details</h5>
-                  <p className={styles.drawerSectionHint}>Select the sub-benefit and intervention for this consultation.</p>
+                  <p className={styles.drawerSectionHint}>
+                    Select the sub-benefit and intervention for this consultation.
+                  </p>
                   <ExtensionSlot
                     name="billing-claims-slot"
                     state={{
@@ -817,7 +833,7 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({ patientUuid, visitU
             onClick={handleprimaryAction}
             disabled={loading || (isSha && !consentSatisfied)}
           >
-            {loading ? 'Starting…' : 'Start claim visit'}
+            {isCash ? 'PAY' : loading ? 'Starting…' : 'Start claim visit'}
           </Button>
         </footer>
       </aside>

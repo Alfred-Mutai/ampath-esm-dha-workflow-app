@@ -22,10 +22,11 @@ import {
   type AddClaimDiagnosisDto,
   type RemoveClaimLineDto,
   type SwitchInterventionDto,
+  type PatientBill,
 } from './dashboard/v2/types';
 import { getHieBaseUrl } from '../claims/utils';
 import {
-  FacilityPreauthsResponse,
+  type FacilityPreauthsResponse,
   type AmrsMaternityDiagnosis,
   type AmrsMaternityDiagnosisDto,
   type AmrsMaternityDiagnosisResponse,
@@ -36,12 +37,15 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import useSWR, { mutate } from 'swr';
 
-export async function fetchFacilityBills(facilityBillsDto: FacilityBillsDto): Promise<FacilityBill[]> {
+export async function fetchFacilityBills(facilityBillsDto: FacilityBillsDto): Promise<PatientBill[]> {
   const etlBaseUrl = await getEtlBaseUrl();
-  const facilityBillsUrl = `${etlBaseUrl}/facility/bills?locationUuid=${facilityBillsDto.locationUuid}&billingDate=${facilityBillsDto.billingDate}`;
+  const facilityBillsUrl = `${etlBaseUrl}/facility/facility-bills?locationUuid=${facilityBillsDto.locationUuid}&billingDate=${facilityBillsDto.billingDate}`;
   const response = await openmrsFetch(facilityBillsUrl);
-  const data = (await response.json()) as FacilityBillsResponse;
-  return data.results ?? [];
+  const data = await response.json();
+  return (data.results ?? []).map((bill: any) => ({
+    ...bill,
+    bill_items: typeof bill.bill_items === 'string' ? JSON.parse(bill.bill_items) : bill.bill_items,
+  }));
 }
 
 export async function fetchPatientFacilityBillDetails(
@@ -643,7 +647,7 @@ export const useFacilityPreauths = (locationUuid: string, billingDate: string) =
 
   const url = `${etlBaseUrl}/facility/pre-auth-bills?billingDate=${billingDate}&locationUuid=${locationUuid}`;
   const { data, error, isLoading, isValidating } = useSWR<{
-    data: FacilityPreauthsResponse
+    data: FacilityPreauthsResponse;
   }>(url, openmrsFetch);
 
   return {
@@ -652,4 +656,22 @@ export const useFacilityPreauths = (locationUuid: string, billingDate: string) =
     isLoading,
     isValidating,
   };
-}
+};
+
+export const getActiveCashVisits = async (locationUuid: string, billDate: string) => {
+  const etlBaseUrl = await getEtlBaseUrl();
+  const url = `${etlBaseUrl}/facility/active-cash-visits?locationUuid=${locationUuid}&billingDate=${billDate}`;
+
+  const response = await openmrsFetch(url);
+
+  return response.json();
+};
+
+export const getFacilityBillLineItems = async (locationUuid: string, billDate: string) => {
+  const etlBaseUrl = await getEtlBaseUrl();
+  const url = `${etlBaseUrl}/facility/bill-line-item?locationUuid=${locationUuid}&billingDate=${billDate}`;
+
+  const response = await openmrsFetch(url);
+
+  return response.json();
+};

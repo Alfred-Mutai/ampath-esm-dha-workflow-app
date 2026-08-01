@@ -28,6 +28,7 @@ import {
 import TableToolbar from '../shared/table-toolbar.component';
 import EmptyState from '../shared/empty-state.component';
 import { usePendingClearanceVisits } from '../active-visits/active-visits.resource';
+import CashPatients from './cash.component';
 
 const money = (n: number) => (n > 0 ? `KES ${n.toLocaleString('en-KE')}` : 'Waived');
 
@@ -75,7 +76,9 @@ const ClearanceTable: React.FC<{
     .filter((r) => status !== 'AWAITING_PAYMENT' || !/sha|shif/i.test(r.payer));
   if (dateMatched.length === 0) {
     return (
-      <EmptyState message={status === 'AWAITING_PAYMENT' ? 'No patients awaiting clearance.' : 'No cleared patients yet.'} />
+      <EmptyState
+        message={status === 'AWAITING_PAYMENT' ? 'No patients awaiting clearance.' : 'No cleared patients yet.'}
+      />
     );
   }
 
@@ -97,43 +100,43 @@ const ClearanceTable: React.FC<{
       ) : (
         <div className={styles.tableCard}>
           <Table size="sm" aria-label="clearance" useZebraStyles>
-        <TableHead>
-          <TableRow>
-            <TableHeader>Patient</TableHeader>
-            <TableHeader>Queue</TableHeader>
-            <TableHeader>Visit type</TableHeader>
-            <TableHeader>Payer</TableHeader>
-            <TableHeader className={styles.numCol}>Consultation fee</TableHeader>
-            <TableHeader>{status === 'AWAITING_PAYMENT' ? 'Action' : 'Status'}</TableHeader>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {filtered.map((r) => (
-            <TableRow key={r.id}>
-              <TableCell>{r.patientName}</TableCell>
-              <TableCell>{r.queue}</TableCell>
-              <TableCell>{r.visitType}</TableCell>
-              <TableCell>{r.payer}</TableCell>
-              <TableCell className={styles.numCol}>{money(r.amount)}</TableCell>
-              <TableCell>
-                {status === 'AWAITING_PAYMENT' ? (
-                  <Button
-                    kind="primary"
-                    size="sm"
-                    renderIcon={CheckmarkOutline}
-                    disabled={clearingId === r.id}
-                    onClick={() => clear(r.id)}
-                  >
-                    {clearingId === r.id ? 'Clearing…' : 'Mark paid & release'}
-                  </Button>
-                ) : (
-                  <Tag size="sm" type="green">
-                    Cleared · at queue
-                  </Tag>
-                )}
-              </TableCell>
-            </TableRow>
-          ))}
+            <TableHead>
+              <TableRow>
+                <TableHeader>Patient</TableHeader>
+                <TableHeader>Queue</TableHeader>
+                <TableHeader>Visit type</TableHeader>
+                <TableHeader>Payer</TableHeader>
+                <TableHeader className={styles.numCol}>Consultation fee</TableHeader>
+                <TableHeader>{status === 'AWAITING_PAYMENT' ? 'Action' : 'Status'}</TableHeader>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filtered.map((r) => (
+                <TableRow key={r.id}>
+                  <TableCell>{r.patientName}</TableCell>
+                  <TableCell>{r.queue}</TableCell>
+                  <TableCell>{r.visitType}</TableCell>
+                  <TableCell>{r.payer}</TableCell>
+                  <TableCell className={styles.numCol}>{money(r.amount)}</TableCell>
+                  <TableCell>
+                    {status === 'AWAITING_PAYMENT' ? (
+                      <Button
+                        kind="primary"
+                        size="sm"
+                        renderIcon={CheckmarkOutline}
+                        disabled={clearingId === r.id}
+                        onClick={() => clear(r.id)}
+                      >
+                        {clearingId === r.id ? 'Clearing…' : 'Mark paid & release'}
+                      </Button>
+                    ) : (
+                      <Tag size="sm" type="green">
+                        Cleared · at queue
+                      </Tag>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
         </div>
@@ -212,7 +215,8 @@ const Clearance: React.FC<{
         <TabPanels>
           {pendingTab ? <TabPanel>{pendingTab}</TabPanel> : null}
           <TabPanel>
-            <ClearanceTable status="AWAITING_PAYMENT" locationUuid={locationUuid} reloadKey={reloadKey} onCleared={refresh} date={date} />
+            <CashPatients billingDate={date} />
+            {/* <ClearanceTable status="AWAITING_PAYMENT" locationUuid={locationUuid} reloadKey={reloadKey} onCleared={refresh} date={date} /> */}
           </TabPanel>
         </TabPanels>
       </Tabs>
