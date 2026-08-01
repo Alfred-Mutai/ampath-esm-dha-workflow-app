@@ -337,6 +337,15 @@
       "canHide": true,
       "canMaximize": true,
       "width": "wider"
+    },
+      {
+      "name": "pay-cash-workspace",
+      "title": "Pay Cash",
+      "component": "payCashWorkspace",
+      "type": "workspace",
+      "canHide": true,
+      "canMaximize": true,
+      "width": "narrow"
     }
   ],
   "workspaces2": [

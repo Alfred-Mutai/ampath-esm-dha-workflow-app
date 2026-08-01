@@ -432,6 +432,8 @@ export type ActiveCashVisit = {
   value_reference: string | null;
   visit_type: string;
   visit_type_uuid: string;
+  line_item_date: string | null;
+  pending_line_items: PendingLineItem[];
 };
 
 export interface BillLineItem {
@@ -459,4 +461,26 @@ export interface PatientBill {
   location_id: string;
   consent_token: string;
   visit_type: string;
+}
+
+export interface PendingLineItem {
+  bill_id: number;
+  price: number;
+  price_name: string;
+  status: string;
+  billable_service: string;
+  quantity: number;
+}
+
+export interface PendingBillLineItems {
+  patient_uuid: string;
+  patient_name: string;
+  identifiers: string;
+  visit_uuid: string;
+  visit_type_uuid: string;
+  visit_type: string;
+  payment_method: string;
+  cash_point: string;
+  line_item_date: string;
+  pending_line_items: PendingLineItem[];
 }

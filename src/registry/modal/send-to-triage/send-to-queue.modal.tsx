@@ -451,7 +451,7 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({
           priceName: selectedBillableService.name,
           priceUuid: selectedBillableService.uuid,
           lineItemOrder: 0,
-          status: 'PENDING',
+          status: isCash ? 'PAID' : 'PENDING',
         },
       ],
       cashPoint: selectedCashPoint.uuid,
@@ -627,23 +627,16 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({
   };
 
   function onClientConsent({ otp, authGuid }: { otp?: string; authGuid?: string }) {
-    // eslint-disable-next-line no-console
-    console.log('AUTH GUID: ', authGuid);
     if (otp) {
       setOtp(otp);
       setOtpVerified(true);
     }
     if (authGuid) {
-      // eslint-disable-next-line no-console
-      console.log('AUTH GUID: ', authGuid);
       setAuthGuid(authGuid);
     }
   }
 
-  // eslint-disable-next-line no-console
-  console.log('PARENT PARENT: ', authGuid);
-
-  const isSha = hasSelectedPaymentMode('SHA') || addSHAClaimVisit;
+  const isSha = (hasSelectedPaymentMode('SHA') && !isCash) || addSHAClaimVisit;
   const patientName = patient?.name?.[0]?.text ?? '';
   const crNumber = patientIdentifiers?.crIdentifierId ?? '';
   const consentSatisfied = otpVerified || !!authGuid;

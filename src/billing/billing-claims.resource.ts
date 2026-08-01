@@ -23,6 +23,7 @@ import {
   type RemoveClaimLineDto,
   type SwitchInterventionDto,
   type PatientBill,
+  type PendingBillLineItems,
 } from './dashboard/v2/types';
 import { getHieBaseUrl } from '../claims/utils';
 import {
@@ -667,11 +668,20 @@ export const getActiveCashVisits = async (locationUuid: string, billDate: string
   return response.json();
 };
 
-export const getFacilityBillLineItems = async (locationUuid: string, billDate: string) => {
+export const getFacilityBillLineItems = async (
+  locationUuid: string,
+  billDate: string,
+): Promise<PendingBillLineItems[]> => {
   const etlBaseUrl = await getEtlBaseUrl();
   const url = `${etlBaseUrl}/facility/bill-line-item?locationUuid=${locationUuid}&billingDate=${billDate}`;
 
   const response = await openmrsFetch(url);
 
-  return response.json();
+  const data = await response.json();
+
+  return (data.results ?? []).map((row: any) => ({
+    ...row,
+    pending_line_items:
+      typeof row.pending_line_items === 'string' ? JSON.parse(row.pending_line_items) : row.pending_line_items,
+  }));
 };

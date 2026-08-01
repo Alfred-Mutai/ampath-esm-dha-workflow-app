@@ -135,7 +135,10 @@ export const patientAdmissionSummary = getAsyncLifecycle(
   () => import('./admissions/inpatient/inpatient-admissions.component'),
   options,
 );
-export const billingDashboardLink = getAsyncLifecycle(() => import('./billing/billing-dashboard-link.component'), options);
+export const billingDashboardLink = getAsyncLifecycle(
+  () => import('./billing/billing-dashboard-link.component'),
+  options,
+);
 
 export const billingDashboard = getAsyncLifecycle(
   () => import('./billing/dashboard/billingDashboard.component'),
@@ -193,5 +196,10 @@ export const switchInterventionWorkspace = getAsyncLifecycle(
 
 export const preauthFormWorkspace = getAsyncLifecycle(
   () => import('./billing/dashboard/v2/preauth/preauth.workspace'),
+  options,
+);
+
+export const payCashWorkspace = getAsyncLifecycle(
+  () => import('./billing/dashboard/v2/clearance/pay-cash.component'),
   options,
 );
