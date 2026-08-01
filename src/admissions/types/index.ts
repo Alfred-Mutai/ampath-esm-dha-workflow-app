@@ -218,3 +218,17 @@ export type FacilityAdmissionRequest = {
 export type FacilityAdmissionRequestsResp = {
   results: FacilityAdmissionRequest[];
 };
+
+export const SERVICE_POINT_NAME = 'ADMISSION';
+export const CLAIM_VISIT_START_SERVICE_POINTS_UUID = '49df844d-79c0-40fc-8ca9-c27d6391f647';
+export type LocationAttribute = {
+  uuid: string;
+  display: string;
+  value: string;
+  attributeType: {
+    uuid: string;
+    display: string;
+    resourceVersion: string;
+  };
+  resourceVersion: string;
+};

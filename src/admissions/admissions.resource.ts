@@ -133,3 +133,12 @@ export async function fetchFacilityEncounterBills(locationUuid: string, encounte
   const data = (await response.json()) as FacilityBillsEncounterResponse;
   return data.results ?? [];
 }
+
+export async function fetchLocationDetails(locationUuid: string){
+  const v = 'custom:(uuid,display,attributes:(uuid,display,value,attributeType:(uuid,display)))';
+  const locationDetailsUrl = `${restBaseUrl}/location/${locationUuid}?v=${v}`;
+  const resp = await openmrsFetch(locationDetailsUrl);
+  const data = await resp.json();
+  return data ?? [];
+
+}
