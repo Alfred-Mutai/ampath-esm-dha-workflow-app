@@ -108,7 +108,11 @@ export const bookings = getAsyncLifecycle(() => import('./bookings/bookings.comp
 
 export const mnchQueueDashboardLink = getAsyncLifecycle(() => import('./side-nav-menu/mnch-nav-links'), options);
 
+export const specializedClinicsDashboardLink = getAsyncLifecycle(() => import('./side-nav-menu/specialized-clinics-nav-links'), options);
+
 export const MNCHRoot = getAsyncLifecycle(() => import('./mnch/mnch-root'), options);
+
+export const SpecializedClinicsRoot = getAsyncLifecycle(() => import('./specialized-clinics/specialized-clinics-root'), options);
 
 export const serviceQueueAdmin = getAsyncLifecycle(
   () => import('./service-queues/admin/service-queue-admin-dashboard.component'),

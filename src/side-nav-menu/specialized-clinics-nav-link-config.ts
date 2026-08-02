@@ -1,0 +1,16 @@
+export const specializedClinicsNavLinksConfig = [
+  {
+    to: 'specialized-clinics',
+    title: 'Specialized Clinics',
+    children: [
+      {
+        to: 'dialysis',
+        title: 'Dialysis',
+      },
+      {
+        to: 'oncology',
+        title: 'Oncology',
+      },
+    ],
+  }
+];

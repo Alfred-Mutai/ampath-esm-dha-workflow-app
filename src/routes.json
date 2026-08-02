@@ -129,6 +129,26 @@
       ]
     },
     {
+      "name": "specialized-clinics-dashboard-link",
+      "component": "specializedClinicsDashboardLink",
+      "slot": "homepage-dashboard-slot",
+      "privileges": [
+      ],
+      "meta": {
+        "name": "specialized-clinics",
+        "slot": "specialized-clinics-dashboard-slot",
+        "title": "Specialized Clinics"
+      },
+      "online": true,
+      "offline": true
+    },
+     {
+      "component": "SpecializedClinicsRoot",
+      "name": "specialized-clinics",
+      "slot": "specialized-clinics-dashboard-slot",
+      "privileges": []
+    },
+    {
       "name": "pharmacy-dashboard-link",
       "component": "pharmacyDashboardLink",
       "slot": "homepage-dashboard-slot",
