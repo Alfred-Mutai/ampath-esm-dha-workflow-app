@@ -11,6 +11,14 @@ export const specializedClinicsNavLinksConfig = [
         to: 'oncology',
         title: 'Oncology',
       },
+      {
+        to: 'dental',
+        title: 'Dental',
+      },
+      {
+        to: 'diagnostic-and-imaging',
+        title: 'Diagnostic And Imaging',
+      },
     ],
   }
 ];
