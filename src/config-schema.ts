@@ -176,6 +176,10 @@ export const configSchema = {
   subBenefitCodesWithHiddenClaimWidget: {
     _type: Type.String,
     _default: ["SHA-08-SC-02"]
+  },
+  startClaimVisitLocationAttributeUuid: {
+     _type: Type.String,
+    _default: "49df844d-79c0-40fc-8ca9-c27d6391f647"
   }
 };
 
@@ -240,6 +244,7 @@ export interface ConfigObject {
   shaPaymentModeUuid: string;
   cashPaymentModeUuid: string;
   subBenefitCodesWithHiddenClaimWidget: Array<string>;
+  startClaimVisitLocationAttributeUuid: string;
 }
 
 const queueEntryActions = ['move', 'call', 'edit', 'transition', 'signOff', 'remove', 'delete', 'undo'] as const;

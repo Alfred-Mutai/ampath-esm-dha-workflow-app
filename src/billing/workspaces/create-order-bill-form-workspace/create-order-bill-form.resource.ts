@@ -109,3 +109,22 @@ export const usePatientIdentifiers = (patientUuid: string) => {
 
     return { isLoading, error, identifiers: data?.data?.identifiers };
 };
+
+export const useLocationAttributes = () => {
+    const { sessionLocation } = useSession();
+    const locationUuid = sessionLocation?.uuid;
+    const customRepresentation = `custom:(attributes)`;
+    const url = `/ws/rest/v1/location/${locationUuid}?v=${customRepresentation}`;
+    const { data, isLoading, error } = useSWR<{
+        data: {
+            attributes: Array<{
+                attributeType: {
+                    uuid: string
+                },
+                value: string
+            }>
+        }
+    }>(url, openmrsFetch);
+
+    return { isLoadingLocationAttributes: isLoading, error, locationAttributes: data?.data?.attributes };
+};
