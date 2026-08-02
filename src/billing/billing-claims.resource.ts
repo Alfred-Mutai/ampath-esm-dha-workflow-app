@@ -696,3 +696,13 @@ export const updateBilllineItem = async (billLineItemId: string): Promise<any> =
 
   return data.results;
 };
+
+export async function fetchPatientEncounterDiagnosis(
+  amrsVisitDiagnosisDto: AmrsVisitDiagnosisDto,
+): Promise<AmrsVisitDiagnosis[]> {
+  const etlBaseUrl = await getEtlBaseUrl();
+  const patientDiagnosisUrl = `${etlBaseUrl}/patient/encounter-diagnosis?visitDate=${amrsVisitDiagnosisDto.visitDate}&patientUuid=${amrsVisitDiagnosisDto.patientUuid}&locationUuid=${amrsVisitDiagnosisDto.locationUuid}`;
+  const response = await openmrsFetch(patientDiagnosisUrl);
+  const data = (await response.json()) as AmrsVisitDiagnosisResponse;
+  return data.results ?? [];
+}

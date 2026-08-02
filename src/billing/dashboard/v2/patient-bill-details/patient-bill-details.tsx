@@ -10,6 +10,7 @@ import {
   fetchMaternityDiagnosis,
   fetchPatientBillPayments,
   fetchPatientDiagnosis,
+  fetchPatientEncounterDiagnosis,
   fetchPatientFacilityBillDetails,
   useInvalidateProviderClaimPreview,
   useProviderClaimPreview,
@@ -22,7 +23,7 @@ import PatientClaimDetails from './claim-details/patient-claim-details.component
 import ClaimDetailsSkeleton from './claim-details/claim-details-skeleton.component';
 import EmptyState from '../shared/empty-state.component';
 import ScrollToTop from '../shared/scroll-to-top.component';
-import { type AmrsVisitDiagnosisDto, type AmrsVisitDiagnosis, AmrsMaternityDiagnosisDto } from '../../../types';
+import { type AmrsVisitDiagnosisDto, type AmrsVisitDiagnosis, type AmrsMaternityDiagnosisDto } from '../../../types';
 interface patientBillDetailsProps {
   patientUuid: string;
   locationUuid: string;
@@ -43,16 +44,18 @@ const PatientBillDetails: React.FC<patientBillDetailsProps> = ({ patientUuid, lo
   // piece of state meant every reload stacked another copy onto the previous one.
   const [visitDiagnosis, setVisitDiagnosis] = useState<AmrsVisitDiagnosis[]>([]);
   const [maternityDiagnosis, setMaternityDiagnosis] = useState<AmrsVisitDiagnosis[]>([]);
+  const [encounterDiagnosis, setEncounterDiagnosis] = useState<AmrsVisitDiagnosis[]>([]);
   const patientAmrsVisitDiagnosis = useMemo(
-    () => [...visitDiagnosis, ...maternityDiagnosis],
-    [visitDiagnosis, maternityDiagnosis],
+    () => [...visitDiagnosis, ...maternityDiagnosis,...encounterDiagnosis],
+    [visitDiagnosis, maternityDiagnosis, encounterDiagnosis],
   );
   // Both fetches feed the one diagnosis section, so it stays under the skeleton until
   // both have landed. Tracking only the first let the section render, then pop a
   // maternity card in underneath it a moment later.
   const [visitDiagnosisLoading, setVisitDiagnosisLoading] = useState<boolean>(true);
   const [maternityDiagnosisLoading, setMaternityDiagnosisLoading] = useState<boolean>(true);
-  const diagnosisLoading = visitDiagnosisLoading || maternityDiagnosisLoading;
+  const [encounterDiagnosisLoading, setEncounterDiagnosisLoading] = useState<boolean>(true);
+  const diagnosisLoading = visitDiagnosisLoading || maternityDiagnosisLoading || encounterDiagnosisLoading;
   // Claim load state, surfaced on the Claim Details header. Shares the SWR request the
   // claim section itself uses, so it's not a second fetch.
   const { claimVisit, isLoading: claimLoading, isValidating: claimValidating } = useProviderClaimPreview(
@@ -85,6 +88,7 @@ const PatientBillDetails: React.FC<patientBillDetailsProps> = ({ patientUuid, lo
       getPatientPayments();
       getPatientAmrsVisitDiagnosis();
       getPatientAmrsMaternityDiagnosis();
+      getPatientAmrsEncounterDiagnosis();
     }
   }, [locationUuid, patientUuid, billingDate, refreshToken]);
   async function getPatientBillDetails() {
@@ -188,6 +192,25 @@ const PatientBillDetails: React.FC<patientBillDetailsProps> = ({ patientUuid, lo
       });
     } finally {
       setMaternityDiagnosisLoading(false);
+    }
+  }
+  async function getPatientAmrsEncounterDiagnosis() {
+    setEncounterDiagnosisLoading(true);
+    const amrsMaternityDiagnosisPayload =  getPatientAmrsVisitDiagnosisPayload();
+    try {
+      const resp: any = await fetchPatientEncounterDiagnosis(amrsMaternityDiagnosisPayload);
+      const results = (resp ?? [])
+        .filter((r) => r?.uuid != null)
+        .map((v) => ({ ...v }));
+      setEncounterDiagnosis(results);
+    } catch (error) {
+      showSnackbar({
+        title: 'Error fetching patient encounter diagnosis',
+        kind: 'error',
+        subtitle: 'An error occurred while fetching the patient encounter diagnosis',
+      });
+    } finally {
+      setEncounterDiagnosisLoading(false);
     }
   }
   function getPatientAmrsVisitDiagnosisPayload(): AmrsVisitDiagnosisDto {
