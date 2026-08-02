@@ -19,6 +19,10 @@ export const specializedClinicsNavLinksConfig = [
         to: 'diagnostic-and-imaging',
         title: 'Diagnostic And Imaging',
       },
+      {
+        to: 'ophthalmology',
+        title: 'Ophthalmology',
+      },
     ],
   }
 ];
