@@ -22,12 +22,12 @@ import dayjs from 'dayjs';
 import {
   createPreauth,
   fetchShaInterventionByCode,
-  pollPreauthUntilFinalised,
+  pollPreauthUntilSubmitted,
   preauthAttachmentFieldName,
   type PreauthFormPayload,
 } from '../../../../claims/claims.resource';
-import { cancelAllPendingAuthorizations, sendClaimsOTP } from '../../../../registry/hie.resource';
-import { fetchPatientDiagnosis } from '../../../billing-claims.resource';
+import { cancelAllPendingAuthorizations, sendClaimsOTP, authorizeClaimsWithOtp } from '../../../../registry/hie.resource';
+import { addClaimDiagnosis, fetchPatientDiagnosis } from '../../../billing-claims.resource';
 import { ensureInterventionOnVisit } from '../../../../claims/interventions.resource';
 import { type AmrsVisitDiagnosis } from '../../../types';
 import { type PatientFacilityBillDetails } from '../types';
@@ -55,10 +55,13 @@ interface PreauthWorkspaceProps extends DefaultWorkspaceProps {
   consentToken: string;
   patientUuid?: string;
   locationUuid: string;
+  /** Elective (pre-visit) mode — uses authorize token + expected_service_start_date */
+  isElective?: boolean;
   billItem: Partial<PatientFacilityBillDetails> & {
     intervention_code: string;
     patient_uuid?: string;
     cr_no?: string;
+    service_type?: string;
   };
   intervention: PreauthInterventionProps;
   onSuccess?: (result: { consentToken: string; preauthCode?: string; status: string }) => void;
@@ -72,33 +75,35 @@ const TREATMENT = ['DAY_WARD', 'RECLINING_CHAIR', 'SIDE_ROOM'];
 const LENS = ['FRAMES_LENSES', 'FRAMED', 'CONTACT'];
 const NEW_OR_REPL = ['NEW', 'REPLACEMENT'];
 
-/** Specialty sample defaults (HIE Postman curls) so special preauths can be submitted. */
+/** Empty specialty fields — clinicians must enter real clinical data. */
 const SPECIALTY_DEFAULTS = {
-  chiefComplaint: 'Chief complaint',
-  vitalSigns: '110 BP',
-  hpi: 'None',
-  physicalExam: 'Looks pale and weak',
-  investigations: 'None',
+  chiefComplaint: '',
+  vitalSigns: '',
+  hpi: '',
+  physicalExam: '',
+  investigations: '',
   anaesthesia: 'GENERAL',
-  sessionsRequired: '7',
-  costPerSession: '5000',
+  sessionsRequired: '',
+  costPerSession: '',
   frequency: 'ONCE_A_MONTH',
-  clinicalIndications: 'Clinical indications',
-  isCoInsured: true,
-  necessity: 'To help patient see clearly',
+  clinicalIndications: '',
+  isCoInsured: false,
+  necessity: '',
   lensPrescription: 'FRAMES_LENSES',
-  lensAmount: '10000',
-  eyeExamAmount: '2000',
-  frameAmount: '10000',
-  newOrReplacement: 'REPLACEMENT',
+  lensAmount: '',
+  eyeExamAmount: '',
+  frameAmount: '',
+  newOrReplacement: 'NEW',
   carcinomaStaging: 'STAGE_1',
-  comorbidity: 'The comorbidity',
+  comorbidity: '',
   metastases: 'LUNG',
   treatmentSetting: 'DAY_WARD',
-  oncologySessions: '20',
-  oncologyCostPerSession: '2500',
-  imagingIndications: 'Presence of head pains',
-  renalIndications: 'Pain in lower abdomen',
+  oncologySessions: '',
+  oncologyCostPerSession: '',
+  imagingIndications: '',
+  renalIndications: '',
+  progressReport: '',
+  coInsuranceDetails: '',
 };
 
 const DOC_TYPE_OPTIONS = [
@@ -150,9 +155,10 @@ const normalizeRegulationBody = (value?: string | null): RegulationBody => {
 const PreauthForm: React.FC<PreauthWorkspaceProps> = ({
   closeWorkspace,
   promptBeforeClosing,
-  consentToken,
+  consentToken: consentTokenProp,
   patientUuid,
   locationUuid,
+  isElective = false,
   billItem,
   intervention,
   onSuccess,
@@ -163,10 +169,12 @@ const PreauthForm: React.FC<PreauthWorkspaceProps> = ({
   const [submitting, setSubmitting] = useState(false);
   const [polling, setPolling] = useState(false);
   const [consentMethod, setConsentMethod] = useState<'biometric' | 'otp'>('otp');
-  const [consentDone, setConsentDone] = useState(false);
+  const [consentDone, setConsentDone] = useState(Boolean(consentTokenProp) && !isElective);
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState('');
   const [sendingOtp, setSendingOtp] = useState(false);
+  const [activeConsentToken, setActiveConsentToken] = useState(consentTokenProp || '');
+  const [expectedServiceStartDate, setExpectedServiceStartDate] = useState(toIsoLocal());
   const abortRef = useRef<AbortController | null>(null);
 
   // Specialty from launch props + bill item; SHA coverage may enrich after mount
@@ -240,6 +248,10 @@ const PreauthForm: React.FC<PreauthWorkspaceProps> = ({
   const [comorbidity, setComorbidity] = useState(SPECIALTY_DEFAULTS.comorbidity);
   const [metastases, setMetastases] = useState(SPECIALTY_DEFAULTS.metastases);
   const [treatmentSetting, setTreatmentSetting] = useState(SPECIALTY_DEFAULTS.treatmentSetting);
+  const [progressReport, setProgressReport] = useState(SPECIALTY_DEFAULTS.progressReport);
+  const [relatedToEmployment, setRelatedToEmployment] = useState(false);
+  const [relatedToAccident, setRelatedToAccident] = useState(false);
+  const [coInsuranceDetails, setCoInsuranceDetails] = useState(SPECIALTY_DEFAULTS.coInsuranceDetails);
 
   const patientName = billItem.patient_name ?? '';
   const crNo = billItem.cr_no ?? '';
@@ -274,7 +286,8 @@ const PreauthForm: React.FC<PreauthWorkspaceProps> = ({
   });
 
   useEffect(() => {
-    if (!consentToken) {
+    // Normal preauth requires an existing claim token. Elective obtains one via authorize.
+    if (!isElective && !consentTokenProp) {
       showSnackbar({
         kind: 'error',
         title: t('missingConsentToken', 'Missing claim token'),
@@ -282,7 +295,9 @@ const PreauthForm: React.FC<PreauthWorkspaceProps> = ({
       });
       closeWorkspace?.();
     }
-  }, [consentToken, closeWorkspace, t]);
+  }, [consentTokenProp, isElective, closeWorkspace, t]);
+
+  const consentToken = activeConsentToken;
 
   // Enrich specialty flags from SHA interventions coverage when launch props lack them.
   useEffect(() => {
@@ -513,9 +528,37 @@ const PreauthForm: React.FC<PreauthWorkspaceProps> = ({
     }
   };
 
-  const handleVerifyOtp = () => {
+  const handleVerifyOtp = async () => {
     if (!otp || otp.length < 4) {
       showSnackbar({ kind: 'error', title: 'Enter OTP' });
+      return;
+    }
+    if (isElective) {
+      if (!crNo) {
+        showSnackbar({ kind: 'error', title: 'Missing CR number', subtitle: 'Cannot authorize without patient CR id.' });
+        return;
+      }
+      setSendingOtp(true);
+      try {
+        const auth = await authorizeClaimsWithOtp({
+          patientId: crNo,
+          otp: otp.trim(),
+          interventions: [intervention.code],
+          serviceType: (billItem.service_type as string) || 'OUTPATIENT',
+          locationUuid,
+        });
+        const token = String(auth?.token ?? auth?.consent_token ?? '').trim();
+        if (!token) {
+          throw new Error('Authorize succeeded but no token was returned.');
+        }
+        setActiveConsentToken(token);
+        setConsentDone(true);
+        showSnackbar({ kind: 'success', title: 'Pre-visit authorization complete' });
+      } catch (e: any) {
+        showSnackbar({ kind: 'error', title: 'Authorize failed', subtitle: String(e?.message ?? e) });
+      } finally {
+        setSendingOtp(false);
+      }
       return;
     }
     setConsentDone(true);
@@ -523,6 +566,14 @@ const PreauthForm: React.FC<PreauthWorkspaceProps> = ({
   };
 
   const handleConfirmBiometric = () => {
+    if (isElective && !activeConsentToken) {
+      showSnackbar({
+        kind: 'info',
+        title: 'Use OTP for elective',
+        subtitle: 'Elective pre-visit authorize currently uses OTP. Biometrics authorize is available via the Claims widget.',
+      });
+      return;
+    }
     setConsentDone(true);
     showSnackbar({ kind: 'success', title: 'Biometric consent recorded' });
   };
@@ -592,6 +643,12 @@ const PreauthForm: React.FC<PreauthWorkspaceProps> = ({
       payload.investigation_report_details = investigations.trim();
       payload.type_of_anaesthesia = anaesthesia;
       payload.surgery_date = surgeryDate;
+      payload.is_condition_related_to_employment = relatedToEmployment;
+      payload.is_condition_related_to_auto_or_other_accident = relatedToAccident;
+      payload.is_co_insured = isCoInsured;
+      if (isCoInsured && coInsuranceDetails.trim()) {
+        payload.co_insurance_details = coInsuranceDetails.trim();
+      }
     }
 
     if (specialty.requiresRenalPreauth) {
@@ -610,6 +667,7 @@ const PreauthForm: React.FC<PreauthWorkspaceProps> = ({
       payload.eye_examination_amount = eyeExamAmount;
       payload.frame_amount = frameAmount;
       payload.new_or_replacement = newOrReplacement;
+      payload.clinical_indications = clinicalIndications.trim();
     }
 
     if (specialty.requiresOncologyPreauth) {
@@ -621,17 +679,34 @@ const PreauthForm: React.FC<PreauthWorkspaceProps> = ({
       payload.number_of_sessions_required = sessionsRequired;
       payload.cost_per_session = costPerSession;
       payload.is_co_insured = isCoInsured;
+      payload.start_date = startDate;
+      if (progressReport.trim()) {
+        payload.progress_report = progressReport.trim();
+      }
     }
 
     if (specialty.requiresRadiologyPreauth) {
       payload.clinical_indications = clinicalIndications.trim();
     }
 
+    if (isElective) {
+      payload.expected_service_start_date = expectedServiceStartDate;
+    }
+
     return payload;
   };
 
   const handleSubmit = async () => {
-    if (!consentToken) return;
+    if (!consentToken) {
+      showSnackbar({
+        kind: 'error',
+        title: 'Missing authorization',
+        subtitle: isElective
+          ? 'Complete pre-visit OTP authorize before submitting the elective preauth.'
+          : 'A claim token is required.',
+      });
+      return;
+    }
     if (!consentDone) {
       showSnackbar({ kind: 'error', title: 'Consent required', subtitle: 'Complete OTP or biometric consent first.' });
       return;
@@ -642,6 +717,7 @@ const PreauthForm: React.FC<PreauthWorkspaceProps> = ({
       !doctorId.trim() && 'Doctor National ID',
       !providerEmail.trim() && 'Provider notification email',
       !resolvedUnitPrice && 'Unit price',
+      isElective && !expectedServiceStartDate && 'Expected service start date',
     ].filter(Boolean);
     if (missingRequired.length) {
       showSnackbar({
@@ -663,7 +739,9 @@ const PreauthForm: React.FC<PreauthWorkspaceProps> = ({
     setSubmitting(true);
     abortRef.current = new AbortController();
     try {
-      await ensureInterventionOnVisit(consentToken, intervention.code, locationUuid);
+      if (!isElective) {
+        await ensureInterventionOnVisit(consentToken, intervention.code, locationUuid);
+      }
       const payload = buildPayload();
       await createPreauth(
         payload,
@@ -679,18 +757,52 @@ const PreauthForm: React.FC<PreauthWorkspaceProps> = ({
       );
 
       setPolling(true);
-      const { status, preauthCode } = await pollPreauthUntilFinalised(consentToken, locationUuid, {
-        signal: abortRef.current.signal,
-      });
+      const polled = await pollPreauthUntilSubmitted(
+        consentToken,
+        locationUuid,
+        intervention.code,
+        { signal: abortRef.current.signal },
+      );
+      const status = polled.status;
+      const preauthCode = polled.preauthCode;
 
       if (preauthCode) {
         storePreauthCode(consentToken, intervention.code, preauthCode);
       }
 
+      // Sync selected ICD onto the claim (normal / post-claim only).
+      if (!isElective) {
+        try {
+          const dx = selectedDx;
+          await addClaimDiagnosis({
+            consentToken,
+            interventionCode: intervention.code,
+            icdCode: icdCode.trim(),
+            locationUuid,
+            practitionerIdentificationNumber: (dx?.practioner_nat_id || doctorId || '').trim(),
+            practitionerIdentificationType: DEFAULT_DOCTOR_ID_TYPE,
+            practitionerRegulationBody: normalizeRegulationBody(dx?.practitioner_body || regulationBody),
+          });
+        } catch {
+          // Preauth succeeded; claim diagnosis can still be added from bill details.
+        }
+      }
+
+      const awaitingDoctor = status === 'PENDING_DOCTOR_APPROVAL';
       showSnackbar({
         kind: 'success',
-        title: 'Preauth finalised',
-        subtitle: preauthCode ? `Code: ${preauthCode}` : `Status: ${status}`,
+        title: awaitingDoctor
+          ? isElective
+            ? 'Elective preauth submitted'
+            : 'Preauth submitted'
+          : status === 'FINALISED' || status === 'FINALIZED'
+            ? 'Preauth finalised'
+            : 'Preauth submitted',
+        subtitle: awaitingDoctor
+          ? 'Awaiting doctor approval. Track progress on the Preauthorizations Status tab.'
+          : preauthCode
+            ? `Code: ${preauthCode}`
+            : `Status: ${status}`,
       });
       onSuccess?.({ consentToken, preauthCode, status });
       setDirty(false);
@@ -707,7 +819,7 @@ const PreauthForm: React.FC<PreauthWorkspaceProps> = ({
     }
   };
 
-  if (!consentToken) {
+  if (!isElective && !consentToken) {
     return null;
   }
 
@@ -721,17 +833,44 @@ const PreauthForm: React.FC<PreauthWorkspaceProps> = ({
               {patientName} · {intervention.code} · {billableService}
             </p>
           </div>
-          <Tag type="blue" size="md">
-            {specialtyLabel} preauth
+          <Tag type={isElective ? 'magenta' : 'blue'} size="md">
+            {isElective ? 'Elective' : specialtyLabel} preauth
           </Tag>
         </div>
+
+        {isElective ? (
+          <section className={styles.section}>
+            <h5>Expected service start</h5>
+            <DatePicker
+              datePickerType="single"
+              dateFormat="Y-m-d"
+              value={expectedServiceStartDate ? dayjs(expectedServiceStartDate).toDate() : undefined}
+              onChange={(dates: Date[]) => {
+                markDirty();
+                if (dates?.[0]) setExpectedServiceStartDate(dateToServiceIso(dates[0]));
+              }}
+            >
+              <DatePickerInput
+                id="expected-service-start"
+                labelText="Expected service start date"
+                placeholder="yyyy-mm-dd"
+              />
+            </DatePicker>
+          </section>
+        ) : null}
 
         <InlineNotification
           kind="info"
           lowContrast
           hideCloseButton
-          title="Claim token"
-          subtitle={`${consentToken.slice(0, 8)}…${consentToken.slice(-4)}`}
+          title={isElective ? 'Pre-visit authorization token' : 'Claim token'}
+          subtitle={
+            consentToken
+              ? `${consentToken.slice(0, 8)}…${consentToken.slice(-4)}`
+              : isElective
+                ? 'Complete OTP authorize below to obtain a pre-visit token.'
+                : '—'
+          }
         />
 
         <section className={styles.section}>
@@ -1011,6 +1150,46 @@ const PreauthForm: React.FC<PreauthWorkspaceProps> = ({
                 <DatePickerInput id="surgery-date" labelText="Surgery date" placeholder="yyyy-mm-dd" />
               </DatePicker>
             </div>
+            <div className={styles.row}>
+              <Checkbox
+                id="related-employment"
+                labelText="Related to employment"
+                checked={relatedToEmployment}
+                onChange={(_, { checked }) => {
+                  markDirty();
+                  setRelatedToEmployment(checked);
+                }}
+              />
+              <Checkbox
+                id="related-accident"
+                labelText="Related to auto/other accident"
+                checked={relatedToAccident}
+                onChange={(_, { checked }) => {
+                  markDirty();
+                  setRelatedToAccident(checked);
+                }}
+              />
+              <Checkbox
+                id="surgical-co-insured"
+                labelText="Is co-insured"
+                checked={isCoInsured}
+                onChange={(_, { checked }) => {
+                  markDirty();
+                  setIsCoInsured(checked);
+                }}
+              />
+            </div>
+            {isCoInsured ? (
+              <TextArea
+                id="co-insurance-details"
+                labelText="Co-insurance details"
+                value={coInsuranceDetails}
+                onChange={(e) => {
+                  markDirty();
+                  setCoInsuranceDetails(e.target.value);
+                }}
+              />
+            ) : null}
           </section>
         ) : null}
 
@@ -1085,6 +1264,15 @@ const PreauthForm: React.FC<PreauthWorkspaceProps> = ({
         {specialty.requiresOpticalPreauth ? (
           <section className={styles.section}>
             <h5>Optical preauth</h5>
+            <TextArea
+              id="optical-indications"
+              labelText="Clinical indications"
+              value={clinicalIndications}
+              onChange={(e) => {
+                markDirty();
+                setClinicalIndications(e.target.value);
+              }}
+            />
             <TextArea
               id="necessity"
               labelText="Necessity of service"
@@ -1197,6 +1385,28 @@ const PreauthForm: React.FC<PreauthWorkspaceProps> = ({
                 setComorbidity(e.target.value);
               }}
             />
+            <TextArea
+              id="progress-report"
+              labelText="Progress report"
+              value={progressReport}
+              onChange={(e) => {
+                markDirty();
+                setProgressReport(e.target.value);
+              }}
+            />
+            <div className={styles.row}>
+              <DatePicker
+                datePickerType="single"
+                dateFormat="Y-m-d"
+                value={startDate ? dayjs(startDate).toDate() : undefined}
+                onChange={(dates: Date[]) => {
+                  markDirty();
+                  if (dates?.[0]) setStartDate(dateToServiceIso(dates[0]));
+                }}
+              >
+                <DatePickerInput id="oncology-start" labelText="Start date" placeholder="yyyy-mm-dd" />
+              </DatePicker>
+            </div>
             <div className={styles.row}>
               <TextInput
                 id="onc-sessions"
@@ -1260,7 +1470,7 @@ const PreauthForm: React.FC<PreauthWorkspaceProps> = ({
         </Button>
         <Button kind="primary" onClick={handleSubmit} disabled={!consentDone || submitting || polling}>
           {polling ? (
-            <InlineLoading description="Awaiting FINALISED…" />
+            <InlineLoading description="Confirming submission…" />
           ) : submitting ? (
             <InlineLoading description="Submitting…" />
           ) : (

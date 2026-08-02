@@ -853,13 +853,8 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
 
         if (claimResult && intervention) {
           const interventionResult = intervention;
-          const electivePreauth =
-            interventionResult.requiresOncologyPreauth ||
-            interventionResult.requiresOpticalPreauth ||
-            interventionResult.requiresRadiologyPreauth ||
-            interventionResult.requiresRenalPreauth ||
-            interventionResult.requiresSurgicalPreauth;
-          const requiresPreauth = interventionResult.needsPreauth;
+          const requiresPreauth = Boolean(interventionResult.needsPreauth);
+          const isElective = Boolean(interventionResult.needsManualPreauthApproval);
           const requiredPreauthDocumentTypes = interventionResult.requiredPreauthDocumentTypes;
           const applicableDocumentTypes = interventionResult.applicableDocumentTypes;
 
@@ -868,8 +863,8 @@ const SendToTriageModal: React.FC<SendToTriageModalProps> = ({
             consent_token: claimResult.authorization_code,
             service_type: getServiceType(interventionResult, visitType),
             requires_preauth: requiresPreauth,
-            normal_preauth: requiresPreauth && !electivePreauth,
-            elective_preauth: interventionResult.needsManualPreauthApproval && electivePreauth,
+            normal_preauth: requiresPreauth && !isElective,
+            elective_preauth: isElective,
           };
 
           if (applicableDocumentTypes && applicableDocumentTypes.length) {

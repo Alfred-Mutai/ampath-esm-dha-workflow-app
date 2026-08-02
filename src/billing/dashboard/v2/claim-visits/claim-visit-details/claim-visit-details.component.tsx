@@ -11,7 +11,7 @@ import { Button, ButtonSkeleton, InlineLoading, Tag, Tooltip } from '@carbon/rea
 import CloseClaimModal from '../modal/close-claim/close-claim.modal';
 import SubmitClaimModal from '../modal/submit-claim/submit-claim.modal';
 import { endVisit, useInvalidateProviderClaimPreview } from '../../../../billing-claims.resource';
-import { invalidatePreauthPreview } from '../../../../../claims/claims.resource';
+import { invalidatePreauthPreview, usePreauthPreview } from '../../../../../claims/claims.resource';
 import AddClaimDoctorModal from '../modal/claim-doctors/add-claim-doctor/add-claim-doctor.modal';
 import { VisitTypeUuids } from '../../../../../shared/constants/visit-types';
 import { VisitType } from '../../../../../claims';
@@ -97,6 +97,11 @@ const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({
 
   const invalidateProviderClaimPreview = useInvalidateProviderClaimPreview();
 
+  const { preview: preauthPreview } = usePreauthPreview(
+    claimsVisit?.authorization_code,
+    locationUuid,
+  );
+
   // A claim can't be submitted to SHA without at least one recorded diagnosis.
   const hasDiagnosis = (claimsVisit?.claim_diagnoses ?? []).length > 0;
 
@@ -176,14 +181,6 @@ const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({
       return;
     }
     if (!intervention.needs_preauth) {
-      return;
-    }
-    if (intervention.preauth_exist) {
-      showSnackbar({
-        kind: 'info',
-        title: 'Preauth already exists',
-        subtitle: 'A preauth is already recorded for this intervention.',
-      });
       return;
     }
 
@@ -408,6 +405,7 @@ const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({
               canSwitchIntervention,
               onSwitchIntervention: handleSwitchIntervention,
               onRaisePreauth: handleRaisePreauth,
+              preauthPreview,
             })}
             emptyMessage="No interventions on this claim."
             layout="grid"

@@ -27,6 +27,22 @@ export type ShaInterventionPreauthFlags = {
 };
 
 /**
+ * Bill lines that need elective preauth (`needsManualPreauthApproval`) and are not yet approved.
+ */
+export const needsElectivePreauth = (item: PatientFacilityBillDetails): boolean => {
+  if (!item?.intervention_code) {
+    return false;
+  }
+  if (asBool(item.preauth_approved)) {
+    return false;
+  }
+  if (item.elective_preauth != null) {
+    return asBool(item.elective_preauth);
+  }
+  return false;
+};
+
+/**
  * Bill lines that need normal (non-elective) preauth and are not yet approved.
  * Prefer ETL flags when present; otherwise use SHA intervention coverage for the
  * bill's `intervention_code` (`needsPreauth` && !`needsManualPreauthApproval`).
@@ -42,7 +58,7 @@ export const needsNormalPreauth = (
   if (asBool(item.preauth_approved)) {
     return false;
   }
-  // Elective is out of scope for this flow
+  // Elective is a separate queue / workspace mode
   if (asBool(item.elective_preauth)) {
     return false;
   }
@@ -124,6 +140,30 @@ export async function fetchNormalPreauthBillItems(
     if (!item?.intervention_code) return false;
     if (asBool(item.preauth_approved)) return false;
     if (asBool(item.elective_preauth)) return false;
+    if (item.requires_preauth != null || item.normal_preauth != null) {
+      return needsNormalPreauth(item);
+    }
+    return true;
+  });
+}
+
+export async function fetchElectivePreauthBillItems(
+  locationUuid: string,
+  billingDate: string,
+): Promise<PatientFacilityBillDetails[]> {
+  const results = await fetchFacilityPreauthBills({ locationUuid, billingDate });
+  return (results ?? []).filter((item) => needsElectivePreauth(item));
+}
+
+export async function fetchPreauthBillItems(
+  locationUuid: string,
+  billingDate: string,
+): Promise<PatientFacilityBillDetails[]> {
+  const results = await fetchFacilityPreauthBills({ locationUuid, billingDate });
+  return (results ?? []).filter((item) => {
+    if (!item?.intervention_code) return false;
+    if (asBool(item.preauth_approved)) return false;
+    if (asBool(item.elective_preauth)) return true;
     if (item.requires_preauth != null || item.normal_preauth != null) {
       return needsNormalPreauth(item);
     }

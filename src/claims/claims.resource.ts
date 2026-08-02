@@ -416,6 +416,11 @@ export type PreauthFormPayload = {
   new_or_replacement?: string;
   frequency_of_sessions?: string;
   start_date?: string;
+  progress_report?: string;
+  expected_service_start_date?: string;
+  is_condition_related_to_employment?: string | boolean;
+  is_condition_related_to_auto_or_other_accident?: string | boolean;
+  co_insurance_details?: string;
   chief_complaint?: string;
   vital_signs?: string;
   history_of_present_illness?: string;
@@ -494,6 +499,8 @@ export const generatePreauthFormData = (
     if (payload.is_co_insured != null) {
       formData.append('is_co_insured', String(payload.is_co_insured));
     }
+    if (payload.start_date) formData.append('start_date', payload.start_date);
+    if (payload.progress_report) formData.append('progress_report', payload.progress_report);
   }
 
   if (intervention.requiresOpticalPreauth) {
@@ -505,6 +512,7 @@ export const generatePreauthFormData = (
     }
     if (payload.frame_amount != null) formData.append('frame_amount', String(payload.frame_amount));
     if (payload.new_or_replacement) formData.append('new_or_replacement', payload.new_or_replacement);
+    if (payload.clinical_indications) formData.append('clinical_indications', payload.clinical_indications);
   }
 
   if (intervention.requiresRenalPreauth) {
@@ -548,6 +556,25 @@ export const generatePreauthFormData = (
     if (surgeryDate) {
       formData.append('surgery_date', surgeryDate);
     }
+    if (payload.is_condition_related_to_employment != null) {
+      formData.append('is_condition_related_to_employment', String(payload.is_condition_related_to_employment));
+    }
+    if (payload.is_condition_related_to_auto_or_other_accident != null) {
+      formData.append(
+        'is_condition_related_to_auto_or_other_accident',
+        String(payload.is_condition_related_to_auto_or_other_accident),
+      );
+    }
+    if (payload.is_co_insured != null) {
+      formData.append('is_co_insured', String(payload.is_co_insured));
+    }
+    if (payload.co_insurance_details) {
+      formData.append('co_insurance_details', payload.co_insurance_details);
+    }
+  }
+
+  if (payload.expected_service_start_date) {
+    formData.append('expected_service_start_date', payload.expected_service_start_date);
   }
 
   return formData;
@@ -811,6 +838,84 @@ export async function fetchPreauthPreviewRowsForTokens(
 
 const PREAUTH_TERMINAL_FAILURE = new Set(['REJECTED', 'CANCELLED', 'FAILED', 'DECLINED']);
 
+const PREAUTH_SUBMITTED = new Set([
+  'ACTIVE',
+  'PENDING_DOCTOR_APPROVAL',
+  'FINALISED',
+  'FINALIZED',
+]);
+
+function interventionCodeFromPreviewItem(item: Record<string, unknown>): string {
+  const interventionData = (item.interventionData ?? item.intervention_data ?? {}) as Record<
+    string,
+    unknown
+  >;
+  return String(
+    item.interventionCode ?? item.intervention_code ?? interventionData.code ?? '',
+  ).trim();
+}
+
+function statusFromPreviewItem(item: Record<string, unknown>): string {
+  const auth = item.authorizationDetails as Record<string, unknown> | undefined;
+  // Prefer the row's own status — overallPreauthFinalised is visit-wide and misleading
+  // when matching a single intervention.
+  const status = String(item.status ?? item.preauth_status ?? '').toUpperCase();
+  const doctorReview = String(item.doctorReviewStatus ?? item.doctor_review_status ?? '').toUpperCase();
+
+  if (
+    doctorReview &&
+    PREAUTH_TERMINAL_FAILURE.has(doctorReview) &&
+    status !== 'FINALISED' &&
+    status !== 'FINALIZED'
+  ) {
+    return doctorReview;
+  }
+
+  if (!status && (auth?.overallPreauthFinalised === true || auth?.overall_preauth_finalised === true)) {
+    return 'FINALISED';
+  }
+
+  return status;
+}
+
+/** Find the preview row for a specific intervention code (paginated `results[]`). */
+export function findPreauthPreviewForIntervention(
+  preview: unknown,
+  interventionCode: string,
+): Record<string, unknown> | null {
+  const code = (interventionCode ?? '').trim();
+  if (!code) return null;
+  const items = unwrapPreauthPreviewItems(preview);
+  return items.find((item) => interventionCodeFromPreviewItem(item) === code) ?? null;
+}
+
+export function extractPreauthStatusForIntervention(preview: unknown, interventionCode: string): string {
+  const item = findPreauthPreviewForIntervention(preview, interventionCode);
+  if (!item) return '';
+  return statusFromPreviewItem(item);
+}
+
+export function extractPreauthCodeForIntervention(
+  preview: unknown,
+  interventionCode: string,
+): string | undefined {
+  const item = findPreauthPreviewForIntervention(preview, interventionCode);
+  if (!item) return undefined;
+  return extractPreauthCode(item);
+}
+
+/**
+ * True when preview already has a non-failed preauth for this intervention —
+ * Raise should be hidden (re-raise allowed after terminal failure).
+ */
+export function interventionHasBlockingPreauth(preview: unknown, interventionCode: string): boolean {
+  const item = findPreauthPreviewForIntervention(preview, interventionCode);
+  if (!item) return false;
+  const status = statusFromPreviewItem(item);
+  if (!status) return true; // row exists but status blank — treat as already raised
+  return !isPreauthTerminalFailure(status);
+}
+
 export function extractPreauthStatus(preview: unknown): string {
   const item = unwrapPreauthPreviewItem(preview);
   if (!item) {
@@ -822,20 +927,7 @@ export function extractPreauthStatus(preview: unknown): string {
     return 'FINALISED';
   }
 
-  const status = String(item.status ?? item.preauth_status ?? '').toUpperCase();
-  const doctorReview = String(item.doctorReviewStatus ?? item.doctor_review_status ?? '').toUpperCase();
-
-  // Doctor rejection while preauth is still DRAFT — surface as terminal for the list/gates
-  if (
-    doctorReview &&
-    PREAUTH_TERMINAL_FAILURE.has(doctorReview) &&
-    status !== 'FINALISED' &&
-    status !== 'FINALIZED'
-  ) {
-    return doctorReview;
-  }
-
-  return status;
+  return statusFromPreviewItem(item);
 }
 
 export function extractPreauthCode(preview: unknown): string | undefined {
@@ -868,6 +960,11 @@ export function isPreauthFinalised(status: string): boolean {
 
 export function isPreauthTerminalFailure(status: string): boolean {
   return PREAUTH_TERMINAL_FAILURE.has((status || '').toUpperCase());
+}
+
+/** Statuses that mean the preauth was accepted by HIE — form can close. */
+export function isPreauthSubmitted(status: string): boolean {
+  return PREAUTH_SUBMITTED.has((status || '').toUpperCase());
 }
 
 export type PreauthCheckKind = 'not_raised' | 'finalised' | 'pending' | 'failed' | 'error';
@@ -991,6 +1088,46 @@ export async function pollPreauthUntilFinalised(
     await new Promise((resolve) => setTimeout(resolve, intervalMs));
   }
   throw new Error('Timed out waiting for preauth to reach FINALISED');
+}
+
+/**
+ * Poll until the matching intervention's preauth is ACTIVE, PENDING_DOCTOR_APPROVAL,
+ * or FINALISED — enough to close the Raise form without waiting on payer finalisation.
+ */
+export async function pollPreauthUntilSubmitted(
+  consentToken: string,
+  locationUuid: string,
+  interventionCode: string,
+  {
+    intervalMs = 3000,
+    maxAttempts = 40,
+    signal,
+  }: { intervalMs?: number; maxAttempts?: number; signal?: AbortSignal } = {},
+): Promise<{ status: string; preview: unknown; preauthCode?: string }> {
+  const code = (interventionCode ?? '').trim();
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    if (signal?.aborted) {
+      throw new Error('Preauth poll cancelled');
+    }
+    const preview = await getPreauthPreview(consentToken, locationUuid);
+    const status = code
+      ? extractPreauthStatusForIntervention(preview, code)
+      : extractPreauthStatus(preview);
+    if (status && isPreauthSubmitted(status)) {
+      return {
+        status: isPreauthFinalised(status) ? 'FINALISED' : status,
+        preview,
+        preauthCode: code
+          ? extractPreauthCodeForIntervention(preview, code)
+          : extractPreauthCode(preview),
+      };
+    }
+    if (status && isPreauthTerminalFailure(status)) {
+      throw new Error(`Preauth ${status}`);
+    }
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+  throw new Error('Timed out waiting for preauth submission confirmation');
 }
 
 export const getServiceType = (selectedIntervention: Intervention, visitType?: VisitType): ServiceType => {

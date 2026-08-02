@@ -3,8 +3,6 @@ import styles from './billing-claims-dashboard.component.scss';
 import { DatePicker, DatePickerInput, Tab, TabList, TabPanel, TabPanels, Tabs } from '@carbon/react';
 import { Wallet } from '@carbon/react/icons';
 import FacilityBills from './facility-bills/facility-bills.component';
-import Preauths from './facility-bills/preauths.component';
-import ClaimsAccounting from './claims-accounting/claims-accounting.component';
 import { useSession } from '@openmrs/esm-framework';
 import ActiveVisits from './active-visits/active-visits.component';
 import Clearance from './clearance/clearance.component';
@@ -20,8 +18,8 @@ import {
 } from '../../../service-queues/metrics/metrics-cards/metrics-card.component';
 import FacilityAndWorkerSlot from '../../../shared/ui/facility-worker-slot/facility-worker.component-slot.component';
 import ActiveVisitsComponent from './active-visits.component';
-import PreauthList from './preauth/preauth-list.component';
-interface billingClaimsDashboardProps {}
+import PreauthorizationsTab from './preauth/preauthorizations-tab.component';
+interface billingClaimsDashboardProps { }
 
 const today = () => new Date().toLocaleDateString('en-CA');
 
@@ -54,7 +52,6 @@ const BillingClaimsDashboard: React.FC<billingClaimsDashboardProps> = () => {
   // dashboard header, metric tiles and tabs are hidden so the details aren't buried.
   const [billsDetailsOpen, setBillsDetailsOpen] = useState(false);
   // Which sub-tab to open, with a nonce so repeat clicks still re-navigate.
-  const [claimsNav, setClaimsNav] = useState<{ key?: string; nonce: number }>({ nonce: 0 });
   const [clearanceNav, setClearanceNav] = useState<{ key?: string; nonce: number }>({ nonce: 0 });
 
   useEffect(() => {
@@ -194,7 +191,7 @@ const BillingClaimsDashboard: React.FC<billingClaimsDashboardProps> = () => {
                 <Tab>Pending clearance</Tab>
                 <Tab>Facility bills</Tab>
                 <Tab>Preauthorizations</Tab>
-                <Tab>Preauth List</Tab>
+                {/* <Tab>Preauth List</Tab> */}
                 <Tab>Active Visits</Tab>
                 {/* <Tab>Claims</Tab> */}
               </TabList>
@@ -226,16 +223,12 @@ const BillingClaimsDashboard: React.FC<billingClaimsDashboardProps> = () => {
                   />
                 </TabPanel>
                 <TabPanel>
-                  <Preauths locationUuid={locationUuid} billingDate={billingDate} />
-                </TabPanel>
-                <TabPanel>
-                  <PreauthList locationUuid={locationUuid} billingDate={billingDate} onDateChange={handleDateChange} />
-                </TabPanel>
-                {/* <TabPanel>
-                  <ClaimsAccounting initialTabKey={claimsNav.key} navNonce={claimsNav.nonce} locationUuid={locationUuid}
+                  <PreauthorizationsTab
+                    locationUuid={locationUuid}
                     billingDate={billingDate}
-                    onDateChange={handleDateChange} />
-                </TabPanel> */}
+                    onDateChange={handleDateChange}
+                  />
+                </TabPanel>
                 <TabPanel>
                   <ActiveVisitsComponent billingDate={billingDate} />
                 </TabPanel>

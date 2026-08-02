@@ -1,0 +1,5 @@
+{
+  "@ampath/esm-dha-workflow-app": {
+    "hieBaseUrl": "http://localhost:3000"
+  }
+}

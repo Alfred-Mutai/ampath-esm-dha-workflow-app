@@ -184,36 +184,28 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
   const launchPreauthsModal = useCallback(() => {
     if (!selectedIntervention) return;
 
-    // Elective preauth is on hold — keep tag visual only for elective.
-    if (selectedIntervention.needsPreauth && selectedIntervention.needsManualPreauthApproval) {
-      showSnackbar({
-        kind: 'info',
-        title: t('electivePreauthOnHold', 'Elective preauth'),
-        subtitle: t(
-          'electivePreauthOnHoldDetail',
-          'Elective preauth is not available yet. Use the Preauth tab for normal preauths after a claim visit exists.',
-        ),
-      });
-      return;
-    }
+    const elective =
+      Boolean(selectedIntervention.needsPreauth) &&
+      Boolean(selectedIntervention.needsManualPreauthApproval);
 
     const token = getVisitConsentToken(activeVisit);
-    if (!token) {
+    if (!elective && !token) {
       showSnackbar({
         kind: 'error',
         title: t('missingConsentToken', 'No claim token on visit'),
         subtitle: t(
           'missingConsentTokenDetail',
-          'Start a claim visit first, then raise normal preauth from the Preauth tab or here.',
+          'Start a claim visit first, then raise normal preauth from the Preauthorizations tab or here.',
         ),
       });
       return;
     }
 
     launchWorkspace('preauth-form-workspace', {
-      consentToken: token,
+      consentToken: token || '',
       patientUuid,
       locationUuid: sessionLocation?.uuid,
+      isElective: elective,
       billItem: {
         patient_uuid: patientUuid,
         patient_name: '',
@@ -223,7 +215,8 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
         item_quantity: 1,
         cr_no: clientRegistryId,
         requires_preauth: true,
-        normal_preauth: true,
+        normal_preauth: !elective,
+        elective_preauth: elective,
         required_preauth_document_types: (selectedIntervention.requiredPreauthDocumentTypes ?? []).join(','),
         applicable_document_types: (selectedIntervention.applicableDocumentTypes ?? []).join(','),
         requires_surgical_preauth: selectedIntervention.requiresSurgicalPreauth,

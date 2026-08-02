@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
-import { Button, ButtonSet, Form, InlineLoading, Stack, TextInput } from '@carbon/react';
+import React, { useEffect, useState } from 'react';
+import { Button, ButtonSet, Form, InlineLoading, InlineNotification, Stack, TextInput } from '@carbon/react';
 import { showSnackbar, type DefaultWorkspaceProps } from '@openmrs/esm-framework';
 import styles from './add-claim-line.workspace.scss';
 import { type AddClaimLineDto, type PatientFacilityBillDetails } from '../../../types';
 import { addClaimItem } from '../../../../../billing-claims.resource';
 import { ensureInterventionOnVisit } from '../../../../../../claims/interventions.resource';
-import { getStoredPreauthCode } from '../../../preauth/preauth.resource';
+import { extractPreauthStatus, getPreauthPreview } from '../../../../../../claims/claims.resource';
+import { asBool, getStoredPreauthCode, needsNormalPreauth } from '../../../preauth/preauth.resource';
 
 interface AddClaimLineWorkspaceProps extends DefaultWorkspaceProps {
   billItem: PatientFacilityBillDetails;
@@ -43,8 +44,47 @@ const AddClaimLineWorkspace: React.FC<AddClaimLineWorkspaceProps> = ({
   onSuccess,
   closeWorkspace,
 }) => {
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState(false);
+  const [checkingPreauth, setCheckingPreauth] = useState(false);
+  const [preauthBlocked, setPreauthBlocked] = useState(false);
+  const [preauthCode, setPreauthCode] = useState<string | undefined>();
   const resolvedToken = (consentTokenProp || billItem.consent_token || '').trim();
+
+  useEffect(() => {
+    if (!needsNormalPreauth(billItem) || !resolvedToken) {
+      setPreauthBlocked(false);
+      setPreauthCode(getStoredPreauthCode(resolvedToken, billItem.intervention_code));
+      return;
+    }
+
+    let cancelled = false;
+    const run = async () => {
+      setCheckingPreauth(true);
+      try {
+        const stored = getStoredPreauthCode(resolvedToken, billItem.intervention_code);
+        setPreauthCode(stored);
+        const preview = await getPreauthPreview(resolvedToken, locationUuid);
+        const status = extractPreauthStatus(preview);
+        if (!cancelled) {
+          const ok = status === 'FINALISED' || status === 'FINALIZED' || asBool(billItem.preauth_approved);
+          setPreauthBlocked(!ok);
+        }
+      } catch {
+        if (!cancelled) {
+          setPreauthBlocked(
+            !asBool(billItem.preauth_approved) &&
+              !getStoredPreauthCode(resolvedToken, billItem.intervention_code),
+          );
+        }
+      } finally {
+        if (!cancelled) setCheckingPreauth(false);
+      }
+    };
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [billItem, resolvedToken, locationUuid]);
 
   function getClaimLineDto(): AddClaimLineDto {
     const dto: AddClaimLineDto = {
@@ -54,9 +94,9 @@ const AddClaimLineWorkspace: React.FC<AddClaimLineWorkspaceProps> = ({
       quantity: String(billItem.item_quantity),
       locationUuid: locationUuid,
     };
-    const preauthCode = getStoredPreauthCode(resolvedToken, billItem.intervention_code);
-    if (preauthCode) {
-      dto.preauthCode = preauthCode;
+    const code = preauthCode || getStoredPreauthCode(resolvedToken, billItem.intervention_code);
+    if (code) {
+      dto.preauthCode = code;
     }
     return dto;
   }
@@ -79,10 +119,17 @@ const AddClaimLineWorkspace: React.FC<AddClaimLineWorkspaceProps> = ({
       });
       return;
     }
+    if (preauthBlocked) {
+      showSnackbar({
+        kind: 'error',
+        title: 'Preauth required',
+        subtitle: 'Wait until preauth is FINALISED before adding a claim line for this intervention.',
+      });
+      return;
+    }
 
     setLoading(true);
     try {
-      // Claim lines require the intervention on the visit first (same as preauth).
       await ensureInterventionOnVisit(resolvedToken, billItem.intervention_code, locationUuid);
 
       const resp = await addClaimItem(getClaimLineDto());
@@ -119,6 +166,24 @@ const AddClaimLineWorkspace: React.FC<AddClaimLineWorkspaceProps> = ({
     <Form className={styles.form} onSubmit={handleAddClaimLineItem}>
       <div className={styles.formContent}>
         <Stack gap={5}>
+          {preauthBlocked ? (
+            <InlineNotification
+              kind="warning"
+              lowContrast
+              hideCloseButton
+              title="Preauth not finalised"
+              subtitle="Raise and finalise preauth for this intervention before adding a claim line."
+            />
+          ) : null}
+          {preauthCode ? (
+            <InlineNotification
+              kind="info"
+              lowContrast
+              hideCloseButton
+              title="Preauth code"
+              subtitle={preauthCode}
+            />
+          ) : null}
           <TextInput id="bill-item" labelText="Billable item" value={billItem.billable_service ?? '—'} readOnly />
           <TextInput
             id="intervention-code"
@@ -135,8 +200,19 @@ const AddClaimLineWorkspace: React.FC<AddClaimLineWorkspaceProps> = ({
         <Button className={styles.button} kind="secondary" onClick={() => closeWorkspace()} disabled={loading}>
           Cancel
         </Button>
-        <Button className={styles.button} kind="primary" type="submit" disabled={loading || !resolvedToken}>
-          {loading ? <InlineLoading description="Adding..." /> : 'Add claim line'}
+        <Button
+          className={styles.button}
+          kind="primary"
+          type="submit"
+          disabled={loading || checkingPreauth || preauthBlocked || !resolvedToken}
+        >
+          {loading ? (
+            <InlineLoading description="Adding..." />
+          ) : checkingPreauth ? (
+            <InlineLoading description="Checking preauth..." />
+          ) : (
+            'Add claim line'
+          )}
         </Button>
       </ButtonSet>
     </Form>

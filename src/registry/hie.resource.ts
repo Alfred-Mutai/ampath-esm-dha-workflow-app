@@ -156,6 +156,43 @@ export async function sendClaimsOTP(patientId: string, locationUuid: string, int
   return data;
 }
 
+/** Pre-visit OTP authorize (elective). Returns HIE authorization with `token` / `guid`. */
+export async function authorizeClaimsWithOtp(params: {
+  patientId: string;
+  otp: string;
+  interventions: string[];
+  serviceType: string;
+  locationUuid: string;
+  beneficiaryContactId?: string;
+}): Promise<{ token?: string; guid?: string; status?: string; [key: string]: unknown }> {
+  const hieBaseUrl = await getHieBaseUrl();
+  const url = `${hieBaseUrl}/claims-authorize`;
+  const body: Record<string, unknown> = {
+    patient_id: params.patientId,
+    otp: params.otp,
+    interventions: params.interventions,
+    service_type: params.serviceType,
+    locationUuid: params.locationUuid,
+  };
+  if (params.beneficiaryContactId) {
+    body.beneficiary_contact_id = params.beneficiaryContactId;
+  }
+  const response = await openmrsFetch(url, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    const errorText = data?.message || 'Failed to authorize';
+    throw new Error(`Request failed with ${response.status}: ${errorText}`);
+  }
+  return data ?? {};
+}
+
 export async function getBiometrictsRequestUrl(
   patient: HieClient,
   locationUuid: string,

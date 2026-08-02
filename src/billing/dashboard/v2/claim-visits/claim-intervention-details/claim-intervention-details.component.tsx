@@ -2,6 +2,7 @@ import React from 'react';
 import { Button, Tag } from '@carbon/react';
 import { type ClaimAttachment, type PatientFacilityBillDetails, type VisitIntervention } from '../../types';
 import { asBool } from '../../preauth/preauth.resource';
+import { interventionHasBlockingPreauth } from '../../../../../claims/claims.resource';
 import RecordCards, { YesNo, type RecordCardModel } from '../shared/record-cards.component';
 import InterventionAttachments from './intervention-attachments.component';
 
@@ -24,6 +25,8 @@ export interface InterventionAttachmentOpts {
   onSwitchIntervention?: (intervention: VisitIntervention) => void;
   /** Opens the normal preauth workspace for this intervention. */
   onRaisePreauth?: (intervention: VisitIntervention) => void;
+  /** Raw GET /pre-auth/preview payload — used to hide Raise when a non-failed row exists. */
+  preauthPreview?: unknown;
 }
 
 // A claim intervention is actionable only while its workflow_state is ACTIVE;
@@ -40,8 +43,8 @@ export function buildInterventionRecords(
   return (claimInterventions ?? []).map((ci) => {
     const requiredDocs = Array.from(new Set(ci.applicable_document_types ?? []));
     const canAct = Boolean(opts?.canSwitchIntervention) && isActiveIntervention(ci);
-    const canRaisePreauth =
-      canAct && Boolean(ci.needs_preauth) && !Boolean(ci.preauth_exist);
+    const alreadyRaised = interventionHasBlockingPreauth(opts?.preauthPreview, ci.intervention_code);
+    const canRaisePreauth = canAct && Boolean(ci.needs_preauth) && !alreadyRaised;
     const hasActions = Boolean(opts?.onSwitchIntervention || opts?.onRaisePreauth);
 
     return {
@@ -100,8 +103,8 @@ export function buildInterventionRecords(
               title={
                 !ci.needs_preauth
                   ? 'This intervention does not need preauth'
-                  : ci.preauth_exist
-                    ? 'Preauth already exists for this intervention'
+                  : alreadyRaised
+                    ? 'Preauth already raised for this intervention'
                     : 'Raise normal preauth for this intervention'
               }
             >

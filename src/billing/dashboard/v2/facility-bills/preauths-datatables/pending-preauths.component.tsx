@@ -69,8 +69,8 @@ const PendingPreauths: React.FC<PendingPreauthsProps> = ({ locationUuid, billing
         return <div>No pending preauthorisations found.</div>;
     }
 
-    function handleAddPreauth(row: DataTableRow<any[]>): void {
-        console.log(row);
+    function handleAddPreauth(_row: DataTableRow<any[]>): void {
+        // Prefer the Preauthorizations tab raise queue (PreauthList).
     }
 
     return (

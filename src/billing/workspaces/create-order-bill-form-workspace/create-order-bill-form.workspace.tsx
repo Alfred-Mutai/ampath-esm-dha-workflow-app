@@ -255,9 +255,10 @@ const CreateOrderBillForm: React.FC<CreateOrderBillFormProps> = ({
             };
 
             if (interventionResult) {
-                const electivePreauth = interventionResult.requires_oncology_preauth || interventionResult.requires_optical_preauth || interventionResult.requires_radiology_preauth
-                    || interventionResult.requires_renal_preauth || interventionResult.requires_surgical_preauth;
-                const requiresPreauth = interventionResult.needs_preauth;
+                // Elective = needsManualPreauthApproval only — specialty flags are separate.
+                // Claim-visit interventions are post-claim (normal path); elective is pre-visit.
+                const requiresPreauth = Boolean(interventionResult.needs_preauth);
+                const isElective = false;
                 const requiredPreauthDocumentTypes = interventionResult.required_preauth_document_types;
                 const applicableDocumentTypes = interventionResult.applicable_document_types;
                 const subBenefitCode =
@@ -275,8 +276,8 @@ const CreateOrderBillForm: React.FC<CreateOrderBillFormProps> = ({
                     intervention_code: interventionResult.intervention_code,
                     service_type: getServiceType(interventionResult, visitType),
                     requires_preauth: requiresPreauth,
-                    normal_preauth: requiresPreauth && !electivePreauth,
-                    elective_preauth: electivePreauth
+                    normal_preauth: requiresPreauth && !isElective,
+                    elective_preauth: isElective,
                 }
 
                 const consentToken = getConsentToken(activeVisit);
