@@ -118,6 +118,7 @@ interface BillRow {
   consentToken: string;
   /** Everything the free-text search looks at, pre-joined. */
   searchText: string;
+  lineItems?: FacilityBill['bill_items'];
 }
 
 const billRow = (fb: PatientBill): BillRow => {
@@ -136,6 +137,7 @@ const billRow = (fb: PatientBill): BillRow => {
     searchText: `${fb.patient_name} ${formatCr(fb.identifiers)}  ${fb.receipt_number ?? ''} ${
       fb.visit_type ?? ''
     } ${status} ${fb.cash_point ?? ''}`.toLowerCase(),
+    lineItems: fb.bill_items,
   };
 };
 
@@ -231,6 +233,7 @@ const FacilityBills: React.FC<facilityBillsProps> = ({
     const facilityBillsPayload = generateFacilityBillsPayload();
     try {
       const data = await fetchFacilityBills(facilityBillsPayload);
+      console.log('FACILITY BILLS', data);
       setFacilityBills(data ?? []);
     } catch (error) {
       showSnackbar({

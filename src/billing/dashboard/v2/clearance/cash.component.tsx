@@ -11,7 +11,8 @@ interface CashPatientsProps {
 }
 
 const CashPatients: React.FC<CashPatientsProps> = ({ billingDate }) => {
-  const [cashPatients, setCashPatients] = useState<ActiveCashVisit[] | PendingBillLineItems[]>([]);
+  const [cashPatients, setCashPatients] = useState<ActiveCashVisit[]>([]);
+  const [pendingBillItems, setPendingBillItems] = useState<PendingBillLineItems[]>([]);
   const [patientUuid, setPatientUuid] = useState<string | null>('');
   const [visitUuid, setVisitUuid] = useState<string | null>('');
   const [visitTypeUuid, setVisitTypeUuid] = useState('');
@@ -19,28 +20,49 @@ const CashPatients: React.FC<CashPatientsProps> = ({ billingDate }) => {
   const session = useSession();
 
   const locationUuid = session.sessionLocation?.uuid;
-  const getActivevisits = async (locationUuid: string, billingDate: string) => {
-    try {
-      const res = await getActiveCashVisits(locationUuid!, billingDate);
-      setCashPatients(res.results);
-    } catch (er) {
-      console.error(er);
-    }
-  };
-
-  const getPendingBillLineItems = async (locationUuid: string, billingDate: string) => {
-    try {
-      const res = await getFacilityBillLineItems(locationUuid!, billingDate);
-      setCashPatients(res);
-    } catch (er) {
-      console.error(er);
-    }
-  };
 
   useEffect(() => {
-    getActivevisits(locationUuid!, billingDate);
-    getPendingBillLineItems(locationUuid!, billingDate);
+    if (!locationUuid) return;
+
+    const fetchAll = async () => {
+      try {
+        const [visitsRes, pendingRes] = await Promise.all([
+          getActiveCashVisits(locationUuid, billingDate),
+          getFacilityBillLineItems(locationUuid, billingDate),
+        ]);
+        setCashPatients(visitsRes?.results ?? []);
+        setPendingBillItems(pendingRes ?? []);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    fetchAll();
   }, [billingDate, locationUuid]);
+
+  const mergedPatients: (ActiveCashVisit | PendingBillLineItems)[] = (() => {
+    const pendingByVisitUuid = new Map(pendingBillItems.map((item) => [item.visit_uuid, item]));
+
+    const result: (ActiveCashVisit | PendingBillLineItems)[] = [...pendingBillItems];
+
+    cashPatients.forEach((visit) => {
+      if (!pendingByVisitUuid.has(visit.visit_uuid)) {
+        result.push(visit);
+      }
+    });
+
+    return result;
+  })();
+
+  //finalize bill
+
+  // https://o3.openmrs.org/openmrs/ws/rest/v1/billing/bill/9782ecd4-514a-4a92-be78-f7c7a2b2562c
+  // payload status: "POSTED"
+
+  // process payment
+
+  // https://o3.openmrs.org/openmrs/ws/rest/v1/billing/bill/9782ecd4-514a-4a92-be78-f7c7a2b2562c/payment
+  // payload amount: 500 amountTendered: 500 instanceType: "526bf278-ba81-4436-b867-c2f6641d060a"
 
   const handleGenerateBill = async (
     visit: ActiveCashVisit | PendingBillLineItems,
@@ -53,8 +75,7 @@ const CashPatients: React.FC<CashPatientsProps> = ({ billingDate }) => {
 
       setTimeout(() => {
         launchWorkspace('pay-cash-workspace', {
-          lineItems: visit.pending_line_items,
-          visit: visit,
+          lineItems: (visit as PendingBillLineItems).pending_line_items,
         });
       }, 50);
       return;
@@ -82,8 +103,8 @@ const CashPatients: React.FC<CashPatientsProps> = ({ billingDate }) => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {cashPatients?.length > 0 ? (
-              cashPatients?.map((visit, index) => (
+            {mergedPatients?.length > 0 ? (
+              mergedPatients?.map((visit, index) => (
                 <TableRow key={index}>
                   <TableCell>{visit.patient_name}</TableCell>
                   <TableCell>{visit.identifiers}</TableCell>
