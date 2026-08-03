@@ -20,21 +20,23 @@ No specialty clinical narrative for Normal.
 
 ## 2. Surgical preauth
 
-| Currently typed / uploaded | HIE field(s) |
+Form-backed fields are loaded from the **POC Pre-authorization Form** (encounter type PREAUTHORIZATION) when present — shown read-only. Missing form answers block submit until the chart form is completed.
+
+| Source | HIE field(s) |
 | --- | --- |
-| Chief complaint | `chief_complaint` |
-| Vital signs | `vital_signs` |
-| History of present illness | `history_of_present_illness` |
-| Physical examination | `physical_examination` |
-| Investigation report details | `investigation_report_details` |
-| Type of anaesthesia | `type_of_anaesthesia` |
-| Surgery date | `surgery_date` |
+| Form: presenting complaints | `chief_complaint` |
+| Clerk (not on form) | `vital_signs` |
+| Form: HPI | `history_of_present_illness` |
+| Form: general examination | `physical_examination` |
+| Form: investigation report | `investigation_report_details` |
+| Form: anaesthesia | `type_of_anaesthesia` |
+| Form: encounter datetime | `surgery_date` |
+| Form: employment / accident / co-insurance | `is_condition_related_to_employment`, `is_condition_related_to_auto_or_other_accident`, `is_co_insured`, `co_insurance_details` |
 | ICD-11 *(if not from visit diagnosis)* | `diagnoses[].icd_code` |
 | Unit price *(if needed)* | `items[].unit_price` |
 | Service start / end *(if needed)* | `service_start`, `service_end` |
 | Provider email *(if needed)* | `provider_notification_email` |
 | Attachments | `attachments[]` + files |
-| Employment / accident / co-insurance *(optional; not fully wired in UI)* | `is_condition_related_to_employment`, `is_condition_related_to_auto_or_other_accident`, `is_co_insured`, `co_insurance_details` |
 
 ---
 
@@ -42,7 +44,7 @@ No specialty clinical narrative for Normal.
 
 | Currently typed / uploaded | HIE field(s) |
 | --- | --- |
-| Clinical indications | `clinical_indications` |
+| Clinical indications *(from clinical-notes obs / Pre-authorization form; read-only)* | `clinical_indications` |
 | ICD-11 *(if not from visit diagnosis)* | `diagnoses[].icd_code` |
 | Unit price *(if needed)* | `items[].unit_price` |
 | Service start / end *(if needed)* | `service_start`, `service_end` |
@@ -53,14 +55,16 @@ No specialty clinical narrative for Normal.
 
 ## 4. Renal preauth
 
-| Currently typed / uploaded | HIE field(s) |
+Form-backed dialysis fields come from the **POC Pre-authorization Form** (read-only when present).
+
+| Source | HIE field(s) |
 | --- | --- |
-| Number of sessions required | `number_of_sessions_required` |
-| Cost per session | `cost_per_session` |
-| Frequency of sessions | `frequency_of_sessions` |
-| Clinical indications | `clinical_indications` |
-| Start date | `start_date` |
-| Is co-insured | `is_co_insured` |
+| Form: session number | `number_of_sessions_required` |
+| Clerk (not on form) | `cost_per_session` |
+| Form: frequency of sessions | `frequency_of_sessions` |
+| Form: clinical indication | `clinical_indications` |
+| Form: start date | `start_date` |
+| Form: co-insured (+ details when yes) | `is_co_insured`, `co_insurance_details` |
 | ICD-11 *(if not from visit diagnosis)* | `diagnoses[].icd_code` |
 | Unit price *(if needed)* | `items[].unit_price` |
 | Service start / end *(if needed)* | `service_start`, `service_end` |

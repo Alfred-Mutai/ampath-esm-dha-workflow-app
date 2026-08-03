@@ -21,7 +21,7 @@ Once it is running, a browser window should open running the O3 reference applic
 
 Claims and preauth API calls use config key `hieBaseUrl` (see `src/config-schema.ts`), resolved by `getHieBaseUrl()`. That URL should point at **amrs-integrations `hie-saf`**, which then calls DHA via its own `HIE_CLIAMS_BASE_URL`.
 
-`yarn dev` loads [`local-config.json`](./local-config.json), which sets:
+`yarn dev` uses the remote o3-config only. To point HIE/preauth at local hie-saf, run `yarn dev:local`, which loads [`local-config.json`](./local-config.json):
 
 ```json
 {
@@ -31,8 +31,7 @@ Claims and preauth API calls use config key `hieBaseUrl` (see `src/config-schema
 }
 ```
 
-So preauth and other HIE proxy calls go to local hie-saf on port 3000. Use `yarn dev:remote-hie` to run without that override (remote o3-config only).
-
+So with `dev:local`, preauth and other HIE proxy calls go to local hie-saf on port 3000.
 Keep `HIE_CLIAMS_BASE_URL` in `amrs-integrations/packages/hie-saf/.env` pointed at DHA UAT (or a mock). See that package’s `.env.example` and README.
 
 Do not commit localhost as the schema `_default` for `hieBaseUrl`.

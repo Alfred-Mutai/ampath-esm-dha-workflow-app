@@ -21,7 +21,7 @@ import {
   canEditClaimDocuments,
   claimStatusTagType,
 } from '../../claim-statuses';
-import { parseDocTypes, readSpecialtyFlags } from '../../preauth/preauth.resource';
+import { parseDocTypes, readSpecialtyFlags, resolveUnitPriceFromPatientBills } from '../../preauth/preauth.resource';
 const money = (n: number | string) => `KES ${Number(n ?? 0).toLocaleString('en-KE')}`;
 
 interface claimVisitDetailsProps {
@@ -167,7 +167,7 @@ const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({
     });
   };
 
-  const handleRaisePreauth = (intervention: VisitIntervention) => {
+  const handleRaisePreauth = async (intervention: VisitIntervention) => {
     if (!canSwitchIntervention) {
       return;
     }
@@ -193,17 +193,44 @@ const ClaimVisitDetails: React.FC<claimVisitDetailsProps> = ({
       ? intervention.applicable_document_types.map(String)
       : parseDocTypes(intervention.applicable_document_types as string | null | undefined);
 
+    const patientUuid = patientBillDetails?.patient_uuid;
+    let itemPrice =
+      Number(patientBillDetails?.item_price) || Number(intervention.keph_level_tarrif) || 0;
+    let billableService = intervention.intervention_name;
+    let billDate = patientBillDetails?.bill_date ?? claimsVisit.visit_start;
+
+    if (patientUuid && locationUuid) {
+      const { unitPrice, billLine } = await resolveUnitPriceFromPatientBills({
+        patientUuid,
+        locationUuid,
+        billingDate: billDate,
+        interventionCode: intervention.intervention_code,
+        serviceHint: intervention.intervention_name,
+      });
+      if (unitPrice) {
+        itemPrice = Number(unitPrice);
+      }
+      if (billLine?.billable_service) {
+        billableService = billLine.billable_service;
+      }
+      if (billLine?.bill_date) {
+        billDate = billLine.bill_date;
+      }
+    }
+
     launchWorkspace('preauth-form-workspace', {
       consentToken,
-      patientUuid: patientBillDetails?.patient_uuid,
+      patientUuid,
       locationUuid,
       billItem: {
         intervention_code: intervention.intervention_code,
-        patient_uuid: patientBillDetails?.patient_uuid,
+        patient_uuid: patientUuid,
         patient_name: claimsVisit.patient_name ?? patientBillDetails?.patient_name,
         cr_no: patientBillDetails?.cr_no ?? claimsVisit.patient_number,
-        billable_service: intervention.intervention_name,
-        item_price: Number(intervention.keph_level_tarrif) || patientBillDetails?.item_price || 0,
+        billable_service: billableService,
+        bill_date: billDate,
+        item_price: itemPrice,
+        item_total_price: itemPrice,
         item_quantity: patientBillDetails?.item_quantity ?? 1,
         consent_token: consentToken,
       },
