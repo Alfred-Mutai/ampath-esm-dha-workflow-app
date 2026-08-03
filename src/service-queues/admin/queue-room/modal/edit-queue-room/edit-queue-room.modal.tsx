@@ -52,7 +52,7 @@ const EditQueueRoomModal: React.FC<EditQueueRoomModalProps> = ({ open, queueRoom
   };
   const generateCreateQueueRoomPayload = (): CreateQueueRoomDto => {
     return {
-      name: queueRoom.name,
+      name: queueRoomName,
       description: description,
       queue: {
         uuid: queueServiceUuid,

@@ -1,20 +1,20 @@
 import React from 'react';
-import styles from './dialysis-queues.component.scss';
+import styles from './Renal-queues.component.scss';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from '@carbon/react';
 import FacilityAndWorkerSlot from '../../shared/ui/facility-worker-slot/facility-worker.component-slot.component';
-import DialysisTriage from './queues/triage/dialysis-triage';
-import DialysisConsultation from './queues/consultation/dialysis-consultation';
-interface MchQueuesProps {}
-const DialysisQueues: React.FC<MchQueuesProps> = () => {
+import RenalTriage from './queues/triage/renal-triage';
+import RenalConsultation from './queues/consultation/dialysis-consultation';
+interface RenalQueuesProps {}
+const RenalQueues: React.FC<RenalQueuesProps> = () => {
   return (
-    <div className={styles.dialysisLayout}>
+    <div className={styles.renalLayout}>
       <div className={styles.hwrSection}>
             <FacilityAndWorkerSlot />
       </div>
-      <div className={styles.dialysisHeader}>
-        <h4>Dialysis</h4>
+      <div className={styles.renalHeader}>
+        <h4>Renal</h4>
       </div>
-      <div className={styles.dialysisContent}>
+      <div className={styles.renalContent}>
         <Tabs>
           <TabList contained>
             <Tab>Triage</Tab>
@@ -22,10 +22,10 @@ const DialysisQueues: React.FC<MchQueuesProps> = () => {
           </TabList>
           <TabPanels>
             <TabPanel>
-              <DialysisTriage />
+              <RenalTriage />
             </TabPanel>
             <TabPanel>
-              <DialysisConsultation/>
+              <RenalConsultation/>
             </TabPanel>
           </TabPanels>
         </Tabs>
@@ -33,4 +33,4 @@ const DialysisQueues: React.FC<MchQueuesProps> = () => {
     </div>
   );
 };
-export default DialysisQueues;
+export default RenalQueues;

@@ -4,8 +4,8 @@ export const specializedClinicsNavLinksConfig = [
     title: 'Specialized Clinics',
     children: [
       {
-        to: 'dialysis',
-        title: 'Dialysis',
+        to: 'renal',
+        title: 'Renal',
       },
       {
         to: 'oncology',
