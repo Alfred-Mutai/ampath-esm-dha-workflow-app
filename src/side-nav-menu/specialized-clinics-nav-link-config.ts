@@ -23,6 +23,14 @@ export const specializedClinicsNavLinksConfig = [
         to: 'ophthalmology',
         title: 'Ophthalmology',
       },
+      {
+        to: 'psychiatry',
+        title: 'Psychiatry',
+      },
+      {
+        to: 'critical-care-unit',
+        title: 'Critical Care Unit',
+      },
     ],
   }
 ];

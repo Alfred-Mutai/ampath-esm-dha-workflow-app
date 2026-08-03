@@ -129,6 +129,16 @@ const CreateQueueModal: React.FC<CreateQueueModalProps> = ({ open, onModalClose 
                       text="Maternal Child Health Consultation Service"
                     />
                     <SelectItem value={QUEUE_SERVICE_UUIDS.MATERNITY_TRIAGE_SERVICE_UUID} text="Maternity Triage" />
+                    <SelectItem value={QUEUE_SERVICE_UUIDS.DIALYSIS_TRIAGE_SERVICE_UUID} text="Dialysis Triage" />
+                    <SelectItem value={QUEUE_SERVICE_UUIDS.DIALYSIS_CONSULTATION_SERVICE_UUID} text="Dialysis Consultation" />
+                    <SelectItem value={QUEUE_SERVICE_UUIDS.ONCOLOGY_TRIAGE_SERVICE_UUID} text="Oncology Triage" />
+                    <SelectItem value={QUEUE_SERVICE_UUIDS.ONCOLOGY_CONSULTATION_SERVICE_UUID} text="Oncology Consultation" />
+                    <SelectItem value={QUEUE_SERVICE_UUIDS.DENTAL_TRIAGE_SERVICE_UUID} text="Dental Triage" />
+                    <SelectItem value={QUEUE_SERVICE_UUIDS.DENTAL_CONSULTATION_SERVICE_UUID} text="Dental Consultation" />
+                    <SelectItem value={QUEUE_SERVICE_UUIDS.DIAGNOSTIC_AND_IMAGING_TRIAGE_SERVICE_UUID} text="Diagnosis and Imaging Triage" />
+                    <SelectItem value={QUEUE_SERVICE_UUIDS.DIAGNOSTIC_AND_IMAGING_CONSULTATION_SERVICE_UUID} text="Diagnosis and Imaging Consultation" />
+                    <SelectItem value={QUEUE_SERVICE_UUIDS.OPTHALMOLOGY_TRIAGE_SERVICE_UUID} text="Opthalmology Triage" />
+                    <SelectItem value={QUEUE_SERVICE_UUIDS.OPTHALMOLOGY_CONSULTATION_SERVICE_UUID} text="Opthalmology Consultation" />
                   </Select>
                 </div>
               </div>

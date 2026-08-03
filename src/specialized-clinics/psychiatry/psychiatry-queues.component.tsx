@@ -1,20 +1,20 @@
 import React from 'react';
-import styles from './ophthalmology-queues.component.scss';
+import styles from './psychiatry-queues.component.scss';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from '@carbon/react';
 import FacilityAndWorkerSlot from '../../shared/ui/facility-worker-slot/facility-worker.component-slot.component';
-import OphthalmologyTriage from './queues/triage/ophthalmology-triage';
-import OphthalmologyConsultation from './queues/consultation/ophthalmology-consultation';
-interface OphthalmologyQueuesProps {}
-const OphthalmologyQueues: React.FC<OphthalmologyQueuesProps> = () => {
+import PsychiatryTriage from './queues/triage/psychiatry-triage';
+import PsychiatryConsultation from './queues/consultation/psychiatry-consultation';
+interface PsychiatryQueuesProps {}
+const PsychiatryQueues: React.FC<PsychiatryQueuesProps> = () => {
   return (
-    <div className={styles.ophthalmologyLayout}>
+    <div className={styles.psychiatryLayout}>
       <div className={styles.hwrSection}>
             <FacilityAndWorkerSlot />
       </div>
-      <div className={styles.ophthalmologyHeader}>
-        <h4>Ophthalmology</h4>
+      <div className={styles.psychiatryHeader}>
+        <h4>Psychiatry</h4>
       </div>
-      <div className={styles.ophthalmologyContent}>
+      <div className={styles.psychiatryContent}>
         <Tabs>
           <TabList contained>
             <Tab>Triage</Tab>
@@ -22,10 +22,10 @@ const OphthalmologyQueues: React.FC<OphthalmologyQueuesProps> = () => {
           </TabList>
           <TabPanels>
             <TabPanel>
-              <OphthalmologyTriage />
+              <PsychiatryTriage />
             </TabPanel>
              <TabPanel>
-              <OphthalmologyConsultation />
+              <PsychiatryConsultation />
             </TabPanel>
           </TabPanels>
         </Tabs>
@@ -33,4 +33,4 @@ const OphthalmologyQueues: React.FC<OphthalmologyQueuesProps> = () => {
     </div>
   );
 };
-export default OphthalmologyQueues;
+export default PsychiatryQueues;
