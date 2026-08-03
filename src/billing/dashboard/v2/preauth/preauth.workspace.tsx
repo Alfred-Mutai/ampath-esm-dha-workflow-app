@@ -105,37 +105,6 @@ const TREATMENT = ['DAY_WARD', 'RECLINING_CHAIR', 'SIDE_ROOM'];
 const LENS = ['FRAMES_LENSES', 'FRAMED', 'CONTACT'];
 const NEW_OR_REPL = ['NEW', 'REPLACEMENT'];
 
-/** Empty specialty fields — clinicians must enter real clinical data. */
-const SPECIALTY_DEFAULTS = {
-  chiefComplaint: '',
-  vitalSigns: '',
-  hpi: '',
-  physicalExam: '',
-  investigations: '',
-  anaesthesia: 'GENERAL',
-  sessionsRequired: '',
-  costPerSession: '',
-  frequency: 'ONCE_A_MONTH',
-  clinicalIndications: '',
-  isCoInsured: false,
-  necessity: '',
-  lensPrescription: 'FRAMES_LENSES',
-  lensAmount: '',
-  eyeExamAmount: '',
-  frameAmount: '',
-  newOrReplacement: 'NEW',
-  carcinomaStaging: 'STAGE_1',
-  comorbidity: '',
-  metastases: 'LUNG',
-  treatmentSetting: 'DAY_WARD',
-  oncologySessions: '',
-  oncologyCostPerSession: '',
-  imagingIndications: '',
-  renalIndications: '',
-  progressReport: '',
-  coInsuranceDetails: '',
-};
-
 const DOC_TYPE_OPTIONS = [
   'LAB_TESTS',
   'LAB_RESULTS',
@@ -244,54 +213,37 @@ const PreauthForm: React.FC<PreauthWorkspaceProps> = ({
   const [doctorId, setDoctorId] = useState('');
   const [regulationBody, setRegulationBody] = useState<RegulationBody>('KMPDC');
 
-  // Specialty fields — seeded empty; form-backed fields prefilled from POC Pre-authorization form.
-  const [clinicalIndications, setClinicalIndications] = useState(() => {
-    if (specialty.requiresRadiologyPreauth) return SPECIALTY_DEFAULTS.imagingIndications;
-    if (specialty.requiresRenalPreauth) return SPECIALTY_DEFAULTS.renalIndications;
-    return SPECIALTY_DEFAULTS.clinicalIndications;
-  });
+  // Specialty fields — empty until Pre-authorization form obs (or bill unit price) loads.
+  const [clinicalIndications, setClinicalIndications] = useState('');
   const [formLoadState, setFormLoadState] = useState<'idle' | 'loading' | 'done'>('idle');
   const [formFound, setFormFound] = useState<Set<PreauthFormFieldKey>>(() => new Set());
   const [formRelevant, setFormRelevant] = useState<Set<PreauthFormFieldKey>>(() => new Set());
-  const [chiefComplaint, setChiefComplaint] = useState(SPECIALTY_DEFAULTS.chiefComplaint);
-  const [vitalSigns, setVitalSigns] = useState(SPECIALTY_DEFAULTS.vitalSigns);
-  const [hpi, setHpi] = useState(SPECIALTY_DEFAULTS.hpi);
-  const [physicalExam, setPhysicalExam] = useState(SPECIALTY_DEFAULTS.physicalExam);
-  const [investigations, setInvestigations] = useState(SPECIALTY_DEFAULTS.investigations);
-  const [anaesthesia, setAnaesthesia] = useState(SPECIALTY_DEFAULTS.anaesthesia);
-  const [surgeryDate, setSurgeryDate] = useState(toIsoLocal());
-  const [sessionsRequired, setSessionsRequired] = useState(() =>
-    specialty.requiresOncologyPreauth
-      ? SPECIALTY_DEFAULTS.oncologySessions
-      : SPECIALTY_DEFAULTS.sessionsRequired,
-  );
-  const [costPerSession, setCostPerSession] = useState(() => {
-    if (specialty.requiresOncologyPreauth) {
-      return SPECIALTY_DEFAULTS.oncologyCostPerSession;
-    }
-    // Renal: cost per session defaults from bill unit price
-    if (specialty.requiresRenalPreauth) {
-      return String(billItem.item_price ?? billItem.item_total_price ?? SPECIALTY_DEFAULTS.costPerSession).trim();
-    }
-    return SPECIALTY_DEFAULTS.costPerSession;
-  });
-  const [frequency, setFrequency] = useState(SPECIALTY_DEFAULTS.frequency);
-  const [startDate, setStartDate] = useState(toIsoLocal());
-  const [isCoInsured, setIsCoInsured] = useState(SPECIALTY_DEFAULTS.isCoInsured);
-  const [necessity, setNecessity] = useState(SPECIALTY_DEFAULTS.necessity);
-  const [lensPrescription, setLensPrescription] = useState(SPECIALTY_DEFAULTS.lensPrescription);
-  const [lensAmount, setLensAmount] = useState(SPECIALTY_DEFAULTS.lensAmount);
-  const [eyeExamAmount, setEyeExamAmount] = useState(SPECIALTY_DEFAULTS.eyeExamAmount);
-  const [frameAmount, setFrameAmount] = useState(SPECIALTY_DEFAULTS.frameAmount);
-  const [newOrReplacement, setNewOrReplacement] = useState(SPECIALTY_DEFAULTS.newOrReplacement);
-  const [carcinomaStaging, setCarcinomaStaging] = useState(SPECIALTY_DEFAULTS.carcinomaStaging);
-  const [comorbidity, setComorbidity] = useState(SPECIALTY_DEFAULTS.comorbidity);
-  const [metastases, setMetastases] = useState(SPECIALTY_DEFAULTS.metastases);
-  const [treatmentSetting, setTreatmentSetting] = useState(SPECIALTY_DEFAULTS.treatmentSetting);
-  const [progressReport, setProgressReport] = useState(SPECIALTY_DEFAULTS.progressReport);
+  const [chiefComplaint, setChiefComplaint] = useState('');
+  const [vitalSigns, setVitalSigns] = useState('');
+  const [hpi, setHpi] = useState('');
+  const [physicalExam, setPhysicalExam] = useState('');
+  const [investigations, setInvestigations] = useState('');
+  const [anaesthesia, setAnaesthesia] = useState('');
+  const [surgeryDate, setSurgeryDate] = useState('');
+  const [sessionsRequired, setSessionsRequired] = useState('');
+  const [costPerSession, setCostPerSession] = useState('');
+  const [frequency, setFrequency] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [isCoInsured, setIsCoInsured] = useState(false);
+  const [necessity, setNecessity] = useState('');
+  const [lensPrescription, setLensPrescription] = useState('');
+  const [lensAmount, setLensAmount] = useState('');
+  const [eyeExamAmount, setEyeExamAmount] = useState('');
+  const [frameAmount, setFrameAmount] = useState('');
+  const [newOrReplacement, setNewOrReplacement] = useState('');
+  const [carcinomaStaging, setCarcinomaStaging] = useState('');
+  const [comorbidity, setComorbidity] = useState('');
+  const [metastases, setMetastases] = useState('');
+  const [treatmentSetting, setTreatmentSetting] = useState('');
+  const [progressReport, setProgressReport] = useState('');
   const [relatedToEmployment, setRelatedToEmployment] = useState(false);
   const [relatedToAccident, setRelatedToAccident] = useState(false);
-  const [coInsuranceDetails, setCoInsuranceDetails] = useState(SPECIALTY_DEFAULTS.coInsuranceDetails);
+  const [coInsuranceDetails, setCoInsuranceDetails] = useState('');
 
   const formFieldStatus = (key: PreauthFormFieldKey): FormFieldLoadStatus => {
     if (formLoadState === 'idle') return 'idle';
@@ -378,12 +330,7 @@ const PreauthForm: React.FC<PreauthWorkspaceProps> = ({
           }
           return next;
         });
-        if (fromSha.requiresOncologyPreauth) {
-          // Only seed oncology defaults when fields are still empty — do not wipe form prefill.
-          setSessionsRequired((prev) => prev.trim() || SPECIALTY_DEFAULTS.oncologySessions);
-          setCostPerSession((prev) => prev.trim() || SPECIALTY_DEFAULTS.oncologyCostPerSession);
-        }
-        // Renal session count / cost come from Pre-authorization form + bill — never reset here.
+        // Do not seed specialty field defaults — obs / bill loaders fill real values.
       } catch {
         // Keep launch-prop flags if coverage lookup fails
       }
@@ -405,8 +352,11 @@ const PreauthForm: React.FC<PreauthWorkspaceProps> = ({
 
   const markDirty = () => setDirty(true);
 
-  const applyDiagnosis = (dx: AmrsVisitDiagnosis) => {
-    markDirty();
+  const applyDiagnosis = (dx: AmrsVisitDiagnosis, opts?: { fromUser?: boolean }) => {
+    // Prefill from visit load must not trip "unsaved changes" on close.
+    if (opts?.fromUser !== false) {
+      markDirty();
+    }
     setSelectedDx(dx);
     if (dx.icd11_code) {
       setIcdCode(dx.icd11_code);
@@ -437,7 +387,7 @@ const PreauthForm: React.FC<PreauthWorkspaceProps> = ({
           setDiagnoses(results ?? []);
           const withIcd = (results ?? []).filter((d) => d.icd11_code);
           if (withIcd.length === 1) {
-            applyDiagnosis(withIcd[0]);
+            applyDiagnosis(withIcd[0], { fromUser: false });
           }
         }
       } catch {
@@ -476,13 +426,7 @@ const PreauthForm: React.FC<PreauthWorkspaceProps> = ({
       });
       if (cancelled || !fromBills) return;
       setUnitPrice(fromBills);
-      setCostPerSession((prev) => {
-        // Renal: keep form/bill cost in sync with the matched bill line when empty or still launch default
-        if (specialty.requiresRenalPreauth) {
-          return prev.trim() && prev !== SPECIALTY_DEFAULTS.costPerSession ? prev : fromBills;
-        }
-        return prev;
-      });
+      setCostPerSession((prev) => (prev.trim() ? prev : fromBills));
       // Prefer matched billable_service label when launch used intervention name only
       if (billLine?.billable_service && !(billItem.billable_service || '').trim()) {
         // billItem is a prop — display uses billableService derived from it; unit price is enough
@@ -1216,7 +1160,7 @@ const PreauthForm: React.FC<PreauthWorkspaceProps> = ({
                 }
                 selectedItem={selectedDx}
                 onChange={({ selectedItem }) => {
-                  if (selectedItem) applyDiagnosis(selectedItem as AmrsVisitDiagnosis);
+                  if (selectedItem) applyDiagnosis(selectedItem as AmrsVisitDiagnosis, { fromUser: true });
                 }}
               />
             )}
@@ -1360,14 +1304,14 @@ const PreauthForm: React.FC<PreauthWorkspaceProps> = ({
                 titleText="Type of anaesthesia"
                 label="Select"
                 items={ANAESTHESIA}
-                selectedItem={anaesthesia}
+                selectedItem={anaesthesia || null}
                 disabled={formFieldLocked('anaesthesia')}
                 invalid={formFieldInvalid('anaesthesia')}
                 invalidText={formFieldInvalid('anaesthesia') ? FORM_MISSING_HINT : undefined}
                 onChange={({ selectedItem }) => {
                   if (formFieldLocked('anaesthesia')) return;
                   markDirty();
-                  setAnaesthesia(selectedItem ?? SPECIALTY_DEFAULTS.anaesthesia);
+                  setAnaesthesia(selectedItem ?? '');
                 }}
               />
               <DatePicker
@@ -1485,14 +1429,14 @@ const PreauthForm: React.FC<PreauthWorkspaceProps> = ({
                 titleText="Frequency of sessions"
                 label="Select"
                 items={FREQUENCY}
-                selectedItem={frequency}
+                selectedItem={frequency || null}
                 disabled={formFieldLocked('frequency')}
                 invalid={formFieldInvalid('frequency')}
                 invalidText={formFieldInvalid('frequency') ? FORM_MISSING_HINT : undefined}
                 onChange={({ selectedItem }) => {
                   if (formFieldLocked('frequency')) return;
                   markDirty();
-                  setFrequency(selectedItem ?? SPECIALTY_DEFAULTS.frequency);
+                  setFrequency(selectedItem ?? '');
                 }}
               />
             </div>
@@ -1575,10 +1519,10 @@ const PreauthForm: React.FC<PreauthWorkspaceProps> = ({
                 titleText="Lens prescription"
                 label="Select"
                 items={LENS}
-                selectedItem={lensPrescription}
+                selectedItem={lensPrescription || null}
                 onChange={({ selectedItem }) => {
                   markDirty();
-                  setLensPrescription(selectedItem ?? SPECIALTY_DEFAULTS.lensPrescription);
+                  setLensPrescription(selectedItem ?? '');
                 }}
               />
               <Dropdown
@@ -1586,10 +1530,10 @@ const PreauthForm: React.FC<PreauthWorkspaceProps> = ({
                 titleText="New or replacement"
                 label="Select"
                 items={NEW_OR_REPL}
-                selectedItem={newOrReplacement}
+                selectedItem={newOrReplacement || null}
                 onChange={({ selectedItem }) => {
                   markDirty();
-                  setNewOrReplacement(selectedItem ?? SPECIALTY_DEFAULTS.newOrReplacement);
+                  setNewOrReplacement(selectedItem ?? '');
                 }}
               />
             </div>
@@ -1634,10 +1578,10 @@ const PreauthForm: React.FC<PreauthWorkspaceProps> = ({
                 titleText="Carcinoma staging"
                 label="Select"
                 items={STAGING}
-                selectedItem={carcinomaStaging}
+                selectedItem={carcinomaStaging || null}
                 onChange={({ selectedItem }) => {
                   markDirty();
-                  setCarcinomaStaging(selectedItem ?? SPECIALTY_DEFAULTS.carcinomaStaging);
+                  setCarcinomaStaging(selectedItem ?? '');
                 }}
               />
               <Dropdown
@@ -1645,10 +1589,10 @@ const PreauthForm: React.FC<PreauthWorkspaceProps> = ({
                 titleText="Metastases"
                 label="Select"
                 items={METASTASES}
-                selectedItem={metastases}
+                selectedItem={metastases || null}
                 onChange={({ selectedItem }) => {
                   markDirty();
-                  setMetastases(selectedItem ?? SPECIALTY_DEFAULTS.metastases);
+                  setMetastases(selectedItem ?? '');
                 }}
               />
               <Dropdown
@@ -1656,10 +1600,10 @@ const PreauthForm: React.FC<PreauthWorkspaceProps> = ({
                 titleText="Treatment setting"
                 label="Select"
                 items={TREATMENT}
-                selectedItem={treatmentSetting}
+                selectedItem={treatmentSetting || null}
                 onChange={({ selectedItem }) => {
                   markDirty();
-                  setTreatmentSetting(selectedItem ?? SPECIALTY_DEFAULTS.treatmentSetting);
+                  setTreatmentSetting(selectedItem ?? '');
                 }}
               />
             </div>
