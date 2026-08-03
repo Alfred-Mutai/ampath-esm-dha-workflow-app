@@ -23,3 +23,12 @@
   color: var(--cds-text-secondary, #525252);
   font-size: 0.75rem;
 }
+
+.notes {
+  max-width: 18rem;
+  color: var(--cds-text-secondary, #525252);
+  font-size: 0.75rem;
+  line-height: 1.3;
+  white-space: pre-wrap;
+  word-break: break-word;
+}

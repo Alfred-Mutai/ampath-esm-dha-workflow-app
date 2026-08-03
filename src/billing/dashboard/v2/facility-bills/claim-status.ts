@@ -136,7 +136,7 @@ export const PREAUTH_BUCKETS: StatusBucket[] = [
   {
     key: 'resubmission',
     label: 'Needs resubmission',
-    statuses: ['RECALLED', 'PENDING_CLARIFICATION'],
+    statuses: ['RECALLED', 'PENDING_CLARIFICATION', 'CLARIFICATION_AFTER_AUTOMATIC_CHECKS'],
   },
   {
     key: 'closed',
@@ -225,6 +225,9 @@ export function statusMeta(status: string): { label: string; tag: TagType } {
       return { label: 'Rejected', tag: 'red' };
     case 'RECALLED':
       return { label: 'Recalled', tag: 'magenta' };
+    case 'PENDING_CLARIFICATION':
+    case 'CLARIFICATION_AFTER_AUTOMATIC_CHECKS':
+      return { label: 'Needs clarification', tag: 'magenta' };
     case 'PAID':
       return { label: 'Paid', tag: 'green' };
     // Phase 4 — terminal.

@@ -40,9 +40,11 @@ import {
   preauthFormLabel,
   readSpecialtyFlags,
   resolveUnitPriceFromPatientBills,
+  searchDiagnosisConcepts,
   searchHealthWorkerRegistry,
   searchOpenMrsProviders,
   storePreauthCode,
+  type DiagnosisConceptHit,
   type HwrSearchResult,
   type OpenMrsProviderHit,
   type PreauthFormFieldKey,
@@ -51,6 +53,37 @@ import {
 import styles from './preauth.workspace.scss';
 
 export type { PreauthInterventionProps };
+
+/** ComboBox row: visit diagnosis (ETL) or concept-dictionary hit. */
+type DiagnosisPick =
+  | { kind: 'visit'; key: string; dx: AmrsVisitDiagnosis }
+  | { kind: 'concept'; key: string; hit: DiagnosisConceptHit };
+
+const visitDxPick = (dx: AmrsVisitDiagnosis): DiagnosisPick => ({
+  kind: 'visit',
+  key: `visit-${dx.uuid || dx.encounter_id}-${dx.icd11_code}`,
+  dx,
+});
+
+const conceptDxPick = (hit: DiagnosisConceptHit): DiagnosisPick => ({
+  kind: 'concept',
+  key: `concept-${hit.uuid}-${hit.icd11Code}`,
+  hit,
+});
+
+const diagnosisPickLabel = (item: DiagnosisPick | null) => {
+  if (!item) return '';
+  if (item.kind === 'visit') {
+    const d = item.dx;
+    return `${d.icd11_code ?? '—'} · ${d.concept_source_name || d.encounter_type || 'Visit diagnosis'}`;
+  }
+  return `${item.hit.icd11Code} · ${item.hit.display}`;
+};
+
+const diagnosisPickCode = (item: DiagnosisPick | null) => {
+  if (!item) return '';
+  return item.kind === 'visit' ? item.dx.icd11_code ?? '' : item.hit.icd11Code;
+};
 
 const DEFAULT_DOCTOR_ID_TYPE = 'National ID' as const;
 
@@ -197,11 +230,14 @@ const PreauthForm: React.FC<PreauthWorkspaceProps> = ({
     String(billItem.item_price ?? billItem.item_total_price ?? '').trim(),
   );
 
-  // Diagnosis (ICD-11) from visit — code is also editable
-  const [diagnoses, setDiagnoses] = useState<AmrsVisitDiagnosis[]>([]);
+  // Diagnosis: prefill from patient visit diagnoses; search uses concept dictionary (ICD-11).
+  const [visitDiagnoses, setVisitDiagnoses] = useState<AmrsVisitDiagnosis[]>([]);
+  const [conceptDxHits, setConceptDxHits] = useState<DiagnosisConceptHit[]>([]);
   const [loadingDx, setLoadingDx] = useState(false);
-  const [selectedDx, setSelectedDx] = useState<AmrsVisitDiagnosis | null>(null);
+  const [searchingDx, setSearchingDx] = useState(false);
+  const [selectedDx, setSelectedDx] = useState<DiagnosisPick | null>(null);
   const [icdCode, setIcdCode] = useState('');
+  const dxSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Provider — National ID for doctor; HWR for regulation body
   const [providerHits, setProviderHits] = useState<OpenMrsProviderHit[]>([]);
@@ -348,28 +384,33 @@ const PreauthForm: React.FC<PreauthWorkspaceProps> = ({
   useEffect(() => () => {
     abortRef.current?.abort();
     if (providerSearchTimer.current) clearTimeout(providerSearchTimer.current);
+    if (dxSearchTimer.current) clearTimeout(dxSearchTimer.current);
   }, []);
 
   const markDirty = () => setDirty(true);
 
-  const applyDiagnosis = (dx: AmrsVisitDiagnosis, opts?: { fromUser?: boolean }) => {
+  const applyDiagnosisPick = (pick: DiagnosisPick | null, opts?: { fromUser?: boolean }) => {
     // Prefill from visit load must not trip "unsaved changes" on close.
     if (opts?.fromUser !== false) {
       markDirty();
     }
-    setSelectedDx(dx);
-    if (dx.icd11_code) {
-      setIcdCode(dx.icd11_code);
+    setSelectedDx(pick);
+    const code = diagnosisPickCode(pick);
+    if (code) {
+      setIcdCode(code);
     }
-    if (dx.practioner_nat_id) {
-      setDoctorId(dx.practioner_nat_id);
-    }
-    if (dx.practitioner_body) {
-      setRegulationBody(normalizeRegulationBody(dx.practitioner_body));
+    if (pick?.kind === 'visit') {
+      const dx = pick.dx;
+      if (dx.practioner_nat_id) {
+        setDoctorId(dx.practioner_nat_id);
+      }
+      if (dx.practitioner_body) {
+        setRegulationBody(normalizeRegulationBody(dx.practitioner_body));
+      }
     }
   };
 
-  // Load visit diagnoses (ICD-11) that led to the claim
+  // Prefill from patient visit diagnoses (same ETL source as Patient diagnosis on bill details).
   useEffect(() => {
     const uuid = patientUuid || billItem.patient_uuid;
     if (!uuid || !locationUuid) return;
@@ -384,10 +425,10 @@ const PreauthForm: React.FC<PreauthWorkspaceProps> = ({
           locationUuid,
         });
         if (!cancelled) {
-          setDiagnoses(results ?? []);
+          setVisitDiagnoses(results ?? []);
           const withIcd = (results ?? []).filter((d) => d.icd11_code);
           if (withIcd.length === 1) {
-            applyDiagnosis(withIcd[0], { fromUser: false });
+            applyDiagnosisPick(visitDxPick(withIcd[0]), { fromUser: false });
           }
         }
       } catch {
@@ -395,7 +436,7 @@ const PreauthForm: React.FC<PreauthWorkspaceProps> = ({
           showSnackbar({
             kind: 'warning',
             title: 'Could not load diagnoses',
-            subtitle: 'Select or retry after checking the visit has ICD-11 coded diagnoses.',
+            subtitle: 'Search the concept dictionary, or retry after the visit has ICD-11 coded diagnoses.',
           });
         }
       } finally {
@@ -409,6 +450,47 @@ const PreauthForm: React.FC<PreauthWorkspaceProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [patientUuid, billItem.patient_uuid, billItem.bill_date, locationUuid]);
 
+  const diagnosisItems = useMemo((): DiagnosisPick[] => {
+    const base =
+      conceptDxHits.length > 0
+        ? conceptDxHits.map(conceptDxPick)
+        : visitDiagnoses.filter((d) => d.icd11_code).map(visitDxPick);
+    if (!selectedDx) return base;
+    if (!base.some((i) => i.key === selectedDx.key)) {
+      return [selectedDx, ...base];
+    }
+    return base.map((i) => (i.key === selectedDx.key ? selectedDx : i));
+  }, [conceptDxHits, visitDiagnoses, selectedDx]);
+
+  const handleDiagnosisInputChange = (inputValue: string) => {
+    const selectedLabel = diagnosisPickLabel(selectedDx);
+    if (inputValue === selectedLabel) {
+      return;
+    }
+    if (selectedDx) {
+      setSelectedDx(null);
+    }
+    if (dxSearchTimer.current) {
+      clearTimeout(dxSearchTimer.current);
+    }
+    const q = (inputValue ?? '').trim();
+    if (q.length < 2) {
+      setConceptDxHits([]);
+      setSearchingDx(false);
+      return;
+    }
+    dxSearchTimer.current = setTimeout(async () => {
+      setSearchingDx(true);
+      try {
+        const hits = await searchDiagnosisConcepts(q);
+        setConceptDxHits(hits);
+      } catch {
+        setConceptDxHits([]);
+      } finally {
+        setSearchingDx(false);
+      }
+    }, 300);
+  };
   // Resolve unit_price from patient facility bill lines (match intervention + service name).
   useEffect(() => {
     const uuid = patientUuid || billItem.patient_uuid;
@@ -932,15 +1014,17 @@ const PreauthForm: React.FC<PreauthWorkspaceProps> = ({
       // Sync selected ICD onto the claim (normal / post-claim only).
       if (!isElective) {
         try {
-          const dx = selectedDx;
+          const visitDx = selectedDx?.kind === 'visit' ? selectedDx.dx : null;
           await addClaimDiagnosis({
             consentToken,
             interventionCode: intervention.code,
             icdCode: icdCode.trim(),
             locationUuid,
-            practitionerIdentificationNumber: (dx?.practioner_nat_id || doctorId || '').trim(),
+            practitionerIdentificationNumber: (visitDx?.practioner_nat_id || doctorId || '').trim(),
             practitionerIdentificationType: DEFAULT_DOCTOR_ID_TYPE,
-            practitionerRegulationBody: normalizeRegulationBody(dx?.practitioner_body || regulationBody),
+            practitionerRegulationBody: normalizeRegulationBody(
+              visitDx?.practitioner_body || regulationBody,
+            ),
           });
         } catch {
           // Preauth succeeded; claim diagnosis can still be added from bill details.
@@ -1144,30 +1228,34 @@ const PreauthForm: React.FC<PreauthWorkspaceProps> = ({
           />
 
           <div className={styles.searchBlock}>
-            <p className={styles.fieldHint}>Diagnosis (ICD-11 from visit)</p>
+            <p className={styles.fieldHint}>
+              Diagnosis (ICD-11) — prefilled from patient visit; type to search the concept dictionary
+            </p>
             {loadingDx ? (
-              <InlineLoading description="Loading diagnoses…" />
+              <InlineLoading description="Loading visit diagnoses…" />
             ) : (
               <ComboBox
                 id="preauth-diagnosis"
                 titleText="Select diagnosis"
-                placeholder="Search diagnosis / ICD-11"
-                items={diagnoses}
-                itemToString={(item: AmrsVisitDiagnosis | null) =>
-                  item
-                    ? `${item.icd11_code ?? '—'} · ${item.concept_source_name || item.encounter_type || ''}`
-                    : ''
-                }
+                placeholder="Search diagnosis / ICD-11 code"
+                items={diagnosisItems}
+                itemToString={diagnosisPickLabel}
                 selectedItem={selectedDx}
+                shouldFilterItem={() => true}
+                onInputChange={handleDiagnosisInputChange}
                 onChange={({ selectedItem }) => {
-                  if (selectedItem) applyDiagnosis(selectedItem as AmrsVisitDiagnosis, { fromUser: true });
+                  applyDiagnosisPick(selectedItem as DiagnosisPick | null, { fromUser: true });
+                  if (selectedItem) {
+                    setConceptDxHits([]);
+                  }
                 }}
               />
             )}
+            {searchingDx ? <InlineLoading description="Searching concepts…" /> : null}
             <TextInput
               id="preauth-icd11"
               labelText="ICD-11 code"
-              placeholder="Type ICD-11 code"
+              placeholder="Filled from selection (or type manually)"
               value={icdCode}
               onChange={(e) => {
                 markDirty();

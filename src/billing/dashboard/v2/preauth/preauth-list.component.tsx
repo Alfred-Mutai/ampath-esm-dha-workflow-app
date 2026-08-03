@@ -41,6 +41,7 @@ type RowMeta = {
   kind: PreauthStatusDisplayKind;
   status?: string;
   preauthCode?: string;
+  notes?: string;
 };
 
 const PreauthList: React.FC<PreauthListProps> = ({ locationUuid, billingDate, onDateChange }) => {
@@ -76,22 +77,24 @@ const PreauthList: React.FC<PreauthListProps> = ({ locationUuid, billingDate, on
           }
           metaMap[key] = { kind: 'loading' };
 
-          const check = await checkPreauthStatus(token, locationUuid);
+          const check = await checkPreauthStatus(token, locationUuid, item.intervention_code);
           metaMap[key] = {
             kind: check.kind as PreauthCheckKind,
             status: check.status,
             preauthCode: check.preauthCode,
+            notes: check.notes,
           };
         } catch {
           // Visit fetch failed — still allow raise if ETL returned consent_token
           const token = item.consent_token || '';
           tokenMap[key] = token;
           if (token) {
-            const check = await checkPreauthStatus(token, locationUuid);
+            const check = await checkPreauthStatus(token, locationUuid, item.intervention_code);
             metaMap[key] = {
               kind: check.kind as PreauthCheckKind,
               status: check.status,
               preauthCode: check.preauthCode,
+              notes: check.notes,
             };
           } else {
             metaMap[key] = { kind: 'error', status: 'Visit lookup failed' };
@@ -219,9 +222,12 @@ const PreauthList: React.FC<PreauthListProps> = ({ locationUuid, billingDate, on
               const flags = interventionFlagsFromBillItem(item);
               const meta = rowMeta[key];
               const elective = needsElectivePreauth(item);
+              // Already-raised (pending / clarification / finalised) must not show Raise again.
               const canRaise =
-                meta?.kind !== 'finalised' &&
-                (elective || (Boolean(rowTokens[key]) && meta?.kind !== 'no_token'));
+                meta?.kind === 'not_raised' ||
+                meta?.kind === 'failed' ||
+                (elective && meta?.kind === 'no_token');
+              const showNotes = Boolean(meta?.notes?.trim()) && !canRaise;
               return (
                 <TableRow key={key}>
                   <TableCell>
@@ -246,16 +252,16 @@ const PreauthList: React.FC<PreauthListProps> = ({ locationUuid, billingDate, on
                       preauthCode={meta?.preauthCode}
                       loading={!meta || meta.kind === 'loading'}
                     />
+                    {showNotes ? <div className={styles.notes}>{meta?.notes}</div> : null}
                   </TableCell>
                   <TableCell>
-                    <Button
-                      kind="ghost"
-                      size="sm"
-                      disabled={!canRaise}
-                      onClick={() => handleRaise(item)}
-                    >
-                      Raise preauth
-                    </Button>
+                    {canRaise ? (
+                      <Button kind="ghost" size="sm" onClick={() => handleRaise(item)}>
+                        Raise preauth
+                      </Button>
+                    ) : (
+                      '—'
+                    )}
                   </TableCell>
                 </TableRow>
               );

@@ -697,8 +697,47 @@ export type PreauthPreviewRow = {
   needsDoctorApproval: boolean;
   doctorApproved: boolean;
   serviceStart: string;
+  /** Payer / provider notes (e.g. clarification after automatic checks). */
+  notes: string;
   raw: Record<string, unknown>;
 };
+
+/** True when payer asked for clarification / response on an already-raised preauth. */
+export function isPreauthNeedsClarification(status: string): boolean {
+  const s = (status || '').toUpperCase();
+  return (
+    s === 'CLARIFICATION_AFTER_AUTOMATIC_CHECKS' ||
+    s === 'PENDING_CLARIFICATION' ||
+    s.includes('CLARIFICATION')
+  );
+}
+
+/** Collect note text from preview row `preauthNotes` / item `responseNote`. */
+export function extractPreauthNotesFromItem(item: Record<string, unknown> | null | undefined): string {
+  if (!item) return '';
+  const notes = item.preauthNotes ?? item.preauth_notes;
+  if (Array.isArray(notes)) {
+    const texts = notes
+      .map((n) => {
+        if (!n || typeof n !== 'object') return '';
+        return String((n as Record<string, unknown>).note ?? '').trim();
+      })
+      .filter(Boolean);
+    if (texts.length) return texts.join('\n');
+  }
+  const items = item.preauthItems ?? item.preauth_items;
+  if (Array.isArray(items)) {
+    const texts = items
+      .map((n) => {
+        if (!n || typeof n !== 'object') return '';
+        const row = n as Record<string, unknown>;
+        return String(row.responseNote ?? row.response_note ?? '').trim();
+      })
+      .filter(Boolean);
+    if (texts.length) return texts.join('\n');
+  }
+  return '';
+}
 
 function firstDoctorProfile(item: Record<string, unknown>): Record<string, unknown> | null {
   const doctors = item.preauthDoctors ?? item.preauth_doctors;
@@ -766,6 +805,7 @@ export function normalizePreauthPreviewItem(
       item.needsDoctorApproval === true || item.needs_doctor_approval === true,
     doctorApproved: item.doctorApproved === true || item.doctor_approved === true,
     serviceStart: String(item.serviceStart ?? item.service_start ?? '').trim(),
+    notes: extractPreauthNotesFromItem(item),
     raw: item,
   };
 }
@@ -974,6 +1014,7 @@ export type PreauthCheckResult = {
   preauthCode?: string;
   preview: unknown;
   kind: PreauthCheckKind;
+  notes?: string;
   error?: string;
 };
 
@@ -981,6 +1022,7 @@ export type PreauthCheckResult = {
 export async function checkPreauthStatus(
   consentToken: string | null | undefined,
   locationUuid: string | null | undefined,
+  interventionCode?: string | null,
 ): Promise<PreauthCheckResult> {
   if (!consentToken?.trim()) {
     return {
@@ -1001,25 +1043,33 @@ export async function checkPreauthStatus(
 
   try {
     const preview = await getPreauthPreview(consentToken.trim(), locationUuid.trim());
-    const item = unwrapPreauthPreviewItem(preview);
+    const code = (interventionCode ?? '').trim();
+    const item = code
+      ? findPreauthPreviewForIntervention(preview, code)
+      : unwrapPreauthPreviewItem(preview);
     // Paginated empty results / null body → not raised
     if (!preview || !item) {
       return { status: '', preview, kind: 'not_raised' };
     }
 
-    const status = extractPreauthStatus(preview);
-    const preauthCode = extractPreauthCode(preview);
+    const status = code
+      ? extractPreauthStatusForIntervention(preview, code)
+      : extractPreauthStatus(preview);
+    const preauthCode = code
+      ? extractPreauthCodeForIntervention(preview, code)
+      : extractPreauthCode(preview);
+    const notes = extractPreauthNotesFromItem(item);
 
     if (!status) {
-      return { status: '', preview, kind: 'not_raised', preauthCode };
+      return { status: '', preview, kind: 'not_raised', preauthCode, notes };
     }
     if (isPreauthFinalised(status)) {
-      return { status: 'FINALISED', preview, kind: 'finalised', preauthCode };
+      return { status: 'FINALISED', preview, kind: 'finalised', preauthCode, notes };
     }
     if (isPreauthTerminalFailure(status)) {
-      return { status, preview, kind: 'failed', preauthCode };
+      return { status, preview, kind: 'failed', preauthCode, notes };
     }
-    return { status, preview, kind: 'pending', preauthCode };
+    return { status, preview, kind: 'pending', preauthCode, notes };
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : String(e ?? 'Failed to get preauth preview');
     return {

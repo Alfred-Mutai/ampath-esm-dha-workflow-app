@@ -1,6 +1,6 @@
 import React from 'react';
 import { InlineLoading, Tag } from '@carbon/react';
-import { type PreauthCheckKind } from '../../../../claims/claims.resource';
+import { isPreauthNeedsClarification, type PreauthCheckKind } from '../../../../claims/claims.resource';
 
 export type PreauthStatusDisplayKind = PreauthCheckKind | 'no_token' | 'loading';
 
@@ -40,8 +40,14 @@ const PreauthStatusTag: React.FC<PreauthStatusTagProps> = ({
       );
     case 'pending':
       return (
-        <Tag size="sm" type="purple">
-          {status?.trim() || 'Pending'}
+        <Tag
+          size="sm"
+          type={isPreauthNeedsClarification(status ?? '') ? 'magenta' : 'purple'}
+          title={status?.trim() || undefined}
+        >
+          {isPreauthNeedsClarification(status ?? '')
+            ? 'Needs clarification'
+            : status?.trim() || 'Pending'}
         </Tag>
       );
     case 'failed':

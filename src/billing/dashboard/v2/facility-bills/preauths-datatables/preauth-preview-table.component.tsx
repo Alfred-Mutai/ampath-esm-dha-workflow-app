@@ -16,9 +16,11 @@ import { Renew } from '@carbon/react/icons';
 import { showSnackbar, usePagination } from '@openmrs/esm-framework';
 import {
   isAwaitingDoctorApproval,
+  isPreauthNeedsClarification,
   resendPreauthDoctorConsent,
   type PreauthPreviewRow,
 } from '../../../../../claims/claims.resource';
+import { statusMeta } from '../claim-status';
 
 interface PreauthPreviewTableProps {
   rows: PreauthPreviewRow[];
@@ -53,6 +55,7 @@ const PreauthPreviewTable: React.FC<PreauthPreviewTableProps> = ({
         serviceStart: r.serviceStart
           ? r.serviceStart.replace('T', ' ').slice(0, 19)
           : '—',
+        notes: r.notes || '',
         raw: r,
       })),
     [rows],
@@ -66,6 +69,7 @@ const PreauthPreviewTable: React.FC<PreauthPreviewTableProps> = ({
     { key: 'intervention', header: 'Intervention' },
     { key: 'preauthType', header: 'Type' },
     { key: 'status', header: 'Status' },
+    { key: 'notes', header: 'Notes' },
     { key: 'doctor', header: 'Doctor' },
     { key: 'token', header: 'Preauth token' },
     { key: 'serviceStart', header: 'Service start' },
@@ -151,6 +155,8 @@ const PreauthPreviewTable: React.FC<PreauthPreviewTableProps> = ({
                   <TableRow key={row.id} {...getRowProps({ row })}>
                     {row.cells.map((cell) => {
                       if (cell.info.header === 'status') {
+                        const statusValue = String(cell.value);
+                        const meta = statusMeta(statusValue);
                         return (
                           <TableCell key={cell.id} {...getCellProps({ cell })}>
                             <Tag
@@ -158,13 +164,42 @@ const PreauthPreviewTable: React.FC<PreauthPreviewTableProps> = ({
                               type={
                                 isAwaitingDoctorApproval(source)
                                   ? 'magenta'
-                                  : String(cell.value).includes('FINAL')
-                                    ? 'green'
-                                    : 'blue'
+                                  : isPreauthNeedsClarification(statusValue)
+                                    ? 'magenta'
+                                    : String(cell.value).includes('FINAL')
+                                      ? 'green'
+                                      : meta.tag
                               }
+                              title={statusValue}
                             >
-                              {String(cell.value)}
+                              {isPreauthNeedsClarification(statusValue)
+                                ? 'Needs clarification'
+                                : statusValue}
                             </Tag>
+                          </TableCell>
+                        );
+                      }
+                      if (cell.info.header === 'notes') {
+                        const note = String(cell.value || '').trim();
+                        return (
+                          <TableCell key={cell.id} {...getCellProps({ cell })}>
+                            {note ? (
+                              <span
+                                style={{
+                                  display: 'block',
+                                  maxWidth: '22rem',
+                                  whiteSpace: 'pre-wrap',
+                                  wordBreak: 'break-word',
+                                  fontSize: '0.75rem',
+                                  lineHeight: 1.3,
+                                }}
+                                title={note}
+                              >
+                                {note}
+                              </span>
+                            ) : (
+                              '—'
+                            )}
                           </TableCell>
                         );
                       }

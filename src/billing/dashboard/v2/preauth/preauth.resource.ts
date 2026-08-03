@@ -370,6 +370,93 @@ export async function searchOpenMrsProviders(q: string): Promise<OpenMrsProvider
   }));
 }
 
+/** ICD-11 concept source used by AMRS / ETL patient diagnosis (claims-and-billing). */
+export const ICD11_CONCEPT_SOURCE_UUID = '43aaca5f-d623-43fd-993b-673b5d927cdd';
+
+export type DiagnosisConceptHit = {
+  uuid: string;
+  display: string;
+  icd11Code: string;
+};
+
+type ConceptMappingLike = {
+  display?: string;
+  conceptReferenceTerm?: {
+    code?: string;
+    name?: string;
+    conceptSource?: { uuid?: string; name?: string; hl7Code?: string };
+  };
+};
+
+function extractIcd11CodeFromConcept(concept: {
+  mappings?: ConceptMappingLike[];
+}): string {
+  for (const m of concept.mappings ?? []) {
+    const term = m.conceptReferenceTerm;
+    if (!term) continue;
+    const source = term.conceptSource ?? {};
+    const sourceUuid = String(source.uuid ?? '');
+    const sourceName = String(source.name ?? '').toUpperCase();
+    const hl7 = String(source.hl7Code ?? '').toUpperCase();
+    if (
+      sourceUuid === ICD11_CONCEPT_SOURCE_UUID ||
+      sourceName.includes('ICD-11') ||
+      sourceName.includes('ICD11') ||
+      hl7 === 'ICD11' ||
+      hl7.includes('ICD-11')
+    ) {
+      const code = String(term.code ?? '').trim();
+      if (code) return code;
+    }
+  }
+  for (const m of concept.mappings ?? []) {
+    const display = String(m.display ?? '');
+    if (/ICD-?11/i.test(display)) {
+      const code = display.split(':').pop()?.trim();
+      if (code) return code;
+    }
+  }
+  return '';
+}
+
+/**
+ * Search the OpenMRS concept dictionary for ICD-11–mapped diagnosis concepts.
+ * Used when the clerk types in Raise Preauth (visit diagnoses still prefill the list).
+ */
+export async function searchDiagnosisConcepts(q: string): Promise<DiagnosisConceptHit[]> {
+  const term = (q ?? '').trim();
+  if (term.length < 2) {
+    return [];
+  }
+  const params = new URLSearchParams({
+    q: term,
+    limit: '25',
+    v: 'custom:(uuid,display,mappings:(display,conceptReferenceTerm:(uuid,code,name,conceptSource:(uuid,name,hl7Code))))',
+  });
+  const response = await openmrsFetch(`${restBaseUrl}/concept?${params.toString()}`);
+  const results = (response?.data?.results as Array<{
+    uuid: string;
+    display: string;
+    mappings?: ConceptMappingLike[];
+  }>) ?? [];
+
+  const hits: DiagnosisConceptHit[] = [];
+  const seen = new Set<string>();
+  for (const c of results) {
+    const icd11Code = extractIcd11CodeFromConcept(c);
+    if (!icd11Code) continue;
+    const key = `${icd11Code}|${c.uuid}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    hits.push({
+      uuid: c.uuid,
+      display: c.display || icd11Code,
+      icd11Code,
+    });
+  }
+  return hits;
+}
+
 export type HwrSearchResult = {
   membership?: {
     id?: string;
