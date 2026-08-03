@@ -110,6 +110,11 @@ const CreateOrderBillForm: React.FC<CreateOrderBillFormProps> = ({
             const currentCashpoint = bill?.cashPoint;
             cashPoint = currentCashpoint?.uuid;
             setValue("cashPoint", cashPoint);
+        } else {
+            if(cashPoints && cashPoints.length) {
+                cashPoint = cashPoints[0]?.uuid;
+                setValue("cashPoint", cashPoint);
+            }
         }
         return cashPoint;
     }, [currentDayBills]);

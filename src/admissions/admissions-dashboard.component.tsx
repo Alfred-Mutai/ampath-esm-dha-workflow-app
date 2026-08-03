@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import styles from './admissions-dashboard.component.scss';
 import StatCard from '../shared/ui/stat-card/stat-card.component';
 import { InlineLoading, Tab, TabList, TabPanel, TabPanels, Tabs } from '@carbon/react';
@@ -10,6 +10,7 @@ import {
   getAdmittedPatientsData,
   getDichargedEncounters,
   fetchFacilityAdmissionRequests,
+  useActiveVisitEncounterUuids,
 } from './admissions.resource';
 import {
   type Disposition,
@@ -41,6 +42,7 @@ const AdmissionsDashboard: React.FC = () => {
   const session = useSession();
   const locationUuid = session.sessionLocation.uuid;
   const { maternityDischargeEncounterTypeUuid } = useConfig<ConfigObject>();
+  const { activeVisitEncounterUuids } = useActiveVisitEncounterUuids(locationUuid);
   const sortedDischargeEncounters = useMemo(() => generateDischargeEncounters(), [dischargeEncounterBundle]);
 
   const getPatient = (patients: Patient[]) => {
@@ -78,6 +80,14 @@ const AdmissionsDashboard: React.FC = () => {
   useEffect(() => {
     fetchData();
   }, [locationUuid]);
+
+  useEffect(() => {
+    if (activeVisitEncounterUuids.length > 0) {
+      getAwaitingDischargeEncounters();
+      getDisachargedEncounters();
+    }
+  }, [activeVisitEncounterUuids]);
+
   const fetchData = () => {
     setLoading(true);
     getDashboardData();
@@ -104,14 +114,28 @@ const AdmissionsDashboard: React.FC = () => {
     setAdmittedPatientsData(res);
     setLoading(false);
   };
-  const getAwaitingDischargeEncounters = async () => {
+  const getAwaitingDischargeEncounters = useCallback(async () => {
     const res = await getDichargedEncounters(maternityDischargeEncounterTypeUuid, locationUuid);
-    setAwaitingDischargeEncounterBundle(res);
-  };
-  const getDisachargedEncounters = async () => {
+    
+    if (res && res.entry) {
+      const filteredEntries = res.entry.filter(entry => {
+        const resource = entry.resource;
+        return resource && resource.resourceType === 'Encounter' && activeVisitEncounterUuids.includes(resource.id);
+      });
+      setAwaitingDischargeEncounterBundle({
+        ...res,
+        entry: filteredEntries,
+        total: filteredEntries.length
+      });
+    } else {
+      setAwaitingDischargeEncounterBundle(res);
+    }
+  }, [maternityDischargeEncounterTypeUuid, locationUuid, activeVisitEncounterUuids]);
+  
+  const getDisachargedEncounters = useCallback(async () => {
     const res = await getDichargedEncounters(AdmissionEncounterTypeUuids.DISCHARGE_ENCOUNTER_TYPE_UUID, locationUuid);
     setDischargeEncounterBundle(res);
-  };
+  }, [locationUuid, activeVisitEncounterUuids]);
   function generateDischargeEncounters(): FhirEncounter[] {
     if (dischargeEncounterBundle && dischargeEncounterBundle.entry) {
       const fhirEntries = dischargeEncounterBundle.entry ?? [];

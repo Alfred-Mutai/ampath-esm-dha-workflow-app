@@ -1,4 +1,7 @@
 import { Encounter, fhirBaseUrl, FHIRResource, openmrsFetch, restBaseUrl } from '@openmrs/esm-framework';
+import { useMemo } from 'react';
+import useSWR from 'swr';
+import { VisitTypeUuids } from '../shared/constants/visit-types';
 import { AdmitPatientDto, AssignBedToPatientDto, BedLayout, BedSwapDto, CancelAdmissionDto, DischargePatientDto, Disposition, DispositionResponse, FacilityBillsEncounterResponse, FacilityEncounterBill, FhirEncounterBundle, TransferPatientDto, UnAssignBedDto, type AdmissionLocationData } from './types';
 import { getEtlBaseUrl } from '../shared/utils/get-base-url';
 
@@ -124,6 +127,53 @@ export async function getDichargedEncounters(encounterTypeUuid: string, location
   const resp = await openmrsFetch(encountersUrl);
   const result = await resp.json();
   return result;
+}
+
+export async function getActiveVisitEncountersUuids(locationUuid: string): Promise<string[]> {
+  const rep = 'custom:(uuid,visitType:(uuid,display),encounters:(uuid))';
+  const params = {
+    location: locationUuid,
+    includeInactive: 'false',
+    v: rep
+  };
+  const queryString = new URLSearchParams(params).toString();
+  const visitsUrl = `${restBaseUrl}/visit?${queryString}`;
+  const resp = await openmrsFetch(visitsUrl);
+  const data = await resp.json();
+  
+  const encounterUuids: string[] = [];
+  if (data.results && Array.isArray(data.results)) {
+    data.results.forEach((visit: any) => {
+      if (visit.visitType?.uuid !== VisitTypeUuids.INPATIENT_VISIT_TYPE_UUID) {
+        return;
+      }
+      if (visit.encounters && Array.isArray(visit.encounters)) {
+        visit.encounters.forEach((encounter: any) => {
+          if (encounter.uuid) {
+            encounterUuids.push(encounter.uuid);
+          }
+        });
+      }
+    });
+  }
+  
+  return encounterUuids;
+}
+
+export function useActiveVisitEncounterUuids(locationUuid: string) {
+  const { data, error, isLoading } = useSWR<string[]>(
+    locationUuid ? `active-visit-encounters-${locationUuid}` : null,
+    () => getActiveVisitEncountersUuids(locationUuid),
+  );
+
+  return useMemo(
+    () => ({
+      activeVisitEncounterUuids: data ?? [],
+      isLoading,
+      error,
+    }),
+    [data, isLoading, error],
+  );
 }
 
 export async function fetchFacilityEncounterBills(locationUuid: string, encounterTypeUuid: string, billingFrom: string): Promise<FacilityEncounterBill[]> {
