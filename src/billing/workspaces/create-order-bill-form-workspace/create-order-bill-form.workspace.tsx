@@ -162,13 +162,15 @@ const CreateOrderBillForm: React.FC<CreateOrderBillFormProps> = ({
 
             let initialServicePriceUuid = "";
             if (initialPriceName) {
-                initialServicePriceUuid = servicePrices?.find(sP => sP?.paymentMode?.name?.toUpperCase() === initialPriceName.toUpperCase())?.uuid;
+                const initial = servicePrices?.find(sP => sP?.paymentMode?.name?.toUpperCase() === initialPriceName.toUpperCase());
+                initialServicePriceUuid = initial?.uuid + "#" + initial?.paymentMode?.uuid;
             }
 
             if (activeVisit && !initialPriceName) {
                 const paymentModeUuid = getPaymentMode(activeVisit);
                 if (paymentModeUuid) {
-                    initialServicePriceUuid = servicePrices?.find(sP => sP?.paymentMode?.uuid === paymentModeUuid)?.uuid;
+                    const initial = servicePrices?.find(sP => sP?.paymentMode?.uuid === paymentModeUuid);
+                    initialServicePriceUuid = initial?.uuid + "#" + initial?.paymentMode?.uuid;
                 }
             }
 
@@ -567,7 +569,7 @@ const CreateOrderBillForm: React.FC<CreateOrderBillFormProps> = ({
                                                         <SelectItem value="" text="Select service price" />
                                                         {
                                                             servicePrices.map((service) => {
-                                                                const value = serviceUuid + "#" + service?.uuid;
+                                                                const value = serviceUuid + "#" + service?.uuid + "#" + service?.paymentMode?.uuid;
                                                                 const text = `${service?.name} - ${service?.price}`;
                                                                 return (
                                                                     <SelectItem value={value} text={text} />
@@ -632,6 +634,7 @@ const CreateOrderBillForm: React.FC<CreateOrderBillFormProps> = ({
                     order={order}
                     billableItem={billableItem?.[0]}
                     quantity={Number(watch('quantity') ?? quantity)}
+                    initialUnitPriceUuid={watch('unitPrice')}
                 />
             }
         </>

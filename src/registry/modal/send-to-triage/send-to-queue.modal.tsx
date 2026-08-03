@@ -66,6 +66,7 @@ interface SendToQueueModalProps {
   order?: Order;
   billableItem?: OpenmrsResource | null;
   quantity?: number;
+  initialUnitPriceUuid?: string;
 }
 
 // Select the field's text on focus so typing replaces the (preselected) value.
@@ -86,6 +87,7 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({
   order,
   billableItem,
   quantity = 1,
+  initialUnitPriceUuid
 }) => {
   const { patient } = usePatient(patientUuid);
   const [selectedPatientType, setSelectedPatientType] = useState<string>();
@@ -169,6 +171,12 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({
   }, [patient, patientIdentifiers]);
 
   const selectedPaymentMode = useMemo(() => {
+    if (initialUnitPriceUuid) {
+      const splitPrice = initialUnitPriceUuid.split("#");
+      if (splitPrice && splitPrice.length > 2) {
+        return splitPrice[2];
+      }
+    }
     if (activeVisit) {
       const paymentMode =
         activeVisit.attributes?.find((atr) => atr?.attributeType?.uuid === '8553afa0-bdb9-4d3c-8a98-05fa9350aa85')
@@ -176,7 +184,7 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({
       return paymentMode;
     }
     return '';
-  }, [activeVisit]);
+  }, [activeVisit, initialUnitPriceUuid]);
 
   const selectedPaymentDetail: PaymentDetail = useMemo(() => {
     if (activeVisit) {
