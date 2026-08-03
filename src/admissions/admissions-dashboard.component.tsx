@@ -55,7 +55,7 @@ const AdmissionsDashboard: React.FC = () => {
     if (admittedPatientsData && awaitingDischargeEncounterBundle) {
       const fhirEntries = awaitingDischargeEncounterBundle.entry;
       let patientUuids = [];
-      fhirEntries.forEach((fe) => {
+      fhirEntries?.forEach((fe) => {
         const resource = fe.resource;
         if (resource && resource.resourceType === 'Encounter') {
           const subject = resource.subject.reference.split("/");
@@ -140,7 +140,7 @@ const AdmissionsDashboard: React.FC = () => {
     if (dischargeEncounterBundle && dischargeEncounterBundle.entry) {
       const fhirEntries = dischargeEncounterBundle.entry ?? [];
       let dischargeEncounters: FhirEncounter[] = [];
-      fhirEntries.forEach((fe) => {
+      fhirEntries?.forEach((fe) => {
         const resource = fe.resource;
         if (resource && resource.resourceType === 'Encounter') {
           dischargeEncounters.push(resource);

@@ -1137,7 +1137,7 @@ export const getServiceType = (selectedIntervention: Intervention, visitType?: V
   if (paymentMechanism.trim().toUpperCase() === 'CAPITATION') {
     return 'CAPITATION';
   }
-  if (paymentMechanism.trim().toUpperCase() === 'PER_DIEM') {
+  if (["PER DIEM", "PER_DIEM"].includes(paymentMechanism.trim().toUpperCase())) {
     return 'PER_DIEM';
   }
   if (accessPoint.trim().toUpperCase() === 'IP') {

@@ -42,6 +42,8 @@ interface ClaimsComponentProps {
   onClaimsVisitStart?: (payload: ClaimResult, intervention: Intervention, subBenefit: ClientSubBenefit, usePreselectedIntervention: boolean) => void;
   onAddIntervention?: (intervention: any, subBenefit?: ClientSubBenefit) => void;
   onInterventionChange?: (intervention: Intervention | undefined) => void;
+  onError?: (error: any) => void
+  hasPreExistingInterventions?: (interventions: PreExistingIntervention[] | undefined) => void;
 }
 
 const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
@@ -57,6 +59,8 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
   onClaimsVisitStart,
   onAddIntervention,
   onInterventionChange,
+  onError,
+  hasPreExistingInterventions
 }) => {
   const { activeVisit } = useVisit(patientUuid);
   const [selectedIntervention, setSelectedIntervention] = useState<Intervention>();
@@ -180,6 +184,12 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
       didAutoPreselect.current = true;
     }
   }, [preExistingInterventions, isLoadingPreExistingIntervention, clientSubBenefits, interventions]);
+
+  useEffect(() => {
+    if(!isLoadingPreExistingIntervention && preExistingInterventions && preExistingInterventions.length) {
+      hasPreExistingInterventions(preExistingInterventions);
+    }
+  }, [preExistingInterventions, isLoadingPreExistingIntervention])
 
   const launchPreauthsModal = useCallback(() => {
     if (!selectedIntervention) return;
@@ -317,6 +327,7 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
         kind: 'success',
       });
     } catch (err) {
+      onError(err);
       showSnackbar({
         title: t('startingVisitError', 'Error starting visit'),
         subtitle: `Error: ${err}`,
@@ -420,6 +431,7 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
         kind: 'success',
       });
     } catch (err) {
+      onError(err);
       showSnackbar({
         title: t('addInterventionError', 'Error adding intervention'),
         subtitle: `Error: ${err}`,

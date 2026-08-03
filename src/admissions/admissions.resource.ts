@@ -143,12 +143,12 @@ export async function getActiveVisitEncountersUuids(locationUuid: string): Promi
   
   const encounterUuids: string[] = [];
   if (data.results && Array.isArray(data.results)) {
-    data.results.forEach((visit: any) => {
+    data.results?.forEach((visit: any) => {
       if (visit.visitType?.uuid !== VisitTypeUuids.INPATIENT_VISIT_TYPE_UUID) {
         return;
       }
       if (visit.encounters && Array.isArray(visit.encounters)) {
-        visit.encounters.forEach((encounter: any) => {
+        visit.encounters?.forEach((encounter: any) => {
           if (encounter.uuid) {
             encounterUuids.push(encounter.uuid);
           }
