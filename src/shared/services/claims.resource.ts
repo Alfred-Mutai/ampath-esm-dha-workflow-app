@@ -40,9 +40,6 @@ export const getServiceType = (
   if (accessPoint.trim().toUpperCase() === 'OP') {
     return 'OUTPATIENT';
   }
-  if (paymentMechanism.trim().toUpperCase() === 'CASE BASED') {
-    return 'INPATIENT';
-  }
   if (accessPoint.trim().toUpperCase() === 'OP AND IP') {
     return visitType;
   }
