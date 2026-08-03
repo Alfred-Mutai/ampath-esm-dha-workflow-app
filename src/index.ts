@@ -207,3 +207,8 @@ export const payCashWorkspace = getAsyncLifecycle(
   () => import('./billing/dashboard/v2/clearance/pay-cash.component'),
   options,
 );
+
+export const generateOrderBillButton = getAsyncLifecycle(
+  () => import('./billing/extensions/generate-order-bill-button/generate-order-bill-button.extension'),
+  options,
+);
