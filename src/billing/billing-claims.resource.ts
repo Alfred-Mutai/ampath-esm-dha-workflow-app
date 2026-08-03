@@ -634,11 +634,16 @@ export const endVisit = async (visitUuid: string) => {
 
 export const getActiveVisits = async (locationUuid: string, billDate: string) => {
   const etlBaseUrl = await getEtlBaseUrl();
-  const url = `${etlBaseUrl}/facility/active-bill-visits?locationUuid=${locationUuid}&billingDate=${billDate}`;
+  try {
+    const url = `${etlBaseUrl}/facility/active-bill-visits?locationUuid=${locationUuid}&billingDate=${billDate}`;
+    const response = await openmrsFetch(url);
+    const data = await response.json();
 
-  const response = await openmrsFetch(url);
-
-  return response.json();
+    return data.results ?? [];
+  } catch (error) {
+    console.error('Error fetching active visits:', error);
+    throw error;
+  }
 };
 
 export const useFacilityPreauths = (locationUuid: string, billingDate: string) => {
@@ -684,17 +689,6 @@ export const getFacilityBillLineItems = async (
     pending_line_items:
       typeof row.pending_line_items === 'string' ? JSON.parse(row.pending_line_items) : row.pending_line_items,
   }));
-};
-
-export const updateBilllineItem = async (billLineItemId: string): Promise<any> => {
-  const etlBaseUrl = await getEtlBaseUrl();
-  const url = `${etlBaseUrl}/billing/update-bill-line-item?billLineItemId=${billLineItemId}}`;
-
-  const response = await openmrsFetch(url);
-
-  const data = await response.json();
-
-  return data.results;
 };
 
 export async function fetchPatientEncounterDiagnosis(

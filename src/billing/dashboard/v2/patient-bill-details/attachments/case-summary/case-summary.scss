@@ -1,0 +1,295 @@
+.cs-root {
+  --ink: #16211c;
+  --ink-soft: #4b5a52;
+  --paper: #f6f4ee;
+  --panel: #ffffff;
+  --line: #dcd6c8;
+  --accent: #1f5f4e;
+  --accent-soft: #e4efe9;
+  --alert: #9c3b2e;
+  --alert-soft: #f6e6e2;
+  --header-bar: #1f5f4e;
+  --mono: "IBM Plex Mono", "SFMono-Regular", Menlo, monospace;
+  --serif: "Source Serif 4", Georgia, serif;
+  --sans: "Inter", "Helvetica Neue", Arial, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  padding: 32px 16px 64px;
+  min-height: 100%;
+  box-sizing: border-box;
+
+  * { box-sizing: border-box; }
+
+  .cs-shell { max-width: 900px; margin: 0 auto; }
+
+  .cs-demo-banner {
+    background: var(--accent-soft);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 8px 12px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+  }
+
+  .cs-header {
+    margin-bottom: 20px;
+  }
+
+  .cs-header-bar {
+    height: 10px;
+    background: var(--header-bar);
+    border-radius: 3px 3px 0 0;
+    margin-bottom: 16px;
+  }
+
+  .cs-header-info {
+    text-align: center;
+  }
+
+  .cs-org {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 4px;
+  }
+
+  .cs-title {
+    font-family: var(--serif);
+    font-size: 24px;
+    font-weight: 600;
+    margin: 0 0 4px;
+  }
+
+  .cs-meta-right {
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-soft);
+    line-height: 1.6;
+    margin-top: 4px;
+  }
+
+  .cs-identity {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 14px 24px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 18px 20px;
+    margin-bottom: 20px;
+  }
+
+  .cs-field-name {
+    grid-column: 1 / -1;
+  }
+
+  .cs-name-value {
+    font-family: var(--serif);
+    font-size: 20px;
+    font-weight: 600;
+  }
+
+  .cs-field {
+    min-width: 0;
+  }
+
+  .cs-field-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-soft);
+    margin-bottom: 3px;
+  }
+
+  .cs-field-value {
+    font-size: 14px;
+    word-break: break-word;
+  }
+
+  .cs-field-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 14px 24px;
+  }
+
+  .cs-alert {
+    background: var(--alert-soft);
+    border-left: 4px solid var(--alert);
+    color: var(--alert);
+    padding: 12px 16px;
+    border-radius: 4px;
+    font-size: 13px;
+    margin-bottom: 20px;
+  }
+
+  .cs-section {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 18px 20px;
+    margin-bottom: 16px;
+  }
+
+  .cs-section-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    margin: 0 0 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .cs-section-num {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    line-height: 18px;
+    text-align: center;
+    border-radius: 50%;
+    background: var(--accent-soft);
+    color: var(--accent);
+    margin-right: 6px;
+    font-size: 10px;
+  }
+
+  .cs-vitals-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
+    gap: 10px;
+  }
+
+  .cs-vital {
+    text-align: center;
+    padding: 10px 4px;
+    background: var(--paper);
+    border-radius: 5px;
+  }
+
+  .cs-vital-value { font-family: var(--serif); font-size: 20px; font-weight: 600; }
+  .cs-vital-unit { font-size: 10px; color: var(--ink-soft); }
+  .cs-vital-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-top: 2px;
+  }
+  .cs-vital-trend { font-size: 12px; margin-left: 3px; }
+  .cs-vitals-foot {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--ink-soft);
+    margin-top: 10px;
+  }
+
+  table.cs-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+
+    th {
+      text-align: left;
+      font-family: var(--mono);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--ink-soft);
+      padding: 6px 8px;
+      border-bottom: 1px solid var(--line);
+      background: var(--paper);
+    }
+
+    td {
+      padding: 8px 8px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+    }
+
+    tr:last-child td { border-bottom: none; }
+  }
+
+  .cs-pill {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 9px;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 20px;
+    background: var(--accent-soft);
+    color: var(--accent);
+
+    &.tag { background: #efe6d8; color: #7a5a2a; margin-left: 6px; }
+  }
+
+  .cs-drug-name { font-weight: 600; }
+  .cs-drug-detail { color: var(--ink-soft); font-size: 12px; margin-top: 2px; }
+
+  .cs-empty {
+    font-size: 13px;
+    color: var(--ink-soft);
+    font-style: italic;
+  }
+
+  .cs-soap {
+    dt {
+      font-family: var(--mono);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      margin-top: 12px;
+
+      &:first-child { margin-top: 0; }
+    }
+
+    dd { margin: 4px 0 0; font-size: 14px; line-height: 1.5; }
+  }
+
+  .cs-encounter {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+    font-size: 13px;
+
+    &:last-child { border-bottom: none; }
+
+    .cs-encounter-head {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--ink-soft);
+      margin-bottom: 4px;
+    }
+
+    .cs-encounter-line {
+      margin-top: 2px;
+
+      b { font-weight: 600; }
+    }
+  }
+
+  .cs-footer {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--ink-soft);
+    text-align: center;
+    margin-top: 24px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  @media (max-width: 520px) {
+    .cs-title { font-size: 20px; }
+  }
+}

@@ -16,13 +16,11 @@ const ActiveVisitsComponent: React.FC<ActiveVisitsProps> = ({ billingDate }) => 
   const [visitTypeUuid, setVisitTypeUuid] = useState('');
   const session = useSession();
 
-  const patient = usePatient();
-
   const locationUuid = session.sessionLocation?.uuid;
   const getActivevisits = async (locationUuid: string, billingDate: string) => {
     try {
       const res = await getActiveVisits(locationUuid!, billingDate);
-      setactiveVisits(res.results);
+      setactiveVisits(res);
     } catch (er) {
       console.error(er);
     }
@@ -56,8 +54,8 @@ const ActiveVisitsComponent: React.FC<ActiveVisitsProps> = ({ billingDate }) => 
           </TableRow>
         </TableHead>
         <TableBody>
-          {activeVisits.length > 0 ? (
-            activeVisits.map((visit, index) => (
+          {activeVisits?.length > 0 ? (
+            activeVisits?.map((visit, index) => (
               <TableRow key={index}>
                 <TableCell>{visit.patient_name}</TableCell>
                 <TableCell>{visit.identifiers}</TableCell>
@@ -79,7 +77,7 @@ const ActiveVisitsComponent: React.FC<ActiveVisitsProps> = ({ billingDate }) => 
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={5}>No active visits found</TableCell>
+              <TableCell colSpan={6}>No active visits found</TableCell>
             </TableRow>
           )}
         </TableBody>
