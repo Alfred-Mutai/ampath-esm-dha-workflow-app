@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from './Renal-queues.component.scss';
+import styles from './renal-queues.component.scss';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from '@carbon/react';
 import FacilityAndWorkerSlot from '../../shared/ui/facility-worker-slot/facility-worker.component-slot.component';
 import RenalTriage from './queues/triage/renal-triage';
