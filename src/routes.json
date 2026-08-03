@@ -297,6 +297,10 @@
     {
       "name": "preauths-modal",
       "component": "preauthsModal"
+    },
+    {
+      "name": "generate-order-bill-button-extension",
+      "component": "generateOrderBillButton"
     }
   ],
   "workspaces": [
