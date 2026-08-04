@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import useSWR from 'swr';
 import { type ConfigObject } from '../../../../config-schema';
 import { fetchFacilityClaimVisits } from '../../../billing-claims.resource';
+import { getConsentToken } from '../../../../shared/services/claims.resource';
 
 // Visit attribute that records the payment mode chosen at registration.
 const PAYMENT_MODE_ATTRIBUTE_UUID = '8553afa0-bdb9-4d3c-8a98-05fa9350aa85';
@@ -74,7 +75,8 @@ export const usePendingClearanceVisits = (date?: string) => {
   const dayFilter = date ? dayjs(date) : null;
   const visits = (activeVisits ?? [])
     .filter((visit) => !dayFilter || dayjs(visit.startDatetime).isSame(dayFilter, 'day'))
-    .filter((visit) => readPaymentModeUuid(visit) === shaPaymentModeUuid);
+    .filter((visit) => readPaymentModeUuid(visit) === shaPaymentModeUuid)
+    .filter((visit) => !getConsentToken(visit));
   // Drop visits that already have an associated SHA claim visit — those have
   // left "pending clearance" and are being handled in the claims workflow.
   // .filter((visit) => !visitHasClaim(visit, claimedPatientIds));
