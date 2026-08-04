@@ -111,8 +111,7 @@ export type AmrsVisitDiagnosisDto = {
 };
 export type AmrsVisitDiagnosisResponse = {
   results: AmrsVisitDiagnosis[];
-}
-
+};
 
 export type AmrsMaternityDiagnosis = {
   uuid: string;
@@ -126,9 +125,9 @@ export type AmrsMaternityDiagnosis = {
   practitioner_speciality: string;
   practitioner_body: string;
   practitioner_identifier_type: string;
-  patient_id: string; 
+  patient_id: string;
   facility: string;
-  concept_id: string; 
+  concept_id: string;
   value_coded: string;
 };
 
@@ -138,7 +137,7 @@ export type AmrsMaternityDiagnosisDto = {
 };
 export type AmrsMaternityDiagnosisResponse = {
   results: AmrsMaternityDiagnosis[];
-}
+};
 
 export interface FacilityPreauth {
   cash_point: string;
@@ -164,3 +163,24 @@ export interface FacilityPreauth {
 export interface FacilityPreauthsResponse {
   results: FacilityPreauth[];
 }
+
+export type BedOccupancyRate = {
+    total_ip_visits: number;
+    icu_visits: number;
+    hdu_visits: number;
+    normal_ip_visits: number;
+    newborn_visits: number;
+    dialysis_visits: number;
+    total_number_of_bed: number;
+    number_of_normal_bed: number;
+    number_of_icu_bed: number;
+    number_of_hdu_bed: number;
+    number_of_dialysis_bed: number;
+    number_of_baby_cot: number;
+}
+
+export type BedOccupancy = {
+  name: string;
+  bp_level: string;
+  bed_occupancy_rate: BedOccupancyRate
+};

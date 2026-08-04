@@ -1,8 +1,23 @@
-import { Encounter, fhirBaseUrl, FHIRResource, openmrsFetch, restBaseUrl } from '@openmrs/esm-framework';
+import { type Encounter, fhirBaseUrl, FHIRResource, openmrsFetch, restBaseUrl } from '@openmrs/esm-framework';
 import { useMemo } from 'react';
 import useSWR from 'swr';
 import { VisitTypeUuids } from '../shared/constants/visit-types';
-import { AdmitPatientDto, AssignBedToPatientDto, BedLayout, BedSwapDto, CancelAdmissionDto, DischargePatientDto, Disposition, DispositionResponse, FacilityBillsEncounterResponse, FacilityEncounterBill, FhirEncounterBundle, TransferPatientDto, UnAssignBedDto, type AdmissionLocationData } from './types';
+import {
+  type AdmitPatientDto,
+  type AdmittedListData,
+  type AssignBedToPatientDto,
+  type BedLayout,
+  type BedSwapDto,
+  type CancelAdmissionDto,
+  type DischargePatientDto,
+  type Disposition,
+  type FacilityBillsEncounterResponse,
+  type FacilityEncounterBill,
+  type FhirEncounterBundle,
+  type TransferPatientDto,
+  type UnAssignBedDto,
+  type AdmissionLocationData,
+} from './types';
 import { getEtlBaseUrl } from '../shared/utils/get-base-url';
 
 const customRep =
@@ -13,7 +28,7 @@ export async function getPatientByUuid(patientUuid: string) {
     throw new Error('PatientUuid is required');
   }
   const params = {
-    v: "full"
+    v: 'full',
   };
   const queryString = new URLSearchParams(params).toString();
   const patientUrl = `${restBaseUrl}/patient/${patientUuid}?${queryString}`;
@@ -33,11 +48,12 @@ export async function getAdmissionLoactionData(locationUuid: string): Promise<Ad
 }
 
 export async function getAdmissionRequests(locationUuid: string): Promise<Disposition[]> {
-  const admissionRep = 'custom:(dispositionLocation,dispositionType,disposition,dispositionEncounter:full,patient:(uuid,identifiers,voided,person:(uuid,display,gender,age,birthdate,birthtime,preferredName,preferredAddress,dead,deathDate)),dispositionObsGroup,visit)';
+  const admissionRep =
+    'custom:(dispositionLocation,dispositionType,disposition,dispositionEncounter:full,patient:(uuid,identifiers,voided,person:(uuid,display,gender,age,birthdate,birthtime,preferredName,preferredAddress,dead,deathDate)),dispositionObsGroup,visit)';
   const params = {
     v: admissionRep,
     dispositionLocation: locationUuid,
-    dispositionType: 'ADMIT,TRANSFER'
+    dispositionType: 'ADMIT,TRANSFER',
   };
   const queryString = new URLSearchParams(params).toString();
   const admissionRequestUrl = `${restBaseUrl}/emrapi/inpatient/request?${queryString}`;
@@ -101,12 +117,12 @@ export async function dischargePatientFromWard(dischargePatientDto: DischargePat
 
 export async function unassignBed(unAssignBedDto: UnAssignBedDto) {
   const params = {
-    patientUuid: unAssignBedDto.patientUuid
+    patientUuid: unAssignBedDto.patientUuid,
   };
   const queryString = new URLSearchParams(params).toString();
   const unassignBedUrl = `${restBaseUrl}/beds/${unAssignBedDto.bedId}?${queryString}`;
   await openmrsFetch(unassignBedUrl, {
-    method: 'DELETE'
+    method: 'DELETE',
   });
   return true;
 }
@@ -114,13 +130,16 @@ export async function admitPatientElseWhere(transferPatientDto: TransferPatientD
   const transferUrl = `${restBaseUrl}/encounter`;
   return postRequest(transferUrl, transferPatientDto);
 }
-export async function getDichargedEncounters(encounterTypeUuid: string, locationUuid: string): Promise<FhirEncounterBundle> {
+export async function getDichargedEncounters(
+  encounterTypeUuid: string,
+  locationUuid: string,
+): Promise<FhirEncounterBundle> {
   const params = {
     _summary: 'data',
     type: encounterTypeUuid,
     location: locationUuid,
     _count: '100',
-    _getpagesoffset: '0'
+    _getpagesoffset: '0',
   };
   const queryString = new URLSearchParams(params).toString();
   const encountersUrl = `${fhirBaseUrl}/Encounter?${queryString}`;
@@ -134,13 +153,13 @@ export async function getActiveVisitEncountersUuids(locationUuid: string): Promi
   const params = {
     location: locationUuid,
     includeInactive: 'false',
-    v: rep
+    v: rep,
   };
   const queryString = new URLSearchParams(params).toString();
   const visitsUrl = `${restBaseUrl}/visit?${queryString}`;
   const resp = await openmrsFetch(visitsUrl);
   const data = await resp.json();
-  
+
   const encounterUuids: string[] = [];
   if (data.results && Array.isArray(data.results)) {
     data.results?.forEach((visit: any) => {
@@ -156,7 +175,7 @@ export async function getActiveVisitEncountersUuids(locationUuid: string): Promi
       }
     });
   }
-  
+
   return encounterUuids;
 }
 
@@ -176,7 +195,11 @@ export function useActiveVisitEncounterUuids(locationUuid: string) {
   );
 }
 
-export async function fetchFacilityEncounterBills(locationUuid: string, encounterTypeUuid: string, billingFrom: string): Promise<FacilityEncounterBill[]> {
+export async function fetchFacilityEncounterBills(
+  locationUuid: string,
+  encounterTypeUuid: string,
+  billingFrom: string,
+): Promise<FacilityEncounterBill[]> {
   const etlBaseUrl = await getEtlBaseUrl();
   const facilityBillsUrl = `${etlBaseUrl}/facility/encounter-bills?locationUuid=${locationUuid}&billingFrom=${billingFrom}&encounterTypeUuid=${encounterTypeUuid}`;
   const response = await openmrsFetch(facilityBillsUrl);
@@ -184,11 +207,18 @@ export async function fetchFacilityEncounterBills(locationUuid: string, encounte
   return data.results ?? [];
 }
 
-export async function fetchLocationDetails(locationUuid: string){
+export async function fetchLocationDetails(locationUuid: string) {
   const v = 'custom:(uuid,display,attributes:(uuid,display,value,attributeType:(uuid,display)))';
   const locationDetailsUrl = `${restBaseUrl}/location/${locationUuid}?v=${v}`;
   const resp = await openmrsFetch(locationDetailsUrl);
   const data = await resp.json();
   return data ?? [];
+}
 
+export async function fetchAdmittedPatients(locationUuid: string): Promise<AdmittedListData[]> {
+  const etlBaseUrl = await getEtlBaseUrl();
+  const admittedListUrl = `${etlBaseUrl}/admissions/admitted?locationUuid=${locationUuid}`;
+  const resp = await openmrsFetch(admittedListUrl);
+  const data = await resp.json();
+  return data.results ?? [];
 }

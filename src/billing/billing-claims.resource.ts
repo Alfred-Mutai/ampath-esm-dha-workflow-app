@@ -34,6 +34,7 @@ import {
   type AmrsVisitDiagnosis,
   type AmrsVisitDiagnosisDto,
   type AmrsVisitDiagnosisResponse,
+  BedOccupancy,
 } from './types';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import useSWR, { mutate } from 'swr';
@@ -699,4 +700,11 @@ export async function fetchPatientEncounterDiagnosis(
   const response = await openmrsFetch(patientDiagnosisUrl);
   const data = (await response.json()) as AmrsVisitDiagnosisResponse;
   return data.results ?? [];
+}
+
+export async function fetchFacilityBedOccupancy(locationUuid: string):  Promise<BedOccupancy>{
+  const { hieBaseUrl } = await getHieBaseUrl();
+  const response = await openmrsFetch(`${hieBaseUrl}/bed-occupancy?locationUuid=${locationUuid}`);
+  const data = (await response.json()) as BedOccupancy;
+  return data;
 }

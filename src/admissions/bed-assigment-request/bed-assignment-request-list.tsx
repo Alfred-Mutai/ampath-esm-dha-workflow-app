@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   OverflowMenu,
   OverflowMenuItem,
@@ -9,24 +9,38 @@ import {
   TableHeader,
   TableRow,
 } from '@carbon/react';
-import { type BedLayout } from '../types';
+import { FacilityAdmissionRequest, type AdmittedListData, type BedLayout } from '../types';
 import BedSwapModal from '../modal/bed-swap/bed-swap.modal';
 import { launchWorkspace2, useConfig } from '@openmrs/esm-framework';
 import { type ConfigObject } from '../../config-schema';
-import { getPatientByUuid } from '../admissions.resource';
+import { fetchAdmittedPatients, getPatientByUuid } from '../admissions.resource';
 
-interface AdmittedPatientsListProps {
-  admittedPatientsData: BedLayout[];
+interface AdmittedListProps {
+  locationUuid: string;
   refresh: () => void;
 }
 
-const AdmittedPatientsList: React.FC<AdmittedPatientsListProps> = ({ admittedPatientsData, refresh }) => {
+const BedAssignmentRequestList: React.FC<AdmittedListProps> = ({ locationUuid, refresh }) => {
   const [showBedSwapModal, setShowBedSwapModal] = useState<boolean>(false);
   const [selectedLayout, setSelectedLayout] = useState<any>();
   const { maternityDischargeFormUuid } = useConfig<ConfigObject>();
+  const [admittedPatients, setAdmittedPatients] = useState<AdmittedListData[]>([]);
 
-  if (!admittedPatientsData) {
-    return <>No data to display</>;
+  useEffect(() => {
+    if (locationUuid) {
+      getAdmittedPatientList();
+    }
+  }, [locationUuid]);
+  async function getAdmittedPatientList() {
+    const resp = await fetchAdmittedPatients(locationUuid);
+    if (resp) {
+      const unAssignedBeds = resp.filter((l) => {
+        return !l.bed_id;
+      });
+      setAdmittedPatients(unAssignedBeds);
+    } else {
+      setAdmittedPatients([]);
+    }
   }
   const handleTransferRequest = (layout: BedLayout) => {
     setSelectedLayout(layout);
@@ -73,28 +87,6 @@ const AdmittedPatientsList: React.FC<AdmittedPatientsListProps> = ({ admittedPat
     refresh();
   };
 
-  const rows =
-    admittedPatientsData?.flatMap((layout) =>
-      (layout.patients ?? []).map((patient) => ({
-        key: `${layout.bedUuid}-${patient.uuid}`,
-        bedNumber: layout.bedNumber,
-        bedId: layout.bedId,
-        status: layout.status,
-        location: layout.location,
-        name: patient.person.display,
-        gender: patient.person.gender,
-        age: patient.person.age,
-        identifier: patient.identifiers?.[0]?.identifier ?? 'N/A',
-        person: patient.person,
-        patientUuid: patient.uuid,
-        patient: patient,
-      })),
-    ) ?? [];
-
-  if (!rows.length) {
-    return <>No Data</>;
-  }
-
   return (
     <>
       <Table>
@@ -112,25 +104,22 @@ const AdmittedPatientsList: React.FC<AdmittedPatientsListProps> = ({ admittedPat
           </TableRow>
         </TableHead>
         <TableBody>
-          {rows.map((row, index) => (
-            <TableRow key={row.key}>
+          {admittedPatients.map((row, index) => (
+            <TableRow key={index}>
               <TableCell>{index + 1}</TableCell>
-              <TableCell>{row.bedNumber}</TableCell>
-              <TableCell>{row.name}</TableCell>
+              <TableCell>{row.bed_number}</TableCell>
+              <TableCell>{row.patient_name}</TableCell>
               <TableCell>{row.gender}</TableCell>
               <TableCell>{row.age}</TableCell>
-              <TableCell>{row.identifier}</TableCell>
-              <TableCell>{row.status}</TableCell>
+              <TableCell>
+                {row.cr_id},{row.national_id}
+              </TableCell>
+              <TableCell>{row.bed_status}</TableCell>
               <TableCell>{row.location}</TableCell>
               <TableCell>
                 <>
                   <OverflowMenu aria-label="overflow-menu">
-                    <OverflowMenuItem itemText="Transfer" onClick={() => handleTransferRequest(row as any)} />
                     <OverflowMenuItem itemText="Bed Swap" onClick={() => handleBedSwapRequest(row as any)} />
-                    <OverflowMenuItem
-                      itemText="Fill Discharge Form"
-                      onClick={() => handleDischargeRequest(row as any)}
-                    />
                   </OverflowMenu>
                 </>
               </TableCell>
@@ -138,22 +127,8 @@ const AdmittedPatientsList: React.FC<AdmittedPatientsListProps> = ({ admittedPat
           ))}
         </TableBody>
       </Table>
-      {showBedSwapModal && selectedLayout ? (
-        <>
-          <BedSwapModal
-            open={showBedSwapModal}
-            onModalClose={handleBedSwapModalClose}
-            onSuccessfullBedSwap={handleBedSwapModalClose}
-            disposition={null}
-            person={selectedLayout.person}
-            bedLayouts={admittedPatientsData}
-          />
-        </>
-      ) : (
-        <></>
-      )}
     </>
   );
 };
 
-export default AdmittedPatientsList;
+export default BedAssignmentRequestList;

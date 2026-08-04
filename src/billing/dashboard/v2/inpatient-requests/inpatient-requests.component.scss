@@ -1,0 +1,22 @@
+.inpatientRequestsLayout{
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    padding: 5px 5px;
+    row-gap: 5px;
+    .inpatientRequestsHeader{
+        display: flex;
+        flex-direction: row;
+        width: 100%;
+        padding: 10px 10px;
+    }
+}
+.headerCol{
+    width: 30%;
+}
+.btnContainer{
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    column-gap: 3px;
+}

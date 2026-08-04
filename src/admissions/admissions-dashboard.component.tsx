@@ -29,6 +29,8 @@ import AwaitingDischargeList from './awaiting-discharge-list/awaiting-discharge-
 import { type ConfigObject } from '../config-schema';
 import dayjs from 'dayjs';
 import FacilityAndWorkerSlot from '../shared/ui/facility-worker-slot/facility-worker.component-slot.component';
+import AdmittedList from './bed-assigment-request/bed-assignment-request-list';
+import BedAssignmentRequestList from './bed-assigment-request/bed-assignment-request-list';
 
 const AdmissionsDashboard: React.FC = () => {
   const [dashboardData, setDashboardData] = useState<AdmissionLocationData>(null);
@@ -55,7 +57,9 @@ const AdmissionsDashboard: React.FC = () => {
     if (admittedPatientsData && awaitingDischargeEncounterBundle) {
       const fhirEntries = awaitingDischargeEncounterBundle.entry;
       let patientUuids = [];
-      fhirEntries?.forEach((fe) => {
+      if(fhirEntries){
+
+      fhirEntries.forEach((fe) => {
         const resource = fe.resource;
         if (resource && resource.resourceType === 'Encounter') {
           const subject = resource.subject.reference.split("/");
@@ -63,6 +67,7 @@ const AdmissionsDashboard: React.FC = () => {
           patientUuids.push(patientUuid);
         }
       });
+    }
 
       const awaiting = admittedPatientsData.filter(p => patientUuids.includes(getPatient(p.patients)?.uuid));
       const admitted = admittedPatientsData.filter(p => !patientUuids.includes(getPatient(p.patients)?.uuid));
@@ -111,6 +116,7 @@ const AdmissionsDashboard: React.FC = () => {
   };
   const getAdmittedPatients = async () => {
     const res = await getAdmittedPatientsData(locationUuid);
+    console.log('admitted Patients', res);
     setAdmittedPatientsData(res);
     setLoading(false);
   };
@@ -205,6 +211,7 @@ const AdmissionsDashboard: React.FC = () => {
               <Tabs>
                 <TabList contained>
                   <Tab>Admission Requests</Tab>
+                  <Tab>Bed Assignment Requests</Tab>
                   <Tab>Admitted</Tab>
                   <Tab>Awaiting Discharge</Tab>
                   <Tab>Discharged</Tab>
@@ -222,8 +229,11 @@ const AdmissionsDashboard: React.FC = () => {
                     )}
                   </TabPanel>
                   <TabPanel>
+                   <BedAssignmentRequestList locationUuid={locationUuid} refresh={handleRefresh}/>
+                  </TabPanel>
+                  <TabPanel>
                     {admittedPatientsData ? (
-                      <AdmittedPatientsList admittedPatientsData={admitted} refresh={handleRefresh} />
+                       <AdmittedPatientsList admittedPatientsData={admitted} refresh={handleRefresh} />
                     ) : (
                       <></>
                     )}

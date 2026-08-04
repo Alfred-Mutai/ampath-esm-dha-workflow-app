@@ -19,6 +19,7 @@ import {
 import FacilityAndWorkerSlot from '../../../shared/ui/facility-worker-slot/facility-worker.component-slot.component';
 import ActiveVisitsComponent from './active-visits.component';
 import PreauthorizationsTab from './preauth/preauthorizations-tab.component';
+import InpatientRequests from './inpatient-requests/inpatient-requests.component';
 interface billingClaimsDashboardProps { }
 
 const today = () => new Date().toLocaleDateString('en-CA');
@@ -194,6 +195,7 @@ const BillingClaimsDashboard: React.FC<billingClaimsDashboardProps> = () => {
                 {/* <Tab>Preauth List</Tab> */}
                 <Tab>Active Visits</Tab>
                 {/* <Tab>Claims</Tab> */}
+                <Tab>Admission Requests</Tab>
               </TabList>
               <TabPanels>
                 <TabPanel>
@@ -231,6 +233,9 @@ const BillingClaimsDashboard: React.FC<billingClaimsDashboardProps> = () => {
                 </TabPanel>
                 <TabPanel>
                   <ActiveVisitsComponent billingDate={billingDate} />
+                </TabPanel>
+                <TabPanel>
+                  <InpatientRequests locationUuid={locationUuid} requestDate=''/>
                 </TabPanel>
               </TabPanels>
             </Tabs>

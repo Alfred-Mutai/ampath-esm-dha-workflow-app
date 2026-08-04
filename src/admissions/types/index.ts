@@ -232,3 +232,18 @@ export type LocationAttribute = {
   };
   resourceVersion: string;
 };
+
+export type AdmittedListData = {
+  patient_name: string;
+  national_id: string;
+  cr_id: string;
+  admision_date: string;
+  encounter_type: string;
+  location: string;
+  location_uuid: string;
+  gender: string;
+  age: number;
+  bed_number: string | null;
+  bed_status: string | null;
+  bed_id: string | null;
+};
