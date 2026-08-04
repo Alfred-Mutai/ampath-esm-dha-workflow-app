@@ -1,0 +1,119 @@
+/* Chips, not a track: nothing here claims one entry led to the next, only that each
+   happened. Being unordered, they can wrap — which is what keeps this section to two or
+   three lines however much the claim carries. */
+.history {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+/* The live one, leading, set apart from the settled facts below it. */
+.status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+  min-width: 0;
+}
+
+/* Same micro-label as the claim's other headers, so the rail reads as one column. */
+.statusLabel {
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: #6f6f6f;
+  flex-shrink: 0;
+}
+
+.statusTag {
+  /* Carbon tags carry their own margin, which would knock the tag out of line with the
+     text beside it. */
+  margin: 0;
+}
+
+.statusNote {
+  font-size: 0.75rem;
+  color: #6f6f6f;
+  overflow-wrap: anywhere;
+}
+
+/* Pushed to the end of the status line so the caveat costs no line of its own. */
+.caveat {
+  margin-left: auto;
+}
+
+.caveatTrigger {
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #8d8d8d;
+  cursor: help;
+
+  &:hover,
+  &:focus-visible {
+    color: #525252;
+  }
+}
+
+.confirming {
+  min-height: 1.25rem;
+
+  :global(.cds--inline-loading__text) {
+    font-size: 0.75rem;
+    color: #6f6f6f;
+  }
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.5rem 0.125rem 0.375rem;
+  border-radius: 0.75rem;
+  font-size: 0.75rem;
+  line-height: 1.34;
+  white-space: nowrap;
+  /* A long note — an authorisation status, say — gives up the nowrap rather than push
+     the row wider than the pane. */
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.chipDone {
+  background: #defbe6;
+  color: #0e6027;
+}
+
+.chipWarning {
+  background: #fcf4d6;
+  color: #684e00;
+}
+
+.chipLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The qualifier — a count, a retry, an outcome — carried at a lower weight than the
+   fact it qualifies. */
+.chipNote {
+  padding-left: 0.25rem;
+  border-left: 1px solid currentColor;
+  opacity: 0.7;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

@@ -1,8 +1,12 @@
-.cvModalLayout{
+@use '@carbon/layout';
+
+/* Same rhythm as the claim's own page, so a claim read in the modal and a claim read on
+   its route are spaced alike. */
+.cvModalLayout {
     display: flex;
     flex-direction: column;
     width: 100%;
-    row-gap: 10px;
+    row-gap: layout.$spacing-05;
 }
 
 /* Shown when the claim itself never arrived. */

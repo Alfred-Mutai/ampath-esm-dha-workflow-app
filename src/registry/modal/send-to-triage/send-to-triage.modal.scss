@@ -12,16 +12,34 @@ $header-height: 3rem;
     row-gap: 5px;
     margin-top: 15px;
 }
+/* One field per row unless there is genuine room for two. The basis below is what decides
+   that, and it is deliberately high: a pair sharing a row each got half the panel, which
+   was not enough for the values these fields actually hold — "UGDH Cash Point",
+   "Consultation (SHA: 75)" — so they truncated rather than wrapped. Stacked, each field
+   gets the panel's whole width, which is roughly double what the next size up would have
+   bought and costs the panel nothing but height. */
 .formRow{
    display: flex;
    flex-direction: row;
+   flex-wrap: wrap;
    width: 100%;
    column-gap: layout.$spacing-05;
+   row-gap: layout.$spacing-05;
 }
 .formControl{
    display: flex;
    flex-direction: column;
+   /* 18rem is the narrowest these fields read at with their real values in them, not the
+      narrowest they can be squeezed to — two of them plus the gap exceed the panel, so
+      they take a row each and show their contents in full. `flex-shrink: 0` is the half
+      that matters: at shrink 1 they would compress to fit one line instead of wrapping,
+      which is exactly the truncation this is meant to end.
+
+      `width` is kept alongside for any use outside a flex row, where the basis does
+      nothing and the field would otherwise collapse to its content. */
+   flex: 1 0 18rem;
    width: 100%;
+   min-width: 0;
    row-gap: 5px;
 }
 .actionSection{
@@ -45,52 +63,58 @@ $header-height: 3rem;
     width: 100%;
 }
 
-/* ---- Side drawer shell ---- */
-.overlay {
-  position: fixed;
-  inset: $header-height 0 0 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  z-index: 7999;
-  animation: fadeIn 160ms ease-out;
-}
-.drawer {
-  position: fixed;
-  top: $header-height;
-  right: 0;
-  bottom: 0;
-  width: 38rem;
-  max-width: 100%;
+/* ---- Workspace shell ---- */
+/* The overlay, the sliding panel and its title bar are the platform's now — this is a
+   registered O3 workspace, so all this component owns is a column that fills whatever
+   height the workspace gives it, with a scrolling body and a pinned action bar. */
+.workspace {
   display: flex;
   flex-direction: column;
-  background-color: $ui-01;
-  box-shadow: -2px 0 12px rgba(0, 0, 0, 0.18);
-  z-index: 8000;
-  animation: slideIn 200ms ease-out;
+  block-size: 100%;
+  min-block-size: 0;
 }
-.drawerHeader {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: layout.$spacing-04;
-  padding: layout.$spacing-05;
-  border-bottom: 1px solid $ui-03;
-  background-color: $ui-02;
+
+/* Between the platform's two sizes. O3 offers "wider" and "extra-wide" and nothing in
+   between, and this panel wants the gap: wider than the former, not as wide as the latter.
+   "wider" stays registered as the floor, and this widens the container from there.
+
+   Matched on a substring of the container's class rather than its full name. An exact
+   guess at that name was tried before and silently matched nothing — the @openmrs packages
+   are runtime shared modules, not in node_modules, so the name cannot be checked from
+   here. `[class*='workspace-container']` survives whatever the rest of it is, and the
+   `:has()` restricts it to a container holding this panel, so no other workspace is
+   touched. If it still misses, nothing breaks — the registered "wider" stands. */
+:global([class*='workspace-container']):has(.workspace) {
+  inline-size: min(42rem, 60vw);
+  max-inline-size: min(42rem, 60vw);
 }
-.drawerHeaderText {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-.drawerTitle {
-  @include type.type-style('heading-compact-02');
-  color: $ui-05;
-  margin: 0;
-}
-.drawerSubtitle {
+
+/* The width is the platform's now — registered as "wider" in routes.json, the middle of
+   O3's three sizes and the same as the record-details and preauth panels.
+
+   This is a step down from "extra-wide" and the panel it produces is not the one that was
+   rejected at this size earlier: the fields truncated then because they were sharing a row
+   and compressing to fit. The 18rem basis and `flex-shrink: 0` on `.formControl` came
+   after that, so at this width they stack and show their values in full instead.
+
+   There was a `max-inline-size` override here pinned to `.omrs-workspace-container`. It
+   was a guess at the container's class name and may never have applied, which would be why
+   lowering the number three times changed nothing on screen. A registered width needs no
+   guessing, so the override is gone rather than left as decoration.
+
+   What made the reduction safe is `.formRow` above: it wraps now, so the paired fields
+   stack instead of splitting a width too small to hold both. */
+
+/* Who the panel is for, under the workspace's own title bar. */
+.patientBanner {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: layout.$spacing-02 layout.$spacing-03;
-  margin: layout.$spacing-02 0 0;
+  flex-shrink: 0;
+  padding: layout.$spacing-04 layout.$spacing-05;
+  border-block-end: 1px solid $ui-03;
+  background-color: $ui-02;
 }
 .drawerPatient {
   @include type.type-style('body-compact-01');
@@ -165,21 +189,30 @@ $header-height: 3rem;
     display: none;
   }
 }
+/* The O3 workspace action bar: the two buttons split the panel's full width between them
+   and sit flush against its edges — no padding, no gap, no rule above. Carbon caps a
+   button at 20rem and sizes it to its label, so both have to be overridden or they bunch
+   up at the left instead of meeting in the middle. */
 .drawerFooter {
   display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: layout.$spacing-04;
-  padding: layout.$spacing-05;
-  border-top: 1px solid $ui-03;
-  background-color: $ui-02;
-}
+  flex-shrink: 0;
+  inline-size: 100%;
+  /* Below the ComboBox menus. Those are positioned by floating-ui at the document level,
+     so they are no longer clipped by the scrolling body — but a footer that established
+     its own stacking context above them would paint over the open list instead, which is
+     the same complaint by another route. */
+  position: relative;
+  z-index: 0;
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-@keyframes slideIn {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
+  :global(.cds--btn) {
+    flex: 1 1 50%;
+    max-inline-size: none;
+    /* Small buttons, so the bar keeps to the height of one rather than the 4rem an O3
+       footer usually stands at. They still split the width and sit flush to the edges,
+       which is what makes the bar read as part of the panel — the label is centred rather
+       than pinned to the top, since at this height there is no room below it. */
+    min-block-size: 2.5rem;
+    align-items: center;
+    padding-block: 0;
+  }
 }

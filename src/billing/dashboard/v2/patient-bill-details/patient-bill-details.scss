@@ -5,34 +5,22 @@
   display: flex;
   flex-direction: column;
   width: 100%;
-  row-gap: layout.$spacing-05;
+  row-gap: layout.$spacing-06;
 }
 
-/* Distinct Bills / Claims sections combined on one page. */
+/* Bills and Claims are two sections of one page, not two panels: no box, no tint, no
+   icon — just a heading with a rule under it and the content beneath. */
 .block {
-  background-color: $ui-02;
-  border: 1px solid $ui-03;
-  border-top: 3px solid var(--section-accent);
+  background-color: transparent;
+  border: none;
 }
-.blockBills {
-  --section-accent: #007d79; /* teal — bills */
-  --section-tint: #e5f6f5;
-  border: 1px solid #7fd1cb;
-  border-top: 4px solid var(--section-accent);
-}
-.blockClaims {
-  --section-accent: #0f62fe; /* blue — claims */
-  --section-tint: #edf5ff;
-  border: 1px solid #a6c8ff;
-  border-top: 4px solid var(--section-accent);
-}
+
 .blockHeader {
   display: flex;
   align-items: center;
   gap: layout.$spacing-04;
-  padding: layout.$spacing-04 layout.$spacing-05;
+  padding-bottom: layout.$spacing-03;
   border-bottom: 1px solid $ui-03;
-  background-color: var(--section-tint);
 }
 
 /* Load / last-refreshed indicator pinned to the right edge of the section header. */
@@ -51,40 +39,74 @@
   color: #6f6f6f;
   white-space: nowrap;
 }
-.blockIcon {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.25rem;
-  height: 2.25rem;
-  border-radius: 50%;
-  background-color: $ui-02;
-  border: 1px solid $ui-03;
-  color: var(--section-accent);
-}
+
 .blockTitle {
   margin: 0;
   font-size: 1rem;
   font-weight: 700;
   color: #161616;
 }
+
 .blockSubtitle {
   margin: 0;
   font-size: 0.8125rem;
   color: #6f6f6f;
 }
+
 .blockBody {
-  padding: layout.$spacing-05;
+  padding: layout.$spacing-05 0 0;
 }
 
-/* Patient summary — a clean borderless row of fields. */
+/* Patient banner: who the page is about on the left, the bill's own facts on the right.
+   One row on a normal panel, stacking when there isn't room. */
+.patientHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: layout.$spacing-04 layout.$spacing-06;
+  padding-bottom: layout.$spacing-04;
+  border-bottom: 1px solid $ui-03;
+}
+
+.patientIdentity {
+  display: flex;
+  align-items: center;
+  gap: layout.$spacing-04;
+  min-width: 0;
+}
+
+.patientNameBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.patientName {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #161616;
+  overflow-wrap: anywhere;
+}
+
+.patientSub {
+  font-size: 0.8125rem;
+  color: #6f6f6f;
+  overflow-wrap: anywhere;
+}
+
+.patientStatus {
+  flex-shrink: 0;
+}
+
+/* The bill's own facts, right of the patient. */
 .bdHeader {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, auto));
   gap: layout.$spacing-04 layout.$spacing-06;
   margin: 0;
-  padding: layout.$spacing-04 0;
   background-color: transparent;
   border: none;
 }
@@ -92,6 +114,7 @@
 @media (max-width: 48rem) {
   .bdHeader {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
   }
 }
 @media (max-width: 30rem) {
@@ -120,4 +143,11 @@
     color: #161616;
     overflow-wrap: anywhere;
   }
+}
+
+/* Says the bill has lines with more than one payer, beside the tag naming the first. */
+.mixedPayers {
+  margin-left: 0.375rem;
+  font-size: 0.75rem;
+  color: #6f6f6f;
 }

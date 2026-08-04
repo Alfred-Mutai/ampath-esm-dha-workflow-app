@@ -61,6 +61,13 @@ export interface RecordCardModel {
   };
   /** Per-card tint; overrides the grid-level `tone` so mixed kinds can share a grid. */
   tone?: CardTone;
+  /**
+   * A purpose-built rendering of this record for the side panel, used in place of the
+   * generic card when the record has a shape the labelled-field grid reads poorly — an
+   * invoice, where the money wants grouping and the lines want listing. The card grid
+   * ignores it, so `fields` stays the fallback and the row columns still read from there.
+   */
+  panel?: React.ReactNode;
 }
 
 interface RecordCardsProps {

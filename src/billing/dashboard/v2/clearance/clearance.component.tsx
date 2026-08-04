@@ -18,6 +18,7 @@ import {
 import { CheckmarkOutline } from '@carbon/react/icons';
 import { showSnackbar, useSession } from '@openmrs/esm-framework';
 import styles from './clearance.component.scss';
+
 import {
   clearConsultation,
   getClearanceCounts,
@@ -200,15 +201,12 @@ const Clearance: React.FC<{
 
   return (
     <div className={styles.clearance}>
-      <div className={styles.intro}>
-        <h5 className={styles.title}>Consultation clearance</h5>
-        <p className={styles.subtitle}>
-          Patients wait in the queue marked <strong>Awaiting clearance</strong> until their consultation fee is settled.
-          Mark it paid to release them to be seen.
-        </p>
-      </div>
+      {/* No heading: the tabs name what this is, and the paragraph that explained it is
+          on the tab that starts the work. */}
       <Tabs selectedIndex={tabIndex} onChange={({ selectedIndex }) => setTabIndex(selectedIndex)}>
         <TabList aria-label="Clearance">
+          {/* The explanation lives on the dashboard's own "Pending clearance" tab, which
+              is the one you arrive through — see PENDING_HINT there. */}
           {pendingTab ? <Tab>Pending clearance (SHA){countPill(pendingLoading, pendingCount)}</Tab> : null}
           <Tab>Awaiting payment (CASH){countPill(loadingCounts, counts.awaiting)}</Tab>
         </TabList>

@@ -1,14 +1,27 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { type PatientPayment, type PatientFacilityBillDetails } from '../../types';
 import styles from './bill-details.scss';
-import { Button, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tag } from '@carbon/react';
+import {
+  Button,
+  DataTableSkeleton,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  Tag,
+} from '@carbon/react';
 import { Add, Money } from '@carbon/react/icons';
 import { formatDate, launchWorkspace, parseDate } from '@openmrs/esm-framework';
 import { type AmrsVisitDiagnosis } from '../../../../types';
 import AddClaimDiagnosisModal from '../modals/add-claim-diagnosis/add-claim-diagnosis.modal';
 import { addClaimDiagnosis, useInvalidateProviderClaimPreview, useProviderClaimPreview } from '../../../../billing-claims.resource';
-import RecordCards, { RecordCardsSkeleton, type RecordCardModel } from '../../claim-visits/shared/record-cards.component';
+import EmptyState from '../../shared/empty-state.component';
 import { canEditClaimContent } from '../../claim-statuses';
+
+// One money format across the page, so a total and the line it came from line up.
+const money = (n: number | string): string => `Ksh ${Number(n ?? 0).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 // Stable key for a patient diagnosis, used to track its claim-add attempt/state.
 const diagnosisKey = (d: AmrsVisitDiagnosis): string => d.uuid ?? `${d.encounter_id}-${d.icd11_code}`;
 
@@ -234,148 +247,249 @@ const BillDetails: React.FC<billDetailsProps> = ({ patientBillDetails, patientPa
     }
     return b.payment_status ?? '';
   }
-  // Bill items and diagnoses share one grid so every card — however few — lines up in
-  // the same three-across row across the full width. Tone keeps the two kinds apart:
-  // teal for bill items, amber for diagnoses.
-  const billItemCards: RecordCardModel[] = patientBillDetails.map((b) => ({
-    tone: 'teal',
-    kind: 'Bill item',
-    title: billItemName(b),
-    badge: billItemStatus(b) ? (
-      <Tag size="sm" type={statusTagType(billItemStatus(b))}>
-        {toSentence(billItemStatus(b))}
-      </Tag>
-    ) : undefined,
-    fields: [
-      { label: 'Service type', value: dash(b.service_type) },
-      { label: 'Payer', value: dash(b.payment_scheme) },
-      { label: 'Quantity', value: b.item_quantity },
-      { label: 'Total', value: `Ksh ${b.item_total_price}` },
-    ],
-    actions:
-      canPay(b) || canAddClaimLine(b) ? (
-        <>
-          {canPay(b) && (
-            <Button kind="primary" size="sm" renderIcon={Money} onClick={() => handleBillItemPayment(b)}>
-              Pay
-            </Button>
-          )}
-          {canAddClaimLine(b) && (
-            <Button kind="tertiary" size="sm" renderIcon={Add} onClick={() => handleClaimLineAddition(b)}>
-              Add claim line
-            </Button>
-          )}
-        </>
-      ) : undefined,
-  }));
-
-  const diagnosisCards: RecordCardModel[] = (amrsVisitDiagnosis ?? []).map((d) => {
-    const state = diagnosisState(d);
-    // A single flag communicates where the diagnosis stands with the claim.
-    const flag =
-      state === 'added' ? (
+  // A single flag saying where a diagnosis stands with the claim.
+  function diagnosisFlag(state: DiagnosisState): React.ReactNode {
+    if (state === 'added') {
+      return (
         <Tag size="sm" type="green">
           Added to claim
         </Tag>
-      ) : state === 'error' ? (
+      );
+    }
+    if (state === 'error') {
+      return (
         <Tag size="sm" type="red">
           Not added
         </Tag>
-      ) : state === 'locked' ? (
+      );
+    }
+    if (state === 'locked') {
+      return (
         <Tag size="sm" type="gray">
           Not on claim
         </Tag>
-      ) : (
-        <Tag size="sm" type="blue">
-          {state === 'checking' ? 'Checking…' : 'Adding…'}
-        </Tag>
       );
-    return {
-      tone: 'amber',
-      kind: 'Diagnosis',
-      title: d.encounter_type,
-      badge: flag,
-      fields: [
-        {
-          label: d.concept_source_name || 'ICD code',
-          value: d.icd11_code ? (
-            <Tag size="sm" type="blue">
-              {d.icd11_code}
-            </Tag>
-          ) : (
-            dash(d.icd11_code)
-          ),
-        },
-        { label: 'Encounter date', value: d.encounter_datetime ? formatDate(parseDate(d.encounter_datetime)) : '' },
-      ],
-      // Every diagnosis is mirrored onto the claim automatically; the button is the
-      // fallback for the ones that didn't make it. Only 'error' qualifies, and only a
-      // draft claim can reach it — a claim past draft resolves to 'locked' above, where
-      // there is nothing the user could do but be refused by the backend.
-      actions:
-        state === 'error' ? (
-          <Button kind="tertiary" size="sm" renderIcon={Add} onClick={() => handleAddClaimDiagnosis(d)}>
-            Add to claim diagnosis
-          </Button>
-        ) : undefined,
-    };
-  });
+    }
+    return (
+      <Tag size="sm" type="blue">
+        {state === 'checking' ? 'Checking…' : 'Adding…'}
+      </Tag>
+    );
+  }
+
+  // What the visit came to, and how much of it has been settled. The figures were only
+  // ever readable by adding the lines up by eye, which is what the summary does here.
+  const totalBilled = (patientBillDetails ?? []).reduce((sum, b) => sum + Number(b.item_total_price ?? 0), 0);
+  const totalPaid = (patientPayments ?? []).reduce((sum, p) => sum + Number(p.amount ?? 0), 0);
+  const balance = totalBilled - totalPaid;
+  // Every line item settled through the claim rather than at the cash point, so a
+  // balance here would be read as money the patient still owes.
+  const anyCashLine = (patientBillDetails ?? []).some(
+    (b) => (b.payment_scheme ?? '').trim().toUpperCase() !== 'SHA',
+  );
+  const showActionsColumn = (patientBillDetails ?? []).some((b) => canPay(b) || canAddClaimLine(b));
 
   return (
     <>
       <div className={styles.billDetailsLayout}>
-        {/* Each category is its own section on its own row, all using the same grid. */}
+        {/* The visit's money, up front: what was charged, what came in, what is left. */}
+        {billLoading ? null : (
+          <dl className={styles.summary}>
+            <div className={styles.summaryItem}>
+              <dt>Bill items</dt>
+              <dd>{patientBillDetails?.length ?? 0}</dd>
+            </div>
+            <div className={styles.summaryItem}>
+              <dt>Total billed</dt>
+              <dd>{money(totalBilled)}</dd>
+            </div>
+            <div className={styles.summaryItem}>
+              <dt>Paid</dt>
+              <dd>{money(totalPaid)}</dd>
+            </div>
+            {anyCashLine ? (
+              <div className={styles.summaryItem}>
+                <dt>Balance</dt>
+                <dd className={balance > 0 ? styles.summaryDue : styles.summaryClear}>{money(Math.max(0, balance))}</dd>
+              </div>
+            ) : null}
+          </dl>
+        )}
+
+        {/* Each category is its own section: one plain table, every field in a column,
+            with the actions that apply to a row at the end of it. */}
         <section className={styles.billRow}>
           <h6 className={styles.sectionTitle}>Bill items</h6>
           {billLoading ? (
-            <RecordCardsSkeleton count={3} fields={4} layout="grid" columns={3} tone="teal" />
+            <DataTableSkeleton role="progressbar" showHeader={false} showToolbar={false} rowCount={3} columnCount={7} />
+          ) : (patientBillDetails ?? []).length === 0 ? (
+            <EmptyState message="No bill items for this patient." />
           ) : (
-            <RecordCards records={billItemCards} emptyMessage="No bill items for this patient." layout="grid" columns={3} />
+            <div className={styles.tableCard}>
+              <Table aria-label="bill items" size="sm" useZebraStyles>
+                <TableHead>
+                  <TableRow>
+                    <TableHeader className={styles.numCol}>#</TableHeader>
+                    <TableHeader>Service</TableHeader>
+                    <TableHeader>Service type</TableHeader>
+                    <TableHeader>Payer</TableHeader>
+                    <TableHeader className={styles.numeric}>Qty</TableHeader>
+                    <TableHeader className={styles.numeric}>Unit price</TableHeader>
+                    <TableHeader className={styles.numeric}>Total</TableHeader>
+                    <TableHeader>Status</TableHeader>
+                    {showActionsColumn ? <TableHeader>Actions</TableHeader> : null}
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {patientBillDetails.map((b, index) => (
+                    <TableRow key={b.cashier_bill_line_item_uuid ?? b.bill_line_item_id ?? index}>
+                      <TableCell className={styles.numCol}>{index + 1}</TableCell>
+                      <TableCell>{billItemName(b)}</TableCell>
+                      <TableCell>{dash(b.service_type)}</TableCell>
+                      <TableCell>{dash(b.payment_scheme)}</TableCell>
+                      <TableCell className={styles.numeric}>{b.item_quantity}</TableCell>
+                      <TableCell className={styles.numeric}>{money(b.item_price)}</TableCell>
+                      <TableCell className={styles.numeric}>{money(b.item_total_price)}</TableCell>
+                      <TableCell>
+                        {billItemStatus(b) ? (
+                          <Tag size="sm" type={statusTagType(billItemStatus(b))}>
+                            {toSentence(billItemStatus(b))}
+                          </Tag>
+                        ) : (
+                          dash('')
+                        )}
+                      </TableCell>
+                      {showActionsColumn ? (
+                        <TableCell>
+                          <div className={styles.rowActions}>
+                            {canPay(b) && (
+                              <Button kind="primary" size="sm" renderIcon={Money} onClick={() => handleBillItemPayment(b)}>
+                                Pay
+                              </Button>
+                            )}
+                            {canAddClaimLine(b) && (
+                              <Button kind="tertiary" size="sm" renderIcon={Add} onClick={() => handleClaimLineAddition(b)}>
+                                Add claim line
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      ) : null}
+                    </TableRow>
+                  ))}
+                  <TableRow className={styles.totalRow}>
+                    <TableCell colSpan={6}>Total billed</TableCell>
+                    <TableCell className={styles.numeric}>{money(totalBilled)}</TableCell>
+                    <TableCell colSpan={showActionsColumn ? 2 : 1} />
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
           )}
         </section>
 
         <section className={styles.billRow}>
           <h6 className={styles.sectionTitle}>Patient diagnosis</h6>
           {diagnosisLoading ? (
-            // Two fields per diagnosis card (ICD code, encounter date), unlike the
-            // four on a bill item.
-            <RecordCardsSkeleton count={2} fields={2} layout="grid" columns={3} tone="amber" />
+            <DataTableSkeleton role="progressbar" showHeader={false} showToolbar={false} rowCount={2} columnCount={6} />
+          ) : (amrsVisitDiagnosis ?? []).length === 0 ? (
+            <EmptyState message="No diagnosis recorded for this visit." />
           ) : (
-            <RecordCards records={diagnosisCards} emptyMessage="No diagnosis recorded for this visit." layout="grid" columns={3} />
+            <div className={styles.tableCard}>
+              <Table aria-label="patient diagnosis" size="sm" useZebraStyles>
+                <TableHead>
+                  <TableRow>
+                    <TableHeader className={styles.numCol}>#</TableHeader>
+                    <TableHeader>Encounter</TableHeader>
+                    <TableHeader>Code</TableHeader>
+                    <TableHeader>Coding system</TableHeader>
+                    <TableHeader>Recorded</TableHeader>
+                    <TableHeader>On claim</TableHeader>
+                    <TableHeader>Action</TableHeader>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {amrsVisitDiagnosis.map((d, index) => {
+                    const state = diagnosisState(d);
+                    return (
+                      <TableRow key={diagnosisKey(d)}>
+                        <TableCell className={styles.numCol}>{index + 1}</TableCell>
+                        <TableCell>{dash(d.encounter_type)}</TableCell>
+                        <TableCell>
+                          {d.icd11_code ? (
+                            <Tag size="sm" type="blue">
+                              {d.icd11_code}
+                            </Tag>
+                          ) : (
+                            dash(d.icd11_code)
+                          )}
+                        </TableCell>
+                        <TableCell>{dash(d.concept_source_name)}</TableCell>
+                        <TableCell>
+                          {d.encounter_datetime ? formatDate(parseDate(d.encounter_datetime)) : dash('')}
+                        </TableCell>
+                        <TableCell>{diagnosisFlag(state)}</TableCell>
+                        <TableCell>
+                          {/* Every diagnosis is mirrored onto the claim automatically; the
+                              button is the fallback for the ones that didn't make it. Only
+                              'error' qualifies, and only a draft claim can reach it — past
+                              draft a diagnosis resolves to 'locked', where there is nothing
+                              the user could do but be refused by the backend. */}
+                          {state === 'error' ? (
+                            <Button kind="tertiary" size="sm" renderIcon={Add} onClick={() => handleAddClaimDiagnosis(d)}>
+                              Add to claim
+                            </Button>
+                          ) : (
+                            dash('')
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </section>
 
-        {patientPayments.length > 0 ? (
-          <section className={styles.billRow}>
-            <h6 className={styles.sectionTitle}>Bill payments</h6>
+        <section className={styles.billRow}>
+          <h6 className={styles.sectionTitle}>Bill payments</h6>
+          {patientPayments.length === 0 ? (
+            <EmptyState message="No payments received for this visit." />
+          ) : (
             <div className={styles.tableCard}>
               <Table aria-label="bill payments" size="sm" useZebraStyles>
                 <TableHead>
                   <TableRow>
-                    <TableHeader>No</TableHeader>
+                    <TableHeader className={styles.numCol}>#</TableHeader>
                     <TableHeader>Payment type</TableHeader>
-                    <TableHeader>Amount</TableHeader>
-                    <TableHeader>Amount tendered</TableHeader>
+                    <TableHeader>Receipt</TableHeader>
+                    <TableHeader className={styles.numeric}>Amount</TableHeader>
+                    <TableHeader className={styles.numeric}>Amount tendered</TableHeader>
                     <TableHeader>Date / time</TableHeader>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {patientPayments.map((p, index) => (
                     <TableRow key={p.cashier_bill_payment_uuid}>
-                      <TableCell>{index + 1}</TableCell>
-                      <TableCell>{p.payment_mode}</TableCell>
-                      <TableCell>Ksh {p.amount}</TableCell>
-                      <TableCell>Ksh {p.amount_tendered}</TableCell>
-                      <TableCell>{formatDate(parseDate(p.payment_time))}</TableCell>
+                      <TableCell className={styles.numCol}>{index + 1}</TableCell>
+                      <TableCell>{dash(p.payment_mode)}</TableCell>
+                      <TableCell>{dash(p.receipt_number)}</TableCell>
+                      <TableCell className={styles.numeric}>{money(p.amount)}</TableCell>
+                      <TableCell className={styles.numeric}>{money(p.amount_tendered)}</TableCell>
+                      <TableCell>{p.payment_time ? formatDate(parseDate(p.payment_time)) : dash('')}</TableCell>
                     </TableRow>
                   ))}
+                  <TableRow className={styles.totalRow}>
+                    <TableCell colSpan={3}>Total paid</TableCell>
+                    <TableCell className={styles.numeric}>{money(totalPaid)}</TableCell>
+                    <TableCell colSpan={2} />
+                  </TableRow>
                 </TableBody>
               </Table>
             </div>
-          </section>
-        ) : (
-          <></>
-        )}
+          )}
+        </section>
       </div>
       {showAddClaimDiagnosisModal && selectedDiagnosis && (
         <AddClaimDiagnosisModal

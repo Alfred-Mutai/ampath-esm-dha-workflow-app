@@ -1,14 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { type FacilityBillsDto, type FacilityBill, type ClaimVisitReponse, type PatientBill } from '../types';
 import {
-  type FacilityBillsDto,
-  type FacilityBill,
-  type ClaimVisitReponse,
-  BillingView,
-  type PatientBill,
-} from '../types';
-import {
-  Breadcrumb,
-  BreadcrumbItem,
   Button,
   DataTable,
   DataTableSkeleton,
@@ -29,16 +21,15 @@ import {
 import { Renew, WarningAltFilled } from '@carbon/react/icons';
 import { formatDate, parseDate, showSnackbar, usePagination } from '@openmrs/esm-framework';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import {
+  claimVisitGuid,
   claimVisitToken,
   fetchFacilityBills,
   useFacilityClaimVisits,
-  useInvalidateProviderClaimPreview,
   useLiveClaimStates,
 } from '../../../billing-claims.resource';
 import styles from './facility-bills.component.scss';
-import PatientBillDetails from '../patient-bill-details/patient-bill-details';
-import ClaimDetailsByToken from '../claim-visits/claim-visit-details/claim-details-by-token.component';
 import TableToolbar from '../shared/table-toolbar.component';
 import EmptyState from '../shared/empty-state.component';
 import { ALL_BILL_BUCKETS, CLAIM_BUCKETS, PAYMENT_BUCKETS, type StatusBucket, statusMeta } from './claim-status';
@@ -116,6 +107,9 @@ interface BillRow {
   /** Set on claim rows. Opens the claim itself — the one way in for a claim no bill was
       raised against. */
   consentToken: string;
+  /** The claim's authorization guid, which is what its page is addressed by. Empty on
+      rows built from a bill, which carries no guid. */
+  claimGuid: string;
   /** Everything the free-text search looks at, pre-joined. */
   searchText: string;
   lineItems?: FacilityBill['bill_items'];
@@ -132,6 +126,7 @@ const billRow = (fb: PatientBill): BillRow => {
     billDate: fb.bill_date || '—',
     patientUuid: fb.patient_uuid ?? '',
     consentToken: (fb.consent_token ?? '').trim(),
+    claimGuid: '',
     // The cash point is no longer a column but is still searchable — it's how a cashier
     // finds their own bills.
     searchText: `${fb.patient_name} ${formatCr(fb.identifiers)}  ${fb.receipt_number ?? ''} ${
@@ -159,6 +154,22 @@ const claimTime = (cv: ClaimVisitReponse): number => {
 const orderClaimVisits = (visits: ClaimVisitReponse[]): ClaimVisitReponse[] =>
   [...(visits ?? [])].sort((a, b) => claimTime(b) - claimTime(a) || (b.id ?? 0) - (a.id ?? 0));
 
+// Status buckets for a payer tab: cash, SHA claims, or both vocabularies together.
+const bucketsForTab = (index: number): StatusBucket[] =>
+  index === 0 ? PAYMENT_BUCKETS : index === 1 ? CLAIM_BUCKETS : ALL_BILL_BUCKETS;
+
+/**
+ * Which payer an instance of this component lists. Each is a tab of the dashboard now —
+ * they were sub-tabs inside this component, and a payer bar under a tab that already
+ * named the payer was a second row of tabs saying the same thing.
+ *
+ * The numbers are the payer vocabulary read throughout — `bucketsForTab`, `activeRows`,
+ * `payerNoun` all switch on them — so they are named rather than renumbered.
+ */
+export const CASH_PAYER_TAB = 0;
+export const SHA_PAYER_TAB = 1;
+export const ALL_BILLS_PAYER_TAB = 2;
+
 // The status sub-tab a payer opens on: Draft when it has one (SHA / preauths), else
 // Pending (cash), else the first bucket.
 const defaultBucketKey = (buckets: StatusBucket[]): string => {
@@ -166,16 +177,32 @@ const defaultBucketKey = (buckets: StatusBucket[]): string => {
   return (preferred ?? buckets[0])?.key ?? '';
 };
 
+// The status bucket last being read, held at module scope so it survives this tab
+// unmounting while the user stays inside billing — which is what opening a claim now does,
+// since a claim has its own route. Deliberately not persisted any further: a page reload
+// should start on the defaults. Cleared with the date filter when the user leaves billing
+// altogether (see resetFacilityBillsFilters callers).
+//
+// Kept per payer. Each payer is a separate instance of this component and both are mounted
+// at once inside the dashboard's tab panels, so a single slot would have them overwrite
+// each other's memory on every render — and the buckets aren't even the same vocabulary.
+const lastStatusFilterByPayer: Record<number, string> = {};
+
+/** Forget the remembered status buckets, so each tab opens on its default. */
+export function resetFacilityBillsFilters() {
+  for (const key of Object.keys(lastStatusFilterByPayer)) {
+    delete lastStatusFilterByPayer[Number(key)];
+  }
+}
+
 interface facilityBillsProps {
   billingDate: string;
   locationUuid: string;
   onDateChange?: (value: string) => void;
-  /** Told whether the bill-details drill-down is open, so the parent can clear the
-      surrounding dashboard chrome and give the details the full page. */
-  onDetailsOpenChange?: (open: boolean) => void;
-  /** Payer tab and status bucket to open on when a dashboard tile is clicked. `navNonce`
-      changes on every click, so clicking the same tile twice still navigates. */
-  navPayerTab?: number;
+  /** Which payer this instance lists — one of the `*_PAYER_TAB` constants. */
+  payerTab: number;
+  /** Status bucket to open on when a dashboard tile is clicked. `navNonce` changes on
+      every click, so clicking the same tile twice still navigates. */
   navStatusKey?: string;
   navNonce?: number;
 }
@@ -183,8 +210,7 @@ const FacilityBills: React.FC<facilityBillsProps> = ({
   billingDate,
   locationUuid,
   onDateChange,
-  onDetailsOpenChange,
-  navPayerTab,
+  payerTab,
   navStatusKey,
   navNonce,
 }) => {
@@ -197,21 +223,19 @@ const FacilityBills: React.FC<facilityBillsProps> = ({
     loading: claimsLoading,
     reload: loadClaimVisits,
   } = useFacilityClaimVisits(locationUuid, billingDate);
-  const [currentView, setCurrentView] = useState<BillingView>(BillingView.Bills);
-  const [selectedPatientUuid, setSelectedPatientUuid] = useState<string>('');
-  // Consent token of the claim whose details are open, '' when none.
-  const [openClaimToken, setOpenClaimToken] = useState<string>('');
   const [search, setSearch] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
-  const [detailsRefresh, setDetailsRefresh] = useState<number>(0);
-  // 0 = Cash bills, 1 = SHA claims, 2 = All bills.
-  const [tabIndex, setTabIndex] = useState<number>(0);
+  // Fixed for the life of this instance — the dashboard tab that mounted it is what
+  // chooses the payer. Kept under the old name because the payer index is read in a dozen
+  // places below and it is the same number it always was.
+  const tabIndex = payerTab;
   // Selected status bucket key ('' = All). Defaults to the first bucket of the payer
   // (Drafts for SHA claims, Pending for cash).
-  const [statusFilter, setStatusFilter] = useState<string>(() => defaultBucketKey(PAYMENT_BUCKETS));
+  const [statusFilter, setStatusFilter] = useState<string>(
+    () => lastStatusFilterByPayer[payerTab] ?? defaultBucketKey(bucketsForTab(payerTab)),
+  );
   const { t } = useTranslation();
-  // Refreshes the claim open in the claim-details view.
-  const invalidateProviderClaimPreview = useInvalidateProviderClaimPreview();
+  const navigate = useNavigate();
   const pageSizes = [10, 20, 30, 40, 50];
   const [currentPageSize, setPageSize] = useState(10);
   useEffect(() => {
@@ -221,13 +245,12 @@ const FacilityBills: React.FC<facilityBillsProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [billingDate, locationUuid]);
 
-  // Returning from bill details via "Reload Bills" reloads both halves too.
+  // Remember what is being read, so opening a claim — which now navigates away to the
+  // claim's own page — and coming back lands on the same status bucket.
   useEffect(() => {
-    if (detailsRefresh) {
-      loadClaimVisits();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [detailsRefresh]);
+    lastStatusFilterByPayer[payerTab] = statusFilter;
+  }, [payerTab, statusFilter]);
+
   async function getFacilityBills() {
     setLoading(true);
     const facilityBillsPayload = generateFacilityBillsPayload();
@@ -252,37 +275,29 @@ const FacilityBills: React.FC<facilityBillsProps> = ({
     };
   }
 
-  function toggleView(newView: BillingView, patientUuid: string) {
-    setCurrentView(newView);
-    setSelectedPatientUuid(patientUuid);
-    setOpenClaimToken('');
-    onDetailsOpenChange?.(newView !== BillingView.Bills);
-  }
-
-  // A claim opens the way a bill does — over the whole page, with a breadcrumb back —
-  // rather than in a modal, so there is one way to read a record here.
-  function openClaimDetails(consentToken: string) {
-    setOpenClaimToken(consentToken);
-    setSelectedPatientUuid('');
-    setCurrentView(BillingView.ClaimDetails);
-    onDetailsOpenChange?.(true);
-  }
-
   /**
    * Open a row. The patient name is the way in, on every tab.
    *
-   * The patient view is the comprehensive one: bill items, patient diagnosis, payments
-   * and the claim itself, all on one page. It is keyed on the OpenMRS patient uuid,
-   * which only a matched bill gives us, so the claim on its own is the fallback for a
-   * claim no bill was raised against — not the preferred view.
+   * A claim goes to its own page, addressed by its consent token, so it can be linked to
+   * and reloaded and Back returns here. Elsewhere the patient view is the comprehensive
+   * one — bill items, diagnosis, payments and the claim together — and it is keyed on the
+   * OpenMRS patient uuid, which only a matched bill gives us; the claim page is the
+   * fallback for a bill-less claim.
    */
-  function openRowDetails(patientUuid: string, consentToken: string) {
-    if (patientUuid) {
-      toggleView(BillingView.BillDetails, patientUuid);
+  function openRowDetails(patientUuid: string, consentToken: string, claimGuid: string) {
+    // On the SHA tab every row *is* a claim, so the claim page is what it opens, even
+    // when a bill was matched to it.
+    if (consentToken && (tabIndex === 1 || !patientUuid)) {
+      // Addressed by the claim's authorization guid. The token goes along in router
+      // state so the page doesn't have to look the claim up again on the way in — it
+      // only falls back to a lookup when the URL is opened cold.
+      navigate(`/claim/${encodeURIComponent(claimGuid || consentToken)}`, { state: { consentToken } });
       return;
     }
-    if (consentToken) {
-      openClaimDetails(consentToken);
+    if (patientUuid) {
+      // The bill has its own route now, the same as the claim above — so it can be linked
+      // to and reloaded, and Back returns to this list rather than leaving billing.
+      navigate(`/bill/${encodeURIComponent(patientUuid)}`);
     }
   }
   // Split the bills by payer so each tab shows only its own.
@@ -370,6 +385,7 @@ const FacilityBills: React.FC<facilityBillsProps> = ({
         billDate: formatVisitDate(cv.visitStart || claim?.visit_start) || bill?.bill_date || '—',
         patientUuid: bill?.patient_uuid ?? '',
         consentToken,
+        claimGuid: claimVisitGuid(cv),
         searchText: `${patientName} ${crNumber} ${visitType} ${status} ${visitNumber} ${token} ${
           claim?.invoice_number ?? ''
         } ${bill?.cash_point ?? ''}`.toLowerCase(),
@@ -411,9 +427,6 @@ const FacilityBills: React.FC<facilityBillsProps> = ({
     return leftovers.length ? { key: 'other', label: 'Other', statuses: leftovers } : null;
   };
 
-  // Status buckets for the active tab: cash, SHA claims, or both vocabularies together.
-  const bucketsForTab = (index: number): StatusBucket[] =>
-    index === 0 ? PAYMENT_BUCKETS : index === 1 ? CLAIM_BUCKETS : ALL_BILL_BUCKETS;
   const baseBuckets = bucketsForTab(tabIndex);
   // Held back with the rest: an "Other" tab derived from states still being confirmed
   // would appear and then vanish as they land.
@@ -439,10 +452,9 @@ const FacilityBills: React.FC<facilityBillsProps> = ({
     if (!navNonce) {
       return;
     }
-    if (navPayerTab !== undefined) {
-      setTabIndex(navPayerTab);
-      setStatusFilter(navStatusKey ?? defaultBucketKey(bucketsForTab(navPayerTab)));
-    } else if (navStatusKey) {
+    // The payer is fixed by the tab that mounted this, so only the bucket within it is
+    // navigable — sending a tile to another payer is the dashboard's job now.
+    if (navStatusKey) {
       setStatusFilter(navStatusKey);
     }
     setSearch('');
@@ -458,11 +470,12 @@ const FacilityBills: React.FC<facilityBillsProps> = ({
     { id: 'status', header: 'Status', key: 'status' },
     { id: 'billDate', header: 'Date', key: 'billDate' },
     // Carried on the row but never shown: what the patient name opens is decided from
-    // these two.
+    // these three.
     { id: 'patientUuid', header: '', key: 'patientUuid' },
     { id: 'consentToken', header: '', key: 'consentToken' },
+    { id: 'claimGuid', header: '', key: 'claimGuid' },
   ];
-  const hiddenColumns = ['patientUuid', 'consentToken'];
+  const hiddenColumns = ['patientUuid', 'consentToken', 'claimGuid'];
 
   const rows = paginatedRows.map((row, index) => ({
     id: `${row.id}-${index}`,
@@ -474,13 +487,8 @@ const FacilityBills: React.FC<facilityBillsProps> = ({
     billDate: row.billDate,
     patientUuid: row.patientUuid,
     consentToken: row.consentToken,
+    claimGuid: row.claimGuid,
   }));
-
-  const changeTab = (index: number) => {
-    setTabIndex(index);
-    setStatusFilter(defaultBucketKey(bucketsForTab(index)));
-    goTo(1);
-  };
 
   const payerNoun = tabIndex === 1 ? 'SHA claims' : tabIndex === 2 ? 'bills' : 'cash bills';
   const emptyBillsMessage = selectedBucket
@@ -536,6 +544,7 @@ const FacilityBills: React.FC<facilityBillsProps> = ({
                   {dtRows.map((row) => {
                     const patientUuid = row.cells.find((c) => c.info.header === 'patientUuid')?.value;
                     const consentToken = row.cells.find((c) => c.info.header === 'consentToken')?.value;
+                    const claimGuid = row.cells.find((c) => c.info.header === 'claimGuid')?.value;
                     return (
                       <TableRow {...getRowProps({ row })}>
                         {row.cells.map((cell) => {
@@ -550,7 +559,7 @@ const FacilityBills: React.FC<facilityBillsProps> = ({
                                   <button
                                     type="button"
                                     className={styles.clickableData}
-                                    onClick={() => openRowDetails(patientUuid, consentToken)}
+                                    onClick={() => openRowDetails(patientUuid, consentToken, claimGuid)}
                                   >
                                     {cell.value}
                                   </button>
@@ -648,102 +657,20 @@ const FacilityBills: React.FC<facilityBillsProps> = ({
 
   return (
     <>
-      {currentView === BillingView.Bills ? (
-        <div className={styles.panel}>
-          <div className={styles.intro}>
-            <h4 className={styles.introTitle}>Facility bills</h4>
-            <p className={styles.introText}>
-              Consultation and service bills raised at this facility for the selected date. Select a patient to view the
-              itemised bill, payments received and the outstanding balance.
-            </p>
+      {/* The bill drill-down that used to sit beside this is a route of its own now, so
+          the list is all this component renders. */}
+      <div className={styles.panel}>
+        {/* No heading and no payer bar: the dashboard tab above already names both what
+              this list is and whose bills are in it, and the status buckets inside the
+              table are the only choice left to make. */}
+        {loading ? (
+          <div className={styles.tableCard}>
+            <DataTableSkeleton role="progressbar" showHeader={false} showToolbar={false} />
           </div>
-          {loading ? (
-            <div className={styles.tableCard}>
-              <DataTableSkeleton role="progressbar" showHeader={false} showToolbar={false} />
-            </div>
-          ) : (
-            <Tabs selectedIndex={tabIndex} onChange={({ selectedIndex }) => changeTab(selectedIndex)}>
-              <TabList aria-label="Facility bills" scrollDebounceWait={200}>
-                <Tab>Cash bills</Tab>
-                <Tab>SHA claims</Tab>
-                <Tab>All bills</Tab>
-              </TabList>
-              <TabPanels>
-                <TabPanel>{tabIndex === 0 ? billsTable : null}</TabPanel>
-                <TabPanel>{tabIndex === 1 ? billsTable : null}</TabPanel>
-                <TabPanel>{tabIndex === 2 ? billsTable : null}</TabPanel>
-              </TabPanels>
-            </Tabs>
-          )}
-        </div>
-      ) : (
-        <></>
-      )}
-      {currentView === BillingView.BillDetails && selectedPatientUuid ? (
-        <div className={styles.detailsView}>
-          <div className={styles.detailsHeader}>
-            <Breadcrumb noTrailingSlash className={styles.breadcrumb}>
-              <BreadcrumbItem>
-                <button
-                  type="button"
-                  className={styles.breadcrumbLink}
-                  onClick={() => toggleView(BillingView.Bills, '')}
-                >
-                  Facility bills
-                </button>
-              </BreadcrumbItem>
-              <BreadcrumbItem isCurrentPage>Bill details</BreadcrumbItem>
-            </Breadcrumb>
-            <Button
-              kind="tertiary"
-              size="sm"
-              renderIcon={Renew}
-              iconDescription="Reload"
-              onClick={() => setDetailsRefresh((n) => n + 1)}
-            >
-              Reload Bills
-            </Button>
-          </div>
-          <PatientBillDetails
-            locationUuid={locationUuid}
-            billingDate={billingDate}
-            patientUuid={selectedPatientUuid}
-            refreshToken={detailsRefresh}
-          />
-        </div>
-      ) : (
-        <></>
-      )}
-      {currentView === BillingView.ClaimDetails && openClaimToken ? (
-        <div className={styles.detailsView}>
-          <div className={styles.detailsHeader}>
-            <Breadcrumb noTrailingSlash className={styles.breadcrumb}>
-              <BreadcrumbItem>
-                <button
-                  type="button"
-                  className={styles.breadcrumbLink}
-                  onClick={() => toggleView(BillingView.Bills, '')}
-                >
-                  Facility bills
-                </button>
-              </BreadcrumbItem>
-              <BreadcrumbItem isCurrentPage>Claim details</BreadcrumbItem>
-            </Breadcrumb>
-            <Button
-              kind="tertiary"
-              size="sm"
-              renderIcon={Renew}
-              iconDescription="Reload"
-              onClick={invalidateProviderClaimPreview}
-            >
-              Reload Claim
-            </Button>
-          </div>
-          <ClaimDetailsByToken consentToken={openClaimToken} locationUuid={locationUuid} />
-        </div>
-      ) : (
-        <></>
-      )}
+        ) : (
+          billsTable
+        )}
+      </div>
     </>
   );
 };

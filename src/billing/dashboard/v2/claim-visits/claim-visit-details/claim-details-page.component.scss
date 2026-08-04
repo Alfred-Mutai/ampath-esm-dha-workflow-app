@@ -1,0 +1,13 @@
+@use '@carbon/layout';
+
+/* The claim now has its own route, so it no longer sits inside the dashboard's padded
+   layout — it insets itself by the same amount instead, and the page doesn't start hard
+   against the viewport edge. The amount has to stay in step with `.bcLayout`: navigating
+   from the dashboard to a claim and back should not shift the content sideways. */
+.page {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: layout.$spacing-06;
+  row-gap: layout.$spacing-05;
+}

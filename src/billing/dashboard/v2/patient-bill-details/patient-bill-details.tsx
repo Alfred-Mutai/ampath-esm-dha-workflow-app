@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import styles from './patient-bill-details.scss';
+import { billPaymentModes, type PaymentModeDescriptor } from './payment-mode';
 import {
   type PatientFacilityBillsDto,
   type PatientFacilityBillDetails,
@@ -16,21 +17,38 @@ import {
   useProviderClaimPreview,
 } from '../../../billing-claims.resource';
 import { showSnackbar } from '@openmrs/esm-styleguide';
-import { Button, InlineLoading, SkeletonText } from '@carbon/react';
-import { Receipt, DocumentTasks, Renew } from '@carbon/react/icons';
+import { Button, InlineLoading, SkeletonText, Tag } from '@carbon/react';
+import { Renew } from '@carbon/react/icons';
 import BillDetails from './bill-details/bill-details';
 import PatientClaimDetails from './claim-details/patient-claim-details.component';
 import ClaimDetailsSkeleton from './claim-details/claim-details-skeleton.component';
 import EmptyState from '../shared/empty-state.component';
 import ScrollToTop from '../shared/scroll-to-top.component';
 import { type AmrsVisitDiagnosisDto, type AmrsVisitDiagnosis, type AmrsMaternityDiagnosisDto } from '../../../types';
+// Bill status colours, matching the per-line-item tags on the bill items table below.
+const billStatusTagType = (status: string): 'green' | 'teal' | 'gray' => {
+  const s = (status ?? '').trim().toUpperCase();
+  if (s === 'PAID') return 'green';
+  if (s.includes('PARTIAL')) return 'teal';
+  return 'gray';
+};
+
 interface patientBillDetailsProps {
   patientUuid: string;
   locationUuid: string;
   billingDate: string;
   refreshToken?: number;
+  /** Told who is paying once the lines have loaded. The payer is a property of the bill's
+      lines, so only this component can work it out — the page above shows it. */
+  onPaymentModeResolved?: (mode: PaymentModeDescriptor) => void;
 }
-const PatientBillDetails: React.FC<patientBillDetailsProps> = ({ patientUuid, locationUuid, billingDate, refreshToken }) => {
+const PatientBillDetails: React.FC<patientBillDetailsProps> = ({
+  patientUuid,
+  locationUuid,
+  billingDate,
+  refreshToken,
+  onPaymentModeResolved,
+}) => {
   const [patientBillDetails, setPatientBillDetails] = useState<PatientFacilityBillDetails[]>([]);
   const [consentToken, setConsentToken] = useState<string>('');
   const [patientBillPayments, setPatientBillPayments] = useState<PatientPayment[]>([]);
@@ -39,6 +57,44 @@ const PatientBillDetails: React.FC<patientBillDetailsProps> = ({ patientUuid, lo
     return patientBillDetails[0] ?? null;
   }, [patientBillDetails]);
   const billStatus = useMemo(() => getBillStatus(patientBillDetails), [patientBillDetails]);
+
+  // Who is paying, read off the lines rather than off the patient — one visit's lines can
+  // sit with different payers, which `billPaymentModes` reports rather than hiding.
+  const paymentModes = useMemo(() => billPaymentModes(patientBillDetails), [patientBillDetails]);
+
+  /**
+   * What the bill section is about, given where the bill has got to and who is paying.
+   *
+   * Both matter and neither alone is enough: "awaiting payment" is the whole story on a
+   * pending cash bill, but on a pending SHA one the patient is not the one being waited
+   * on, and saying so avoids a cashier chasing them for it.
+   */
+  const billSubtitle = useMemo(() => {
+    const status = (billStatus ?? '').toUpperCase();
+    const payer = paymentModes.primary;
+    const charges = 'Itemised charges and diagnoses for this visit.';
+
+    if (status === 'PAID') {
+      return 'Itemised charges, the payments that settled them, and diagnoses for this visit.';
+    }
+    if (status === 'PARTIALLY PAID') {
+      return 'Itemised charges, what has been paid so far and what is still outstanding.';
+    }
+    if (status === 'PENDING') {
+      return payer.hasPatientPortion
+        ? `${charges} Nothing has been received against it yet.`
+        : `${charges} It is with ${payer.schemeName || payer.label} rather than the patient.`;
+    }
+    return charges;
+  }, [billStatus, paymentModes.primary]);
+
+  // Handed up to whoever is showing this, once there are lines to judge it from.
+  useEffect(() => {
+    if (patientBillDetails.length) {
+      onPaymentModeResolved?.(paymentModes.primary);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paymentModes.primary.key, patientBillDetails.length]);
   // Two endpoints feed one diagnosis list. They're kept in separate slices and combined
   // for display so each can simply replace its own results: appending both into a single
   // piece of state meant every reload stacked another copy onto the previous one.
@@ -46,7 +102,7 @@ const PatientBillDetails: React.FC<patientBillDetailsProps> = ({ patientUuid, lo
   const [maternityDiagnosis, setMaternityDiagnosis] = useState<AmrsVisitDiagnosis[]>([]);
   const [encounterDiagnosis, setEncounterDiagnosis] = useState<AmrsVisitDiagnosis[]>([]);
   const patientAmrsVisitDiagnosis = useMemo(
-    () => [...visitDiagnosis, ...maternityDiagnosis,...encounterDiagnosis],
+    () => [...visitDiagnosis, ...maternityDiagnosis, ...encounterDiagnosis],
     [visitDiagnosis, maternityDiagnosis, encounterDiagnosis],
   );
   // Both fetches feed the one diagnosis section, so it stays under the skeleton until
@@ -58,10 +114,11 @@ const PatientBillDetails: React.FC<patientBillDetailsProps> = ({ patientUuid, lo
   const diagnosisLoading = visitDiagnosisLoading || maternityDiagnosisLoading || encounterDiagnosisLoading;
   // Claim load state, surfaced on the Claim Details header. Shares the SWR request the
   // claim section itself uses, so it's not a second fetch.
-  const { claimVisit, isLoading: claimLoading, isValidating: claimValidating } = useProviderClaimPreview(
-    consentToken,
-    locationUuid,
-  );
+  const {
+    claimVisit,
+    isLoading: claimLoading,
+    isValidating: claimValidating,
+  } = useProviderClaimPreview(consentToken, locationUuid);
   // Stamp the time each load/refresh completes, to show "Last refreshed at …". The claim
   // no longer revalidates on focus or reconnect, so this timestamp now reflects a real
   // fetch — the initial load, a mutation, or the Refresh control below — rather than
@@ -146,7 +203,7 @@ const PatientBillDetails: React.FC<patientBillDetailsProps> = ({ patientUuid, lo
         return s.paid_status === 'POSTED';
       });
       if (hasPostedBill) {
-        return 'PARTIALLY PAID'
+        return 'PARTIALLY PAID';
       }
       const hasPendingBill = patientBillDetails.some((s) => {
         return s.paid_status === 'PENDING';
@@ -156,7 +213,7 @@ const PatientBillDetails: React.FC<patientBillDetailsProps> = ({ patientUuid, lo
       }
       return 'PAID';
     } else {
-      return status;
+      return '';
     }
   }
   async function getPatientAmrsVisitDiagnosis() {
@@ -196,12 +253,10 @@ const PatientBillDetails: React.FC<patientBillDetailsProps> = ({ patientUuid, lo
   }
   async function getPatientAmrsEncounterDiagnosis() {
     setEncounterDiagnosisLoading(true);
-    const amrsMaternityDiagnosisPayload =  getPatientAmrsVisitDiagnosisPayload();
+    const amrsMaternityDiagnosisPayload = getPatientAmrsVisitDiagnosisPayload();
     try {
       const resp: any = await fetchPatientEncounterDiagnosis(amrsMaternityDiagnosisPayload);
-      const results = (resp ?? [])
-        .filter((r) => r?.uuid != null)
-        .map((v) => ({ ...v }));
+      const results = (resp ?? []).filter((r) => r?.uuid != null).map((v) => ({ ...v }));
       setEncounterDiagnosis(results);
     } catch (error) {
       showSnackbar({
@@ -217,61 +272,103 @@ const PatientBillDetails: React.FC<patientBillDetailsProps> = ({ patientUuid, lo
     return {
       patientUuid: patientUuid,
       visitDate: billingDate,
-      locationUuid: locationUuid
+      locationUuid: locationUuid,
     };
   }
   function getPatientAmrsMaternityDiagnosisPayload(): AmrsMaternityDiagnosisDto {
     return {
       patientUuid: patientUuid,
-      billingDate: billingDate
+      billingDate: billingDate,
     };
   }
   return (
     <>
       <div className={styles.bdLayout}>
+        {/* Who this page is about, stated once at the top: the patient, then the facts
+            that identify the bill itself. */}
         {billLoading ? (
-          <dl className={styles.bdHeader}>
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div className={styles.pdCol} key={i}>
-                <dt>
-                  <SkeletonText width="45%" />
-                </dt>
+          <div className={styles.patientHeader}>
+            <div className={styles.patientIdentity}>
+              <div className={styles.patientNameBlock}>
+                <SkeletonText width="12rem" heading />
+                <SkeletonText width="7rem" />
+              </div>
+            </div>
+            <dl className={styles.bdHeader}>
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div className={styles.pdCol} key={i}>
+                  <dt>
+                    <SkeletonText width="60%" />
+                  </dt>
+                  <dd>
+                    <SkeletonText width="80%" />
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        ) : facilityPatientDetail ? (
+          <div className={styles.patientHeader}>
+            <div className={styles.patientIdentity}>
+              <div className={styles.patientNameBlock}>
+                <h4 className={styles.patientName}>{facilityPatientDetail.patient_name}</h4>
+                <span className={styles.patientSub}>
+                  {[facilityPatientDetail.cr_no, facilityPatientDetail.amrs_universal_id].filter(Boolean).join(' · ')}
+                </span>
+              </div>
+              {billStatus ? (
+                <Tag size="md" type={billStatusTagType(billStatus)} className={styles.patientStatus}>
+                  {billStatus}
+                </Tag>
+              ) : null}
+            </div>
+            <dl className={styles.bdHeader}>
+              <div className={styles.pdCol}>
+                <dt>Bill date</dt>
+                <dd>{facilityPatientDetail.bill_date || '—'}</dd>
+              </div>
+              <div className={styles.pdCol}>
+                <dt>Receipt</dt>
+                <dd>{facilityPatientDetail.receipt_number || '—'}</dd>
+              </div>
+              {/* The third fact belongs to whoever is paying. A cash bill is settled at a
+                  cash point and that is what a cashier looks for; an insured one is
+                  settled by a scheme, and the cash point says nothing about it. */}
+              {paymentModes.primary.hasClaim || paymentModes.primary.key === 'insurance' ? (
+                <div className={styles.pdCol}>
+                  <dt>Scheme</dt>
+                  <dd>{paymentModes.primary.schemeName || paymentModes.primary.label}</dd>
+                </div>
+              ) : (
+                <div className={styles.pdCol}>
+                  <dt>Cash point</dt>
+                  <dd>{facilityPatientDetail.cash_point || '—'}</dd>
+                </div>
+              )}
+              <div className={styles.pdCol}>
+                <dt>Paid by</dt>
                 <dd>
-                  <SkeletonText width="75%" />
+                  <Tag size="sm" type={paymentModes.primary.tagType}>
+                    {paymentModes.primary.label}
+                  </Tag>
+                  {/* One visit's lines can sit with different payers. Saying so is more
+                      use than labelling the whole bill after the first line. */}
+                  {paymentModes.mixed ? <span className={styles.mixedPayers}>+ others</span> : null}
                 </dd>
               </div>
-            ))}
-          </dl>
-        ) : facilityPatientDetail ? (
-          <dl className={styles.bdHeader}>
-            <div className={styles.pdCol}>
-              <dt>Name</dt>
-              <dd>{facilityPatientDetail.patient_name}</dd>
-            </div>
-            <div className={styles.pdCol}>
-              <dt>Bill date</dt>
-              <dd>{facilityPatientDetail.bill_date}</dd>
-            </div>
-            <div className={styles.pdCol}>
-              <dt>CR</dt>
-              <dd>{facilityPatientDetail.cr_no}</dd>
-            </div>
-            <div className={styles.pdCol}>
-              <dt>Bill status</dt>
-              <dd>{billStatus ?? ''}</dd>
-            </div>
-          </dl>
+            </dl>
+          </div>
         ) : (
           <></>
         )}
-        <section className={`${styles.block} ${styles.blockBills}`}>
+        <section className={styles.block}>
           <header className={styles.blockHeader}>
-            <span className={styles.blockIcon}>
-              <Receipt size={20} />
-            </span>
             <div>
               <h5 className={styles.blockTitle}>Bill Details</h5>
-              <p className={styles.blockSubtitle}>Itemised charges, payments received and diagnoses for this visit.</p>
+              {/* What this section is for depends on where the bill has got to: nothing has
+                  been received on a pending one, so promising "payments received" is a
+                  heading over an empty column. */}
+              <p className={styles.blockSubtitle}>{billSubtitle}</p>
             </div>
           </header>
           <div className={styles.blockBody}>
@@ -290,64 +387,68 @@ const PatientBillDetails: React.FC<patientBillDetailsProps> = ({ patientUuid, lo
           </div>
         </section>
 
-        <section className={`${styles.block} ${styles.blockClaims}`}>
-          <header className={styles.blockHeader}>
-            <span className={styles.blockIcon}>
-              <DocumentTasks size={20} />
-            </span>
-            <div>
-              <h5 className={styles.blockTitle}>Claim Details</h5>
-              <p className={styles.blockSubtitle}>SHA claim built from this visit's billed interventions.</p>
-            </div>
-            {billLoading || consentToken ? (
-              <div className={styles.blockHeaderStatus}>
-                {billLoading || claimLoading || claimValidating ? (
-                  <InlineLoading
-                    description={billLoading || claimLoading ? 'Loading…' : 'Refreshing…'}
-                    status="active"
-                  />
-                ) : (
-                  <>
-                    {claimLastRefreshed ? (
-                      <span className={styles.lastRefreshed}>
-                        Last refreshed at{' '}
-                        {claimLastRefreshed.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    ) : null}
-                    {/* The claim no longer re-fetches on its own, so this is how it gets
-                        brought up to date between the mutations that invalidate it. */}
-                    <Button
-                      kind="ghost"
-                      size="sm"
-                      renderIcon={Renew}
-                      iconDescription="Refresh claim"
-                      hasIconOnly
-                      onClick={refreshClaim}
-                    />
-                  </>
-                )}
+        {/* Only where a claim is possible. A straight cash bill has no payer to file
+            with, so this section used to render on every one of them purely to say "No
+            claim associated with this visit yet" — an empty state answering a question
+            nobody asked. While the bill is still loading the payer is unknown, so it is
+            kept: the alternative is the section appearing a moment after the page does. */}
+        {billLoading || consentToken || paymentModes.primary.hasClaim ? (
+          <section className={styles.block}>
+            <header className={styles.blockHeader}>
+              <div>
+                <h5 className={styles.blockTitle}>Claim Details</h5>
+                <p className={styles.blockSubtitle}>SHA claim built from this visit's billed interventions.</p>
               </div>
-            ) : null}
-          </header>
-          <div className={styles.blockBody}>
-            {/* The consent token arrives with the bill, so until that has loaded we
+              {billLoading || consentToken ? (
+                <div className={styles.blockHeaderStatus}>
+                  {billLoading || claimLoading || claimValidating ? (
+                    <InlineLoading
+                      description={billLoading || claimLoading ? 'Loading…' : 'Refreshing…'}
+                      status="active"
+                    />
+                  ) : (
+                    <>
+                      {claimLastRefreshed ? (
+                        <span className={styles.lastRefreshed}>
+                          Last refreshed at{' '}
+                          {claimLastRefreshed.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      ) : null}
+                      {/* The claim no longer re-fetches on its own, so this is how it gets
+                        brought up to date between the mutations that invalidate it. */}
+                      <Button
+                        kind="ghost"
+                        size="sm"
+                        renderIcon={Renew}
+                        iconDescription="Refresh claim"
+                        hasIconOnly
+                        onClick={refreshClaim}
+                      />
+                    </>
+                  )}
+                </div>
+              ) : null}
+            </header>
+            <div className={styles.blockBody}>
+              {/* The consent token arrives with the bill, so until that has loaded we
                 don't yet know whether there is a claim. Skeleton rather than the empty
                 state below, which would otherwise assert there is no claim every time
                 the page opens and then contradict itself a moment later. */}
-            {billLoading ? (
-              <ClaimDetailsSkeleton />
-            ) : locationUuid && consentToken ? (
-              <PatientClaimDetails
-                locationUuid={locationUuid}
-                patientBillDetails={patientBillDetails}
-                consentToken={consentToken}
-                refreshToken={claimRefreshToken}
-              />
-            ) : (
-              <EmptyState message="No claim associated with this visit yet." />
-            )}
-          </div>
-        </section>
+              {billLoading ? (
+                <ClaimDetailsSkeleton />
+              ) : locationUuid && consentToken ? (
+                <PatientClaimDetails
+                  locationUuid={locationUuid}
+                  patientBillDetails={patientBillDetails}
+                  consentToken={consentToken}
+                  refreshToken={claimRefreshToken}
+                />
+              ) : (
+                <EmptyState message="No claim associated with this visit yet." />
+              )}
+            </div>
+          </section>
+        ) : null}
       </div>
       <ScrollToTop />
     </>

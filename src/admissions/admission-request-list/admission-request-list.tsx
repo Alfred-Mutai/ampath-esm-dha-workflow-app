@@ -17,13 +17,13 @@ import {
   type LocationAttribute,
 } from '../types';
 import AdmitPatientModal from '../modal/admit-patient/admit-patient.modal';
-import { formatDate, showSnackbar, useSession, type Visit } from '@openmrs/esm-framework';
+import { formatDate, launchWorkspace, showSnackbar, useSession, type Visit } from '@openmrs/esm-framework';
 import CancelAdmissionRequestModal from '../modal/cancel-admission-request/cancel-admission-request';
 import { fetchLocationDetails } from '../admissions.resource';
-import SendToQueueModal from '../../registry/modal/send-to-triage/send-to-queue.modal';
 import { createVisit } from '../../resources/visit.resource';
 import { type VisitAttribute, type CreateVisitDto } from '../../registry/types';
 import { VisitTypeUuids } from '../../shared/constants/visit-types';
+import { SEND_TO_QUEUE_WORKSPACE } from '../../registry/modal/send-to-triage/send-to-queue.modal';
 import { type PaymentMode } from '../../shared/types';
 import { fetchPaymentModes } from '../../shared/services/billing.resource';
 
@@ -38,7 +38,6 @@ const AdmissionsRequestList: React.FC<AdmissionListProps> = ({ admissionRequests
   const [showAdmitModal, setShowAdmitModal] = useState<boolean>(false);
   const [showCancelAdmissionModal, setShowCancelAdmissionModal] = useState<boolean>(false);
   const [startClaimVisit, setStartClaimVisit] = useState<boolean>(false);
-  const [showStartClaimModal, setShowStartClaimModal] = useState<boolean>(false);
   const [admissionInpatientVisit, setAdmissionInpatientVisit] = useState<Visit>();
   // const [selectedPaymentMode, setSelectedPaymentMode] = useState<PaymentMode>();
   const [paymentModes, setPaymentModes] = useState<PaymentMode[]>([]);
@@ -92,7 +91,15 @@ const AdmissionsRequestList: React.FC<AdmissionListProps> = ({ admissionRequests
     const resp = await createPatientVisit(admissionRequest);
     if (resp) {
       setAdmissionInpatientVisit(resp);
-      setShowStartClaimModal(true);
+      // The claim panel is an OpenMRS workspace now, so it is launched rather than
+      // rendered — the visit it is for has only just been created, hence opening it here
+      // rather than from the row that asked for it.
+      launchWorkspace(SEND_TO_QUEUE_WORKSPACE, {
+        workspaceTitle: 'Initiate SHA claim',
+        patientUuid: admissionRequest?.patient_uuid,
+        visitUuid: resp?.uuid,
+        visitTypeUuid: VisitTypeUuids.INPATIENT_VISIT_TYPE_UUID,
+      });
     }
   }
   async function getLocationDetails() {
@@ -181,9 +188,6 @@ const AdmissionsRequestList: React.FC<AdmissionListProps> = ({ admissionRequests
       subtitle: subtitle,
     });
   };
-  const onCreateClaimVisitModalClose = () => {
-    setShowStartClaimModal(false);
-  };
   return (
     <>
       <Table>
@@ -252,14 +256,6 @@ const AdmissionsRequestList: React.FC<AdmissionListProps> = ({ admissionRequests
         <></>
       )}
 
-      {selectedAdmissionRequest && admissionInpatientVisit && showStartClaimModal && (
-        <SendToQueueModal
-          patientUuid={selectedAdmissionRequest?.patient_uuid}
-          visitUuid={admissionInpatientVisit?.uuid}
-          visitTypeUuid={VisitTypeUuids.INPATIENT_VISIT_TYPE_UUID}
-          onModalClose={onCreateClaimVisitModalClose}
-        />
-      )}
     </>
   );
 };

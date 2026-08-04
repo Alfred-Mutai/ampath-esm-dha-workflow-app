@@ -1,8 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import styles from './billing-claims-dashboard.component.scss';
-import { DatePicker, DatePickerInput, Tab, TabList, TabPanel, TabPanels, Tabs } from '@carbon/react';
-import { Wallet } from '@carbon/react/icons';
-import FacilityBills from './facility-bills/facility-bills.component';
+import { DatePicker, DatePickerInput, Tab, TabList, TabPanel, TabPanels, Tabs, Tooltip } from '@carbon/react';
+import { Information, Wallet } from '@carbon/react/icons';
+import FacilityBills, {
+  CASH_PAYER_TAB,
+  resetFacilityBillsFilters,
+  SHA_PAYER_TAB,
+} from './facility-bills/facility-bills.component';
 import { useSession } from '@openmrs/esm-framework';
 import ActiveVisits from './active-visits/active-visits.component';
 import Clearance from './clearance/clearance.component';
@@ -17,26 +21,86 @@ import {
   MetricsCardItem,
 } from '../../../service-queues/metrics/metrics-cards/metrics-card.component';
 import FacilityAndWorkerSlot from '../../../shared/ui/facility-worker-slot/facility-worker.component-slot.component';
-import ActiveVisitsComponent from './active-visits.component';
 import PreauthorizationsTab from './preauth/preauthorizations-tab.component';
 import InpatientRequests from './inpatient-requests/inpatient-requests.component';
 interface billingClaimsDashboardProps { }
 
 const today = () => new Date().toLocaleDateString('en-CA');
 
+/* The dashboard's own tabs, in order. Named because the summary tiles navigate by index,
+   and a bare number stopped saying which tab it meant once SHA claims was inserted in the
+   middle of the row. */
+const TAB_PENDING_CLEARANCE = 0;
+const TAB_FACILITY_BILLS = 1;
+const TAB_SHA_CLAIMS = 2;
+
+/* What each tab is for, on the tab itself. They were paragraphs standing above the tables
+   — three lines of standing copy on a page opened dozens of times a day, read once.
+   Kept to two short sentences each: what the tab lists, then what you do there. A tooltip
+   is capped at a few hundred pixels wide, so a paragraph in one becomes a tall column that
+   runs off the screen rather than something anyone reads on the way past. */
+const PENDING_HINT =
+  'Visits that have started but are not in a service queue yet. Send each patient to triage, then mark their consultation fee paid to release them to be seen.';
+const BILLS_HINT =
+  'Bills settled at the cash point, for the selected date. Open a patient for the itemised bill, payments received and the balance outstanding.';
+const CLAIMS_HINT =
+  'SHA claims for the selected date, grouped by status. Open one to check its diagnoses, interventions and invoices, or to submit or close it.';
+const PREAUTH_HINT =
+  'Preauths for the selected date. Needs raise lists items still waiting for one; Status shows their live position at SHA and can resend doctor consent.';
+
+/**
+ * An explanation hung off a tab's label.
+ *
+ * A `title` prop on the `Tab` itself is dropped: Carbon spreads `rest` onto the button and
+ * then sets `title: children` afterwards, so the tab's own label always wins. A `title` on
+ * an inner span does work, but a native tooltip waits about a second before appearing,
+ * which is long enough that people stop expecting one.
+ *
+ * So the hint is a Carbon `Tooltip` with its delay taken off. It nests inside the tab
+ * because Carbon's Tooltip does not inject a trigger of its own — it clones event handlers
+ * and aria attributes onto whatever child it is given, and notably not `tabIndex`, so the
+ * icon stays inert and the tab keeps sole ownership of focus and keyboard handling.
+ *
+ * `autoAlign` matters here: the tab list scrolls (`overflow-x: auto`), which would clip a
+ * statically positioned bubble. Floating-ui places it outside that clipping context — the
+ * same thing Carbon does for its own overflowing-tab-label tooltip.
+ */
+const TabHint: React.FC<{ text: string }> = ({ text }) => (
+  <Tooltip label={text} align="bottom" enterDelayMs={0} leaveDelayMs={0} autoAlign className={styles.tabHint}>
+    <span className={styles.tabHintIcon}>
+      <Information size={16} />
+    </span>
+  </Tooltip>
+);
+
 // The chosen filter date is held at module scope, not in component state alone, so it
 // survives this dashboard unmounting and remounting while the user stays inside the
 // billing route — opening a bill's invoice or the claim workspace and coming back.
 // Deliberately not sessionStorage: a page reload should drop it and start on today.
 let lastSelectedDate: string | null = null;
+// Same reasoning for the open tab: opening a claim now navigates to the claim's own
+// page, which unmounts this dashboard, and the breadcrumb back should return to the tab
+// the claim was picked from rather than the first one.
+let lastSelectedTab: number | null = null;
 
 /**
- * Forget the remembered date so the dashboard opens on today again. Called when the
- * user leaves the billing route altogether (see BillingRoot) or re-clicks the
+ * Forget the remembered date, tab and bill filters so the dashboard opens fresh. Called
+ * when the user leaves the billing route altogether (see BillingRoot) or re-clicks the
  * "Accounting" side-nav link, both of which are a request for a fresh view.
  */
+/**
+ * The date the dashboard is currently filtered to, or null when it has been forgotten.
+ * The claim page uses it to look up a claim on the day it was being read before falling
+ * back to searching the whole location.
+ */
+export function rememberedBillingDate(): string | null {
+  return lastSelectedDate;
+}
+
 export function resetBillingDateFilter() {
   lastSelectedDate = null;
+  lastSelectedTab = null;
+  resetFacilityBillsFilters();
 }
 
 const BillingClaimsDashboard: React.FC<billingClaimsDashboardProps> = () => {
@@ -45,15 +109,20 @@ const BillingClaimsDashboard: React.FC<billingClaimsDashboardProps> = () => {
   const [billingDate, setBillingDate] = useState<string>(() => lastSelectedDate ?? today());
   const [awaiting, setAwaiting] = useState(0);
   const [cashDue, setCashDue] = useState(0);
-  const [selectedTab, setSelectedTab] = useState(0);
-  // Which payer tab / status bucket the bills tab should open on, with a nonce so
-  // clicking the same tile twice still navigates.
-  const [billsNav, setBillsNav] = useState<{ payerTab?: number; statusKey?: string; nonce: number }>({ nonce: 0 });
-  // When a facility bill is drilled into, its details take over the whole page — the
-  // dashboard header, metric tiles and tabs are hidden so the details aren't buried.
-  const [billsDetailsOpen, setBillsDetailsOpen] = useState(false);
+  const [selectedTab, setSelectedTab] = useState(() => lastSelectedTab ?? 0);
+  // Which status bucket the bills tab should open on, with a nonce so clicking the same
+  // tile twice still navigates. The payer is no longer part of it: each payer is its own
+  // dashboard tab now, so `tab` alone says which list a tile means.
+  const [billsNav, setBillsNav] = useState<{ statusKey?: string; nonce: number }>({ nonce: 0 });
   // Which sub-tab to open, with a nonce so repeat clicks still re-navigate.
   const [clearanceNav, setClearanceNav] = useState<{ key?: string; nonce: number }>({ nonce: 0 });
+  // The SHA claims tab has its own, since it is a separate instance of FacilityBills and
+  // sharing billsNav would send both lists to the same bucket.
+  const [claimsNav, setClaimsNav] = useState<{ statusKey?: string; nonce: number }>({ nonce: 0 });
+
+  useEffect(() => {
+    lastSelectedTab = selectedTab;
+  }, [selectedTab]);
 
   useEffect(() => {
     if (locationUuid) {
@@ -97,20 +166,35 @@ const BillingClaimsDashboard: React.FC<billingClaimsDashboardProps> = () => {
     tab: number;
     color?: 'red';
     clearKey?: string;
-    billsPayerTab?: number;
     billsStatusKey?: string;
+    claimsStatusKey?: string;
   }[] = [
-    { key: 'awaiting', label: 'Awaiting clearance', unit: 'Patients', value: awaiting, tab: 0, clearKey: 'pending' },
-    { key: 'cashdue', label: 'Facility bills', unit: 'Patients', value: cashDue, tab: 1, billsPayerTab: 0 },
+    {
+      key: 'awaiting',
+      label: 'Awaiting clearance',
+      unit: 'Patients',
+      value: awaiting,
+      tab: TAB_PENDING_CLEARANCE,
+      clearKey: 'pending',
+    },
+    {
+      key: 'cashdue',
+      label: 'Facility bills',
+      unit: 'Patients',
+      value: cashDue,
+      tab: TAB_FACILITY_BILLS,
+      // The tile counts bills still owing, so it lands on the bucket holding them rather
+      // than on whichever one was last being read.
+      billsStatusKey: 'pending',
+    },
     // Straight to the bucket being counted: the SHA claims tab, Drafts / Rejected.
     {
       key: 'draft',
       label: 'Draft claims',
       unit: 'Claims',
       value: claimTileValue('draft'),
-      tab: 1,
-      billsPayerTab: 1,
-      billsStatusKey: 'draft',
+      tab: TAB_SHA_CLAIMS,
+      claimsStatusKey: 'draft',
     },
     {
       key: 'rejected',
@@ -118,19 +202,26 @@ const BillingClaimsDashboard: React.FC<billingClaimsDashboardProps> = () => {
       unit: 'Claims',
       value: claimTileValue('rejected'),
       color: 'red',
-      tab: 1,
-      billsPayerTab: 1,
-      billsStatusKey: 'rejected',
+      tab: TAB_SHA_CLAIMS,
+      claimsStatusKey: 'rejected',
     },
   ];
 
-  const handleTileClick = (s: { tab: number; clearKey?: string; billsPayerTab?: number; billsStatusKey?: string }) => {
+  const handleTileClick = (s: {
+    tab: number;
+    clearKey?: string;
+    billsStatusKey?: string;
+    claimsStatusKey?: string;
+  }) => {
     setSelectedTab(s.tab);
     if (s.clearKey) {
       setClearanceNav((p) => ({ key: s.clearKey, nonce: p.nonce + 1 }));
     }
-    if (s.billsPayerTab !== undefined || s.billsStatusKey) {
-      setBillsNav((p) => ({ payerTab: s.billsPayerTab, statusKey: s.billsStatusKey, nonce: p.nonce + 1 }));
+    if (s.billsStatusKey) {
+      setBillsNav((p) => ({ statusKey: s.billsStatusKey, nonce: p.nonce + 1 }));
+    }
+    if (s.claimsStatusKey) {
+      setClaimsNav((p) => ({ statusKey: s.claimsStatusKey, nonce: p.nonce + 1 }));
     }
   };
 
@@ -143,72 +234,68 @@ const BillingClaimsDashboard: React.FC<billingClaimsDashboardProps> = () => {
   return (
     <>
       <div className={styles.bcLayout}>
-        {!billsDetailsOpen ? (
-          <>
-            <div className={styles.hwrSection}>
-              <FacilityAndWorkerSlot />
-            </div>
-            <div className={styles.bcHeader}>
-              <span className={styles.bcHeaderIcon}>
-                <Wallet size={24} />
-              </span>
-              <div className={styles.bcHeaderTitle}>
-                <h3 className={styles.bcTitle}>Billing &amp; Claims</h3>
-                <p className={styles.bcSubtitle}>Consultation clearance, facility bills and SHA claims.</p>
-              </div>
-            </div>
-            <div className={styles.summaryRow}>
-              {summary.map((s) => (
-                <button key={s.key} type="button" className={styles.metricButton} onClick={() => handleTileClick(s)}>
-                  <MetricsCard>
-                    <MetricsCardHeader title={s.label} />
-                    <MetricsCardBody>
-                      <MetricsCardItem label={s.unit} value={s.value ? s.value : '--'} color={s.color} />
-                    </MetricsCardBody>
-                  </MetricsCard>
-                </button>
-              ))}
-            </div>
-          </>
-        ) : null}
+        <div className={styles.bcHeader}>
+          <span className={styles.bcHeaderIcon}>
+            <Wallet size={24} />
+          </span>
+          <div className={styles.bcHeaderTitle}>
+            <h3 className={styles.bcTitle}>Billing &amp; Claims</h3>
+          </div>
+        </div>
+        <div className={styles.summaryRow}>
+          {summary.map((s) => (
+            <button key={s.key} type="button" className={styles.metricButton} onClick={() => handleTileClick(s)}>
+              <MetricsCard>
+                <MetricsCardHeader title={s.label} />
+                <MetricsCardBody>
+                  <MetricsCardItem label={s.unit} value={s.value ? s.value : '--'} color={s.color} />
+                </MetricsCardBody>
+              </MetricsCard>
+            </button>
+          ))}
+        </div>
         <div className={styles.bcContent}>
           <div className={styles.bcContentTabs}>
-            {!billsDetailsOpen ? (
-              <DatePicker
-                className={styles.tabRowDate}
-                datePickerType="single"
-                dateFormat="Y-m-d"
-                value={billingDate}
-                maxDate={today()}
-                onChange={(dates) => handleDateChange(dates?.[0] ? (dates[0] as Date).toLocaleDateString('en-CA') : '')}
-              >
-                <DatePickerInput id="billing-date" labelText="" placeholder="yyyy-mm-dd" size="sm" />
-              </DatePicker>
-            ) : null}
+            <DatePicker
+              className={styles.tabRowDate}
+              datePickerType="single"
+              dateFormat="Y-m-d"
+              value={billingDate}
+              maxDate={today()}
+              onChange={(dates) => handleDateChange(dates?.[0] ? (dates[0] as Date).toLocaleDateString('en-CA') : '')}
+            >
+              <DatePickerInput id="billing-date" labelText="" placeholder="yyyy-mm-dd" size="sm" />
+            </DatePicker>
             <Tabs selectedIndex={selectedTab} onChange={({ selectedIndex }) => setSelectedTab(selectedIndex)}>
               {/* Tab list hidden while a bill's details are open, but the panels stay
                   mounted so FacilityBills keeps its selected patient and fetched data. */}
-              <TabList scrollDebounceWait={200} className={billsDetailsOpen ? styles.hiddenTabList : undefined}>
-                <Tab>Pending clearance</Tab>
-                <Tab>Facility bills</Tab>
-                <Tab>Preauthorizations</Tab>
+              <TabList scrollDebounceWait={200}>
+                <Tab>
+                  Pending clearance
+                  <TabHint text={PENDING_HINT} />
+                </Tab>
+                <Tab>
+                  Facility bills
+                  <TabHint text={BILLS_HINT} />
+                </Tab>
+                <Tab>
+                  SHA claims
+                  <TabHint text={CLAIMS_HINT} />
+                </Tab>
+                <Tab>
+                  Preauthorizations
+                  <TabHint text={PREAUTH_HINT} />
+                </Tab>
                 {/* <Tab>Preauth List</Tab> */}
-                <Tab>Active Visits</Tab>
                 {/* <Tab>Claims</Tab> */}
                 <Tab>Admission Requests</Tab>
               </TabList>
               <TabPanels>
                 <TabPanel>
                   <Clearance
-                    pendingTab={
-                      <>
-                        <p className={styles.pendingHint}>
-                          Active visits that have started but are not yet in a service queue. Send each patient to
-                          triage to begin their consultation clearance.
-                        </p>
-                        <ActiveVisits date={billingDate} />
-                      </>
-                    }
+                    // The paragraph that introduced this list now hangs off the tab that
+                    // opens it — see PENDING_HINT in Clearance.
+                    pendingTab={<ActiveVisits date={billingDate} />}
                     initialTab={clearanceNav.key}
                     navNonce={clearanceNav.nonce}
                     date={billingDate}
@@ -218,10 +305,21 @@ const BillingClaimsDashboard: React.FC<billingClaimsDashboardProps> = () => {
                   <FacilityBills
                     locationUuid={locationUuid}
                     billingDate={billingDate}
-                    onDetailsOpenChange={setBillsDetailsOpen}
-                    navPayerTab={billsNav.payerTab}
+                    payerTab={CASH_PAYER_TAB}
                     navStatusKey={billsNav.statusKey}
                     navNonce={billsNav.nonce}
+                  />
+                </TabPanel>
+                <TabPanel>
+                  {/* The same table on the SHA payer. It was a sub-tab inside Facility
+                      bills; claims are read often enough, and are enough their own thing,
+                      to be reached in one click rather than two. */}
+                  <FacilityBills
+                    locationUuid={locationUuid}
+                    billingDate={billingDate}
+                    payerTab={SHA_PAYER_TAB}
+                    navStatusKey={claimsNav.statusKey}
+                    navNonce={claimsNav.nonce}
                   />
                 </TabPanel>
                 <TabPanel>
@@ -230,12 +328,6 @@ const BillingClaimsDashboard: React.FC<billingClaimsDashboardProps> = () => {
                     billingDate={billingDate}
                     onDateChange={handleDateChange}
                   />
-                </TabPanel>
-                <TabPanel>
-                  <ActiveVisitsComponent billingDate={billingDate} />
-                </TabPanel>
-                <TabPanel>
-                  <InpatientRequests locationUuid={locationUuid} requestDate=''/>
                 </TabPanel>
               </TabPanels>
             </Tabs>

@@ -1,10 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from '@carbon/react';
 import { claimVisitToken, useFacilityClaimVisits } from '../../../billing-claims.resource';
-import {
-  fetchPreauthPreviewRowsForTokens,
-  type PreauthPreviewRow,
-} from '../../../../claims/claims.resource';
+import { fetchPreauthPreviewRowsForTokens, type PreauthPreviewRow } from '../../../../claims/claims.resource';
 import { PREAUTH_BUCKETS, preauthBucketKeyForStatus, type StatusBucket } from './claim-status';
 import PreauthPreviewTable from './preauths-datatables/preauth-preview-table.component';
 import styles from './facility-bills.component.scss';
@@ -27,10 +24,11 @@ const Preauths: React.FC<PreauthsProps> = ({ locationUuid, billingDate }) => {
   const [rows, setRows] = useState<PreauthPreviewRow[]>([]);
   const [loadingPreview, setLoadingPreview] = useState(false);
 
-  const { claimVisits, loading: visitsLoading, reload: reloadVisits } = useFacilityClaimVisits(
-    locationUuid,
-    billingDate,
-  );
+  const {
+    claimVisits,
+    loading: visitsLoading,
+    reload: reloadVisits,
+  } = useFacilityClaimVisits(locationUuid, billingDate);
 
   const loadPreviews = useCallback(async () => {
     if (!locationUuid) return;
@@ -76,22 +74,20 @@ const Preauths: React.FC<PreauthsProps> = ({ locationUuid, billingDate }) => {
   }, [rows, statusFilter]);
 
   const statusTabItems: StatusBucket[] = [...PREAUTH_BUCKETS, { key: '', label: 'All', statuses: [] }];
-  const statusTabIndex = Math.max(0, statusTabItems.findIndex((b) => b.key === statusFilter));
-  const countPill = (key: string) => (
-    <span className={styles.pill}>{key ? (counts[key] ?? 0) : rows.length}</span>
+  const statusTabIndex = Math.max(
+    0,
+    statusTabItems.findIndex((b) => b.key === statusFilter),
   );
+  const countPill = (key: string) => <span className={styles.pill}>{key ? (counts[key] ?? 0) : rows.length}</span>;
 
   const loading = visitsLoading || loadingPreview;
 
   return (
-    <div className={styles.panel}>
-      <div className={styles.intro}>
-        <h4 className={styles.introTitle}>Preauthorizations</h4>
-        <p className={styles.introText}>
-          Live preauths from SHA for claim visits on this date. When a preauth is waiting on doctor SMS
-          approval, use Resend doctor consent if the doctor did not receive the request.
-        </p>
-      </div>
+    // Not `.panel`: the Preauthorizations tab that renders this has already drawn the box,
+    // and a second one around the same table put a border inside a border. No heading or
+    // blurb either — the dashboard tab names this, and its hint says what the two views
+    // are for, including the doctor-consent resend that paragraph used to explain.
+    <div className={styles.subPanel}>
       <Tabs
         selectedIndex={statusTabIndex}
         onChange={({ selectedIndex }) => setStatusFilter(statusTabItems[selectedIndex]?.key ?? '')}

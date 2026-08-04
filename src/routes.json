@@ -21,7 +21,7 @@
       "name": "dha-workflow-dashboard-link",
       "component": "dhaWorkflowDashboardLink",
       "slot": "homepage-dashboard-slot",
-       "privileges": [
+      "privileges": [
         "O3 View Facility Dashboard"
       ],
       "meta": {
@@ -132,8 +132,7 @@
       "name": "specialized-clinics-dashboard-link",
       "component": "specializedClinicsDashboardLink",
       "slot": "homepage-dashboard-slot",
-      "privileges": [
-      ],
+      "privileges": [],
       "meta": {
         "name": "specialized-clinics",
         "slot": "specialized-clinics-dashboard-slot",
@@ -142,7 +141,7 @@
       "online": true,
       "offline": true
     },
-     {
+    {
       "component": "SpecializedClinicsRoot",
       "name": "specialized-clinics",
       "slot": "specialized-clinics-dashboard-slot",
@@ -335,7 +334,7 @@
       "title": "Create order Bill",
       "type": "other-form"
     },
-        {
+    {
       "name": "upload-intervention-attachments-workspace",
       "title": "Upload Attachments",
       "component": "uploadInterventionAttachmentsWorkspace",
@@ -387,7 +386,7 @@
       "canMaximize": true,
       "width": "wider"
     },
-      {
+    {
       "name": "pay-cash-workspace",
       "title": "Pay Cash",
       "component": "payCashWorkspace",
@@ -395,6 +394,24 @@
       "canHide": true,
       "canMaximize": true,
       "width": "narrow"
+    },
+    {
+      "name": "record-details-workspace",
+      "title": "Details",
+      "component": "recordDetailsWorkspace",
+      "type": "record-details",
+      "canHide": true,
+      "canMaximize": true,
+      "width": "wider"
+    },
+    {
+      "name": "send-to-queue-workspace",
+      "title": "Initiate SHA claim",
+      "component": "sendToQueueWorkspace",
+      "type": "send-to-queue",
+      "canHide": true,
+      "canMaximize": true,
+      "width": "wider"
     }
   ],
   "workspaces2": [

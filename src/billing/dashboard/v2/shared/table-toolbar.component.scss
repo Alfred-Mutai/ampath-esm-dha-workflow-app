@@ -1,6 +1,10 @@
 @use '@carbon/layout';
 @use '@openmrs/esm-styleguide/src/vars' as *;
 
+/* Sets its own space above as well as below: the toolbar sits directly under a row of
+   status tabs, and Carbon's tab underline needs clearing before the search field starts,
+   or the two read as one stacked control. Carried here rather than on the tab row so it
+   holds wherever the toolbar is used, tabs above it or not. */
 .toolbar {
   display: flex;
   align-items: center;
@@ -8,7 +12,7 @@
   inline-size: 100%;
   max-inline-size: 100%;
   box-sizing: border-box;
-  margin-block-end: layout.$spacing-04;
+  margin-block: layout.$spacing-05 layout.$spacing-04;
 }
 
 /* Search : date width ratio of 2 : 1 */

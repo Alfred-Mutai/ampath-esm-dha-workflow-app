@@ -9,21 +9,11 @@
   background-color: $ui-01;
 }
 
-.intro {
-  margin-bottom: layout.$spacing-05;
-}
-
-.title {
-  @include type.type-style('heading-compact-02');
-  color: $ui-05;
-  margin: 0 0 layout.$spacing-02;
-}
-
-.subtitle {
-  @include type.type-style('body-01');
-  color: $text-02;
-  margin: 0;
-  max-width: 62ch;
+/* Same trim as the bills panel, so the two boxes read alike. Carbon's tab-panel padding is
+   on all four sides, which inside a box that is already padded reads as the table having
+   drifted; the TableToolbar each panel opens with sets the gap under the tab row. */
+.clearance :global(.cds--tab-content) {
+  padding: 0;
 }
 
 .pill {
@@ -61,8 +51,7 @@
   }
 }
 
-.loading,
-.empty {
+.loading {
   padding: layout.$spacing-06 layout.$spacing-05;
   color: $text-02;
 }
@@ -77,11 +66,6 @@
 .numCol {
   text-align: right;
   font-variant-numeric: tabular-nums;
-}
-
-.empty {
-  @include type.type-style('body-01');
-  text-align: center;
 }
 
 .prepaidHead {
