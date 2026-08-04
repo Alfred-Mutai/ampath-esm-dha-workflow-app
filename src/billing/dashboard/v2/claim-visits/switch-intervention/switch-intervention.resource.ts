@@ -8,7 +8,7 @@ type CreateSwitchInterventionOrderParams = {
   providerUuid: string;
   orderEncounterTypeUuid: string;
   outPatientCareSettingUuid: string;
-  shaConsulationConceptUuid: string;
+  shaInterventionSwitchingUuid: string;
 };
 
 export async function createSwitchInterventionOrder({
@@ -18,7 +18,7 @@ export async function createSwitchInterventionOrder({
   providerUuid,
   orderEncounterTypeUuid,
   outPatientCareSettingUuid,
-  shaConsulationConceptUuid,
+  shaInterventionSwitchingUuid,
 }: CreateSwitchInterventionOrderParams): Promise<{ orderUuid: string; orderNumber: string }> {
   const dto: CreateOrderEncounterDto = {
     patient: patientUuid,
@@ -34,7 +34,7 @@ export async function createSwitchInterventionOrder({
         patient: patientUuid,
         careSetting: outPatientCareSettingUuid,
         orderer: providerUuid,
-        concept: shaConsulationConceptUuid,
+        concept: shaInterventionSwitchingUuid,
         urgency: 'ROUTINE',
       },
     ],

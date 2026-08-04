@@ -1,0 +1,13 @@
+@use '@carbon/layout';
+
+.caseSummary {
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-05;
+  padding: layout.$spacing-05;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: flex-end;
+}

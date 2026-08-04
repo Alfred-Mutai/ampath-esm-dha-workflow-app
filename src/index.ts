@@ -13,6 +13,7 @@ import { bookingsDashboardMeta } from './dashboard-meta/bookings-dashboard.meta'
 import { serviceQueueAdminDashboardMeta } from './dashboard-meta/service-queue-admin.meta';
 import { admissionsDashboardMeta } from './dashboard-meta/admissions-dashboard.meta';
 import { patientChartAdmissionsMetaData } from './dashboard-meta/inpatient-admissions.meta';
+import { caseSummaryMeta } from './dashboard-meta/case-summary.meta';
 
 export const moduleName = '@ampath/esm-dha-workflow-app';
 
@@ -139,6 +140,10 @@ export const patientAdmissionSummary = getAsyncLifecycle(
   () => import('./admissions/inpatient/inpatient-admissions.component'),
   options,
 );
+
+export const caseSummaryLink = getSyncLifecycle(openMrsCreateDashboardLink(caseSummaryMeta as any), options);
+
+export const caseSummary = getAsyncLifecycle(() => import('./case-summary/case-summary.extension'), options);
 export const billingDashboardLink = getAsyncLifecycle(
   () => import('./billing/billing-dashboard-link.component'),
   options,

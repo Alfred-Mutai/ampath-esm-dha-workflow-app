@@ -262,6 +262,30 @@
       "offline": true
     },
     {
+      "name": "case-summary-dashboard",
+      "slot": "patient-chart-dashboard-slot",
+      "component": "caseSummaryLink",
+      "meta": {
+        "slot": "patient-chart-case-summary-dashboard-slot",
+        "path": "case-summary",
+        "layoutMode": "anchored"
+      },
+      "online": true,
+      "offline": true
+    },
+    {
+      "name": "case-summary-details",
+      "slot": "patient-chart-case-summary-dashboard-slot",
+      "component": "caseSummary",
+      "order": 1,
+      "meta": {
+        "title": "Visit Case Summary",
+        "view": "case-summary"
+      },
+      "online": true,
+      "offline": true
+    },
+    {
       "name": "ampath-billing-dashboard-link",
       "component": "billingDashboardLink",
       "slot": "homepage-dashboard-slot",

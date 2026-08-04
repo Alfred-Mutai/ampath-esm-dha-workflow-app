@@ -1,0 +1,174 @@
+@use '@carbon/layout';
+@use '@carbon/type';
+@use '@openmrs/esm-styleguide/src/vars' as *;
+
+.document {
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-06;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: layout.$spacing-02;
+  padding-bottom: layout.$spacing-04;
+  border-bottom: 1px solid $ui-03;
+  text-align: center;
+}
+
+.facility {
+  @include type.type-style('label-01');
+  color: $text-02;
+  text-transform: uppercase;
+}
+
+.title {
+  @include type.type-style('heading-compact-02');
+  color: $ui-05;
+  margin: 0;
+}
+
+.visitMeta {
+  @include type.type-style('body-compact-01');
+  color: $text-02;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-03;
+}
+
+.sectionTitle {
+  @include type.type-style('heading-compact-01');
+  color: $ui-05;
+  margin: 0;
+  padding-bottom: layout.$spacing-02;
+  border-bottom: 1px solid $ui-03;
+}
+
+.keyValueGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  gap: layout.$spacing-04;
+}
+
+.keyValueItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.keyValueLabel {
+  @include type.type-style('label-01');
+  color: $text-02;
+}
+
+.keyValueValue {
+  @include type.type-style('body-compact-01');
+  color: $ui-05;
+}
+
+.mono {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.82rem;
+}
+
+.empty {
+  @include type.type-style('body-compact-01');
+  color: $text-02;
+  margin: 0;
+}
+
+.testOrders {
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-05;
+}
+
+.testOrder {
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-03;
+  /* Keep an order and its result rows on one page where the printer allows it. */
+  break-inside: avoid;
+}
+
+.testOrderHead {
+  display: flex;
+  align-items: baseline;
+  gap: layout.$spacing-03;
+}
+
+.testOrderName {
+  @include type.type-style('heading-compact-01');
+  color: $ui-05;
+}
+
+.testOrderMeta {
+  @include type.type-style('label-01');
+  color: $text-02;
+}
+
+.abnormalValue {
+  font-weight: 600;
+  margin-right: layout.$spacing-02;
+}
+
+/* ------------------------------------------------------------------ *
+ * SOAP note — four `Tile`s, one per section. Sections are told apart by
+ * icon + label, not colour: this is a clinical document that also prints,
+ * and Carbon itself reserves colour for semantic status (info/success/
+ * warning/error), not arbitrary categorisation — so none is used here.
+ * ------------------------------------------------------------------ */
+
+.soapGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: layout.$spacing-05;
+}
+
+.soapCard {
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-03;
+  /* Keep a section's heading with its own content where the printer allows it. */
+  break-inside: avoid;
+}
+
+.soapCardHeader {
+  display: flex;
+  align-items: center;
+  gap: layout.$spacing-03;
+  color: $text-02;
+  padding-bottom: layout.$spacing-02;
+  border-bottom: 1px solid $ui-03;
+}
+
+.soapCardTitle {
+  @include type.type-style('heading-compact-01');
+  color: $ui-05;
+  flex-grow: 1;
+}
+
+.soapList {
+  @include type.type-style('body-compact-01');
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-02;
+  margin: 0;
+  padding-left: layout.$spacing-05;
+  color: $ui-05;
+
+  li {
+    padding-left: layout.$spacing-02;
+  }
+}
+
+@media (max-width: 42rem) {
+  .soapGrid {
+    grid-template-columns: 1fr;
+  }
+}

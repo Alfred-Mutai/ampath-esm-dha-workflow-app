@@ -75,7 +75,7 @@ const SwitchInterventionForm: React.FC<SwitchInterventionWorkspaceProps> = ({
   const {
     orderEncounterTypeUuid,
     outPatientCareSettingUuid,
-    shaConsulationConceptUuid,
+    shaInterventionSwitchingUuid,
     shaPaymentModeUuid,
   } = useConfig<ConfigObject>();
 
@@ -240,7 +240,7 @@ const SwitchInterventionForm: React.FC<SwitchInterventionWorkspaceProps> = ({
         providerUuid: session.currentProvider?.uuid ?? '',
         orderEncounterTypeUuid,
         outPatientCareSettingUuid,
-        shaConsulationConceptUuid,
+        shaInterventionSwitchingUuid,
       });
       setOrderNumber(createdOrderNumber);
       await attemptCreateBillItem(createdOrderNumber);
