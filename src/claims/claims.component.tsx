@@ -610,17 +610,24 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
           )}
 
           {selectedIntervention ? (
-            selectedIntervention.needsPreauth && !selectedIntervention.needsManualPreauthApproval ? (
-              <Tag size="sm" type="blue" onClick={launchPreauthsModal}>
-                Needs Preauth
+            <>
+              {
+                selectedIntervention.needsPreauth && !selectedIntervention.needsManualPreauthApproval ? (
+                  <Tag size="sm" type="blue" onClick={launchPreauthsModal}>
+                    Needs Preauth
+                  </Tag>
+                ) : selectedIntervention.needsPreauth && selectedIntervention.needsManualPreauthApproval ? (
+                  <Tag size="sm" type="blue" onClick={launchPreauthsModal}>
+                    Needs Elective Preauth
+                  </Tag>
+                ) : (
+                  <></>
+                )
+              }
+              <Tag size="sm" type="teal">
+                {selectedIntervention.accessPoint}
               </Tag>
-            ) : selectedIntervention.needsPreauth && selectedIntervention.needsManualPreauthApproval ? (
-              <Tag size="sm" type="blue" onClick={launchPreauthsModal}>
-                Needs Elective Preauth
-              </Tag>
-            ) : (
-              <></>
-            )
+            </>
           ) : (
             <></>
           )}
