@@ -228,7 +228,6 @@ const BillingClaimsDashboard: React.FC<billingClaimsDashboardProps> = () => {
     }
   };
 
-  // Date filter now lives beside the search in each tab's toolbar (see TableToolbar).
   const handleDateChange = (value: string) => {
     const next = value || today();
     lastSelectedDate = next;
