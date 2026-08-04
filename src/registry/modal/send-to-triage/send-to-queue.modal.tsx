@@ -50,7 +50,13 @@ import { type QueueEntry } from '../../../types/types';
 import { getActiveQueueEntryByPatientUuid } from '../../../service-queues/service-queues.resource';
 import { createOrderEncounter, getOrder } from '../../../shared/services/encounters.resource';
 import { type ConfigObject } from '../../../config-schema';
-import { ClientSubBenefit, PreExistingIntervention, type ClaimResult, type Intervention, type VisitType } from '../../../claims';
+import {
+  ClientSubBenefit,
+  PreExistingIntervention,
+  type ClaimResult,
+  type Intervention,
+  type VisitType,
+} from '../../../claims';
 import { getServiceType } from '../../../shared/services/claims.resource';
 import PaymentMethodComponent from './payment-method.component';
 import ClaimsConsentExtension from '../otp-verification-modal/extension/claims-consent.extension';
@@ -99,7 +105,7 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({
   billableItem,
   quantity = 1,
   closeWorkspace,
-  initialUnitPriceUuid
+  initialUnitPriceUuid,
 }) => {
   const { patient } = usePatient(patientUuid);
   const [selectedPatientType, setSelectedPatientType] = useState<string>();
@@ -157,7 +163,7 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({
     }
     if (intervention && visitType) {
       const serviceType = getServiceType(intervention, visitType);
-      if (serviceType === "PER_DIEM") {
+      if (serviceType === 'PER_DIEM') {
         return false;
       }
     }
@@ -188,7 +194,7 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({
 
   const selectedPaymentMode = useMemo(() => {
     if (initialUnitPriceUuid) {
-      const splitPrice = initialUnitPriceUuid.split("#");
+      const splitPrice = initialUnitPriceUuid.split('#');
       if (splitPrice && splitPrice.length > 2) {
         return splitPrice[2];
       }
@@ -774,157 +780,150 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({
         </div>
       ) : null}
 
-        <div className={styles.drawerBody}>
-          {patient && (
-            <>
-              {
-                order && (
-                  <section className={styles.drawerSection}>
-                    <h5 className={styles.drawerSectionTitle}>
-                      Order details
-                    </h5>
-                    <div className={styles.formRow}>
-                      <InlineNotification
-                        kind="info"
-                        title={`${order?.orderNumber} - ${order?.display}`}
-                        lowContrast
-                      />
-                    </div>
-                  </section>
-                )
-              }
+      <div className={styles.drawerBody}>
+        {patient && (
+          <>
+            {order && (
               <section className={styles.drawerSection}>
-                <h5 className={styles.drawerSectionTitle}>
-                  Billing details
-                  {isSha ? (
-                    <Tag size="sm" type="teal">
-                      SHA
-                    </Tag>
-                  ) : null}
-                </h5>
-
-                {selectedPaymentDetail === PaymentDetail.NonPaying && (
-                  <div className={styles.formRow} style={{ marginTop: '1rem' }}>
-                    <div className={styles.formControl}>
-                      <Select
-                        id="patient-category"
-                        labelText="Patient category"
-                        onChange={(e) => patientCategoryHandler(e.target.value)}
-                      >
-                        <SelectItem value="" text="Select" />
-                        <SelectItem value={PatientCategories.CCC_PATIENT_UUID} text="CCC" />
-                        <SelectItem value={PatientCategories.MCH_PATIENT_UUID} text="MCH" />
-                      </Select>
-                    </div>
-                  </div>
-                )}
+                <h5 className={styles.drawerSectionTitle}>Order details</h5>
+                <div className={styles.formRow}>
+                  <InlineNotification kind="info" title={`${order?.orderNumber} - ${order?.display}`} lowContrast />
+                </div>
               </section>
+            )}
+            <section className={styles.drawerSection}>
+              <h5 className={styles.drawerSectionTitle}>
+                Billing details
+                {isSha ? (
+                  <Tag size="sm" type="teal">
+                    SHA
+                  </Tag>
+                ) : null}
+              </h5>
 
-              {selectedPaymentDetail === PaymentDetail.Paying && isSha && (
-                <section className={styles.drawerSection}>
-                  <h5 className={styles.drawerSectionTitle}>SHA claim details</h5>
-                  <p className={styles.drawerSectionHint}>
-                    Select the sub-benefit and intervention for this consultation.
-                  </p>
-                  <ExtensionSlot
-                    name="billing-claims-slot"
-                    state={{
-                      clientRegistryId: patientIdentifiers?.crIdentifierId,
-                      patientUuid: patientUuid,
-                      triggerCreateVisit,
-                      otp,
-                      authGuid,
-                      visitType,
-                      onSelectChange: () => { },
-                      onClaimsVisitStart,
-                      onInterventionChange,
-                      onError,
-                      hasPreExistingInterventions
+              {/* Cash point and Billable service belong to this section — they were in a
+                    card of their own after the claim details, which put the two fields that say
+                    what is being billed below the section describing the claim built from them. */}
+              {showBillableServices && (
+                <div className={styles.formRow}>
+                  <div
+                    className={styles.formControl}
+                    onFocusCapture={selectInputText}
+                    onKeyDownCapture={(e) => {
+                      if (!selectedCashPoint || e.ctrlKey || e.metaKey || e.altKey) {
+                        return;
+                      }
+                      const showingLabel = (e.target as HTMLInputElement)?.value === (selectedCashPoint.name ?? '');
+                      if (showingLabel && (e.key === 'Backspace' || e.key === 'Delete')) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setSelectedCashPoint(null);
+                      }
                     }}
-                  />
-                </section>
+                  >
+                    <ComboBox
+                      id="cash-point"
+                      titleText="Cash point"
+                      placeholder="Search cash point"
+                      items={facilityCashPoints ?? []}
+                      itemToString={(item) => item?.name ?? ''}
+                      shouldFilterItem={({ item, inputValue }) => {
+                        const selectedLabel = selectedCashPoint?.name ?? '';
+                        if (!inputValue || inputValue === selectedLabel) {
+                          return true;
+                        }
+                        return (item?.name ?? '').toLowerCase().includes(inputValue.toLowerCase());
+                      }}
+                      selectedItem={selectedCashPoint ?? null}
+                      onChange={({ selectedItem }) => setSelectedCashPoint(selectedItem ?? null)}
+                    />
+                  </div>
+                  <div
+                    className={styles.formControl}
+                    onFocusCapture={selectInputText}
+                    onKeyDownCapture={(e) => {
+                      if (!selectedBillableService || e.ctrlKey || e.metaKey || e.altKey) {
+                        return;
+                      }
+                      const label = `${selectedBillableService.billableService.display} (${selectedBillableService.name}: ${selectedBillableService.price})`;
+                      const showingLabel = (e.target as HTMLInputElement)?.value === label;
+                      if (showingLabel && (e.key === 'Backspace' || e.key === 'Delete')) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setSelectedBillableService(null);
+                      }
+                    }}
+                  >
+                    <ComboBox
+                      id="billable-service"
+                      titleText="Billable service"
+                      placeholder="Search billable service"
+                      items={filteredBillableServices ?? []}
+                      itemToString={(item) =>
+                        item ? `${item.billableService.display} (${item.name}: ${item.price})` : ''
+                      }
+                      shouldFilterItem={({ item, inputValue }) => {
+                        const selectedLabel = selectedBillableService
+                          ? `${selectedBillableService.billableService.display} (${selectedBillableService.name}: ${selectedBillableService.price})`
+                          : '';
+                        if (!inputValue || inputValue === selectedLabel) {
+                          return true;
+                        }
+                        const text = item
+                          ? `${item.billableService.display} ${item.name} ${item.price}`.toLowerCase()
+                          : '';
+                        return text.includes(inputValue.toLowerCase());
+                      }}
+                      selectedItem={selectedBillableService ?? null}
+                      onChange={({ selectedItem }) =>
+                        selectedItem ? billableServicesHandler(selectedItem.uuid) : setSelectedBillableService(null)
+                      }
+                    />
+                  </div>
+                </div>
               )}
 
-              {
-                showBillableServices && <section className={styles.drawerSection}>
-                  <div className={styles.formRow}>
-                    <div
-                      className={styles.formControl}
-                      onFocusCapture={selectInputText}
-                      onKeyDownCapture={(e) => {
-                        if (!selectedCashPoint || e.ctrlKey || e.metaKey || e.altKey) {
-                          return;
-                        }
-                        const showingLabel = (e.target as HTMLInputElement)?.value === (selectedCashPoint.name ?? '');
-                        if (showingLabel && (e.key === 'Backspace' || e.key === 'Delete')) {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setSelectedCashPoint(null);
-                        }
-                      }}
+              {selectedPaymentDetail === PaymentDetail.NonPaying && (
+                <div className={styles.formRow} style={{ marginTop: '1rem' }}>
+                  <div className={styles.formControl}>
+                    <Select
+                      id="patient-category"
+                      labelText="Patient category"
+                      onChange={(e) => patientCategoryHandler(e.target.value)}
                     >
-                      <ComboBox
-                        id="cash-point"
-                        titleText="Cash point"
-                        placeholder="Search cash point"
-                        items={facilityCashPoints ?? []}
-                        itemToString={(item) => item?.name ?? ''}
-                        shouldFilterItem={({ item, inputValue }) => {
-                          const selectedLabel = selectedCashPoint?.name ?? '';
-                          if (!inputValue || inputValue === selectedLabel) {
-                            return true;
-                          }
-                          return (item?.name ?? '').toLowerCase().includes(inputValue.toLowerCase());
-                        }}
-                        selectedItem={selectedCashPoint ?? null}
-                        onChange={({ selectedItem }) => setSelectedCashPoint(selectedItem ?? null)}
-                      />
-                    </div>
-                    <div
-                      className={styles.formControl}
-                      onFocusCapture={selectInputText}
-                      onKeyDownCapture={(e) => {
-                        if (!selectedBillableService || e.ctrlKey || e.metaKey || e.altKey) {
-                          return;
-                        }
-                        const label = `${selectedBillableService.billableService.display} (${selectedBillableService.name}: ${selectedBillableService.price})`;
-                        const showingLabel = (e.target as HTMLInputElement)?.value === label;
-                        if (showingLabel && (e.key === 'Backspace' || e.key === 'Delete')) {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setSelectedBillableService(null);
-                        }
-                      }}
-                    >
-                      <ComboBox
-                        id="billable-service"
-                        titleText="Billable service"
-                        placeholder="Search billable service"
-                        items={filteredBillableServices ?? []}
-                        itemToString={(item) =>
-                          item ? `${item.billableService.display} (${item.name}: ${item.price})` : ''
-                        }
-                        shouldFilterItem={({ item, inputValue }) => {
-                          const selectedLabel = selectedBillableService
-                            ? `${selectedBillableService.billableService.display} (${selectedBillableService.name}: ${selectedBillableService.price})`
-                            : '';
-                          if (!inputValue || inputValue === selectedLabel) {
-                            return true;
-                          }
-                          const text = item
-                            ? `${item.billableService.display} ${item.name} ${item.price}`.toLowerCase()
-                            : '';
-                          return text.includes(inputValue.toLowerCase());
-                        }}
-                        selectedItem={selectedBillableService ?? null}
-                        onChange={({ selectedItem }) =>
-                          selectedItem ? billableServicesHandler(selectedItem.uuid) : setSelectedBillableService(null)
-                        }
-                      />
-                    </div>
+                      <SelectItem value="" text="Select" />
+                      <SelectItem value={PatientCategories.CCC_PATIENT_UUID} text="CCC" />
+                      <SelectItem value={PatientCategories.MCH_PATIENT_UUID} text="MCH" />
+                    </Select>
                   </div>
-                </section>
-              }
+                </div>
+              )}
+            </section>
+
+            {selectedPaymentDetail === PaymentDetail.Paying && isSha && (
+              <section className={styles.drawerSection}>
+                <h5 className={styles.drawerSectionTitle}>SHA claim details</h5>
+                <p className={styles.drawerSectionHint}>
+                  Select the sub-benefit and intervention for this consultation.
+                </p>
+                <ExtensionSlot
+                  name="billing-claims-slot"
+                  state={{
+                    clientRegistryId: patientIdentifiers?.crIdentifierId,
+                    patientUuid: patientUuid,
+                    triggerCreateVisit,
+                    otp,
+                    authGuid,
+                    visitType,
+                    onSelectChange: () => {},
+                    onClaimsVisitStart,
+                    onInterventionChange,
+                    onError,
+                    hasPreExistingInterventions,
+                  }}
+                />
+              </section>
+            )}
 
             {selectedPaymentDetail === PaymentDetail.Paying && consentPatient && intervention && (
               <section className={styles.consentSection}>
@@ -946,12 +945,12 @@ const SendToQueueModal: React.FC<SendToQueueModalProps> = ({
       {/* The O3 workspace footer: two buttons filling the panel's width, flush to its
           edges. Every other panel in the app ends this way. */}
       <ButtonSet className={styles.drawerFooter}>
-        <Button kind="secondary" size="sm" onClick={handleSecondaryAction} disabled={loading}>
+        <Button kind="secondary" size="md" onClick={handleSecondaryAction} disabled={loading}>
           Cancel
         </Button>
         <Button
           kind="primary"
-          size="sm"
+          size="md"
           onClick={handleprimaryAction}
           disabled={loading || (isSha && !consentSatisfied)}
         >

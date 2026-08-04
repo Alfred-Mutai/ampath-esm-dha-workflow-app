@@ -20,23 +20,42 @@
   align-items: center;
 }
 
-/* Carbon caps tooltip text at 288px, which turns a couple of sentences into a narrow
-   column tall enough to run off the bottom of the screen. Widened so a hint is three or
-   four lines rather than a dozen, and capped in height so an unexpectedly long one
-   scrolls inside the bubble instead of overflowing the viewport. */
+/* The bubble that appears on hover.
+ *
+ * Carbon caps tooltip text at 288px, which turns a couple of sentences into a narrow
+ * column — widened to 22rem so a hint sets as three or four full lines.
+ *
+ * `overflow-wrap: break-word` is Carbon's default and made sense at 288px, where a long
+ * word could exceed the whole bubble. At this width nothing does, and all it achieves is
+ * hyphen-less breaks mid-word; `normal` keeps words whole. `text-wrap: pretty` then evens
+ * the rag and stops the last line being a single orphaned word.
+ *
+ * The height cap and scrollbar that were here are gone with the long copy that needed
+ * them — and `overflow-y: auto` computes `overflow-x` to `auto` as well, which was a
+ * clipping risk for no benefit now the hints are short. */
 .tabHint :global(.cds--tooltip-content) {
   max-inline-size: 22rem;
-  max-block-size: 60vh;
-  overflow-y: auto;
+  padding-block: layout.$spacing-04;
+  padding-inline: layout.$spacing-05;
+  text-align: start;
+  line-height: 1.45;
+  overflow-wrap: normal;
+  text-wrap: pretty;
 }
 
 /* The icon itself. `cursor: help` is what says it is hoverable — there is no other
-   affordance on a mark that can't be clicked. */
+   affordance on a mark that can't be clicked, and it darkens on hover so the pointer
+   landing on it is confirmed before the bubble has appeared. */
 .tabHintIcon {
   display: inline-flex;
   align-items: center;
   color: colors.$gray-50;
   cursor: help;
+  transition: color 70ms ease-out;
+
+  &:hover {
+    color: colors.$gray-80;
+  }
 }
 
 /* Header: icon + title + subtitle (matches the facility dashboard header). */

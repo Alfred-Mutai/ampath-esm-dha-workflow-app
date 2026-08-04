@@ -22,8 +22,9 @@ import {
 } from '../../../service-queues/metrics/metrics-cards/metrics-card.component';
 import FacilityAndWorkerSlot from '../../../shared/ui/facility-worker-slot/facility-worker.component-slot.component';
 import PreauthorizationsTab from './preauth/preauthorizations-tab.component';
+import AdmissionRequestsTab from './admissions/admission-requests-tab.component';
 import InpatientRequests from './inpatient-requests/inpatient-requests.component';
-interface billingClaimsDashboardProps { }
+interface billingClaimsDashboardProps {}
 
 const today = () => new Date().toLocaleDateString('en-CA');
 
@@ -47,6 +48,8 @@ const CLAIMS_HINT =
   'SHA claims for the selected date, grouped by status. Open one to check its diagnoses, interventions and invoices, or to submit or close it.';
 const PREAUTH_HINT =
   'Preauths for the selected date. Needs raise lists items still waiting for one; Status shows their live position at SHA and can resend doctor consent.';
+const ADMISSIONS_HINT =
+  'Patients a clinician has asked to admit at this facility. Admit one to a bed, or start the SHA claim for the inpatient visit it opens.';
 
 /**
  * An explanation hung off a tab's label.
@@ -288,7 +291,10 @@ const BillingClaimsDashboard: React.FC<billingClaimsDashboardProps> = () => {
                 </Tab>
                 {/* <Tab>Preauth List</Tab> */}
                 {/* <Tab>Claims</Tab> */}
-                <Tab>Admission Requests</Tab>
+                <Tab>
+                  Admission Requests
+                  <TabHint text={ADMISSIONS_HINT} />
+                </Tab>
               </TabList>
               <TabPanels>
                 <TabPanel>
@@ -328,6 +334,12 @@ const BillingClaimsDashboard: React.FC<billingClaimsDashboardProps> = () => {
                     billingDate={billingDate}
                     onDateChange={handleDateChange}
                   />
+                </TabPanel>
+                <TabPanel>
+                  {/* This tab had no panel at all — five tabs against four panels, so
+                      selecting it showed the preauth list or nothing depending on how
+                      Carbon indexed them. */}
+                  <AdmissionRequestsTab locationUuid={locationUuid} />
                 </TabPanel>
               </TabPanels>
             </Tabs>

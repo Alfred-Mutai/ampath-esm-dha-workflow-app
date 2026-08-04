@@ -12,34 +12,16 @@ $header-height: 3rem;
     row-gap: 5px;
     margin-top: 15px;
 }
-/* One field per row unless there is genuine room for two. The basis below is what decides
-   that, and it is deliberately high: a pair sharing a row each got half the panel, which
-   was not enough for the values these fields actually hold — "UGDH Cash Point",
-   "Consultation (SHA: 75)" — so they truncated rather than wrapped. Stacked, each field
-   gets the panel's whole width, which is roughly double what the next size up would have
-   bought and costs the panel nothing but height. */
 .formRow{
    display: flex;
    flex-direction: row;
-   flex-wrap: wrap;
    width: 100%;
    column-gap: layout.$spacing-05;
-   row-gap: layout.$spacing-05;
 }
 .formControl{
    display: flex;
    flex-direction: column;
-   /* 18rem is the narrowest these fields read at with their real values in them, not the
-      narrowest they can be squeezed to — two of them plus the gap exceed the panel, so
-      they take a row each and show their contents in full. `flex-shrink: 0` is the half
-      that matters: at shrink 1 they would compress to fit one line instead of wrapping,
-      which is exactly the truncation this is meant to end.
-
-      `width` is kept alongside for any use outside a flex row, where the basis does
-      nothing and the field would otherwise collapse to its content. */
-   flex: 1 0 18rem;
    width: 100%;
-   min-width: 0;
    row-gap: 5px;
 }
 .actionSection{
@@ -85,25 +67,12 @@ $header-height: 3rem;
    `:has()` restricts it to a container holding this panel, so no other workspace is
    touched. If it still misses, nothing breaks — the registered "wider" stands. */
 :global([class*='workspace-container']):has(.workspace) {
-  inline-size: min(42rem, 60vw);
-  max-inline-size: min(42rem, 60vw);
+  /* 50rem plus 2cm. CSS resolves 1cm as 96/2.54 px regardless of the actual display, so
+     this is ~4.7rem more rather than a measured 2cm on the glass — but it is the figure
+     that was asked for, and writing it in cm keeps that legible. */
+  inline-size: min(calc(50rem + 2cm), 75vw);
+  max-inline-size: min(calc(50rem + 2cm), 75vw);
 }
-
-/* The width is the platform's now — registered as "wider" in routes.json, the middle of
-   O3's three sizes and the same as the record-details and preauth panels.
-
-   This is a step down from "extra-wide" and the panel it produces is not the one that was
-   rejected at this size earlier: the fields truncated then because they were sharing a row
-   and compressing to fit. The 18rem basis and `flex-shrink: 0` on `.formControl` came
-   after that, so at this width they stack and show their values in full instead.
-
-   There was a `max-inline-size` override here pinned to `.omrs-workspace-container`. It
-   was a guess at the container's class name and may never have applied, which would be why
-   lowering the number three times changed nothing on screen. A registered width needs no
-   guessing, so the override is gone rather than left as decoration.
-
-   What made the reduction safe is `.formRow` above: it wraps now, so the paired fields
-   stack instead of splitting a width too small to hold both. */
 
 /* Who the panel is for, under the workspace's own title bar. */
 .patientBanner {
@@ -207,11 +176,11 @@ $header-height: 3rem;
   :global(.cds--btn) {
     flex: 1 1 50%;
     max-inline-size: none;
-    /* Small buttons, so the bar keeps to the height of one rather than the 4rem an O3
+    /* Medium buttons, so the bar keeps to the height of one rather than the 4rem an O3
        footer usually stands at. They still split the width and sit flush to the edges,
        which is what makes the bar read as part of the panel — the label is centred rather
        than pinned to the top, since at this height there is no room below it. */
-    min-block-size: 2.5rem;
+    min-block-size: 3rem;
     align-items: center;
     padding-block: 0;
   }
