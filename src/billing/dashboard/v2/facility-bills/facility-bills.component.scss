@@ -8,35 +8,28 @@
   background-color: $ui-01;
 }
 
-/* Explanatory intro header, matching the Consultation clearance header. */
-.intro {
-  margin-bottom: layout.$spacing-04;
-}
-
-/* Trim Carbon's roomy tab-panel padding so the payer tabs, status sub-tabs, search and
-   table sit close together as one block. */
+/* Carbon pads a tab panel on all four sides, which inside an already-padded box reads as
+   the table having drifted away from its tabs. Dropped entirely: every panel here opens
+   with a TableToolbar, and that carries the gap under the tab row itself — so it is set
+   once, in one place, rather than added here and again there. */
 .panel :global(.cds--tab-content) {
-  padding-inline: 0;
-  padding-block: layout.$spacing-04 0;
-}
-.introTitle {
-  margin: 0 0 layout.$spacing-02;
-  font-size: 1rem;
-  font-weight: 600;
-  color: #161616;
-}
-.introText {
-  margin: 0;
-  max-width: 62ch;
-  font-size: 0.875rem;
-  line-height: 1.4;
-  color: #525252;
+  padding: 0;
 }
 
-/* Status sub-tabs (per payer), between the payer tabs and the search toolbar. */
+/* A view nested inside a `.panel` that a parent already drew — the Preauthorizations tab
+   boxes itself, so its Status view must not box itself again or the table ends up inside
+   two borders. It takes only the top gap the box's own padding would have given it, since
+   what sits above it here is another row of tabs rather than the edge of the card. */
+.subPanel {
+  padding-top: layout.$spacing-05;
+}
+
+/* The status tabs lead the panel now that the payer bar above them is gone, so they carry
+   no margin of their own: the box's padding sets them off at the top, and the tab panel's
+   own padding sets them off from the toolbar below. Both margins were spacing against a
+   row that no longer exists, and the lower one doubled the gap under the tabs. */
 .statusTabs {
-  margin-top: layout.$spacing-05;
-  margin-bottom: layout.$spacing-04;
+  margin: 0;
 }
 
 /* Count pill on each status sub-tab, matching the Consultation clearance tabs. */
@@ -55,11 +48,13 @@
 
 /* Says whether the claim statuses on screen are still being confirmed against the HIE,
    and admits it when some of them couldn't be. */
+/* Sits above the status tabs, so it spaces itself from what follows rather than from the
+   box edge it is now flush against. */
 .statusNotice {
   display: flex;
   align-items: center;
   gap: layout.$spacing-03;
-  margin-top: layout.$spacing-03;
+  margin-bottom: layout.$spacing-04;
   font-size: 0.75rem;
   color: #525252;
 }

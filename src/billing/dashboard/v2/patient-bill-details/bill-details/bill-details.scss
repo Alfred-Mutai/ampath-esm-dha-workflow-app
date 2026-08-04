@@ -34,9 +34,74 @@
   color: $text-03;
 }
 
-/* White bordered card wrapping the loading skeleton / bill-payments table. */
+/* Just a scroll container, so a wide table never pushes the page sideways. The table's
+   own row rules are structure enough — no card around it. */
 .tableCard {
   overflow-x: auto;
-  background-color: $ui-02;
-  border: 1px solid $ui-03;
+}
+
+/* ---- Money summary ---- */
+.summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: layout.$spacing-03 layout.$spacing-06;
+  margin: 0;
+}
+
+.summaryItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+
+  dt {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    color: $text-03;
+  }
+
+  dd {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #161616;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.summaryDue {
+  color: #da1e28;
+}
+
+.summaryClear {
+  color: #0e6027;
+}
+
+/* ---- Tables ---- */
+/* Row-number column only needs its digits. */
+.numCol {
+  width: 3rem;
+}
+
+/* Money and counts right-align on a common decimal, so columns of figures can be
+   compared down the page rather than read one by one. */
+.numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.rowActions {
+  display: flex;
+  gap: layout.$spacing-03;
+}
+
+/* Closing row of a table: the column it sums, restated. A rule above it is all that
+   separates it from the lines it adds up. */
+.totalRow {
+  font-weight: 600;
+
+  td {
+    border-top: 1px solid $ui-03;
+  }
 }

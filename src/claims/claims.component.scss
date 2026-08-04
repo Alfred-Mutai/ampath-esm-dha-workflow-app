@@ -39,12 +39,32 @@
   min-width: 0;
 }
 
-// A small spinner sitting inside the ComboBox, just left of its chevron and
-// vertically centred within the input row.
+// A small spinner sitting inside the ComboBox's input row, just left of its chevron.
+//
+// The field is the containing block and the input is the last thing in it, so anchoring
+// to the bottom puts the spinner on the input row whatever the label above does — it
+// stays put if the label wraps to two lines, which it does in a narrow panel. 0.75rem up
+// from that edge centres a 1rem spinner on the 2.5rem row.
+//
+// z-index because the list-box paints its own background and border over anything sharing
+// its space; without it the spinner sits behind the field it is meant to be inside.
 .fieldSpinner {
   position: absolute;
-  right: 2.5rem;
-  bottom: 0.75rem;
+  inset-inline-end: 2.5rem;
+  inset-block-end: 0.75rem;
+  z-index: 1;
   width: 1rem;
   height: 1rem;
+}
+
+// The spinner floats over the input, so the placeholder underneath has to stop short of
+// it — 2.5rem to clear the chevron, 1rem for the spinner, and a little air. Without this
+// the loading text ran under the spinner and the field read as garbled. Only applied
+// while the spinner is actually there.
+.field:has(.fieldSpinner) {
+  :global(.cds--text-input),
+  :global(.cds--list-box__field input) {
+    padding-inline-end: 4.25rem;
+    text-overflow: ellipsis;
+  }
 }

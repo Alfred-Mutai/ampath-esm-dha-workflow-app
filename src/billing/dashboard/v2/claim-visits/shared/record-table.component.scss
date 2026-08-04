@@ -1,0 +1,61 @@
+@use './empty-state' as empty;
+
+/* ---- Table ---- */
+/* A scroll container only: the table's own row rules carry the structure. */
+.tableCard {
+  overflow-x: auto;
+}
+
+.row {
+  cursor: pointer;
+}
+
+/* The index and the trailing details button only need their own width. */
+.indexCol {
+  width: 3rem;
+}
+
+.actionCol {
+  width: 3rem;
+  text-align: right;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---- Empty state ---- */
+/* A plain line of text where the rows would have been, not a boxed placeholder. */
+.empty {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0.75rem 0;
+  font-size: 0.8125rem;
+  color: #6f6f6f;
+}
+
+.emptyIcon {
+  color: #a8a8a8;
+  flex-shrink: 0;
+}
+
+/* An absence that is blocking something, rather than a section that happens to be
+   unused: filled and ruled so it is found by scanning the page rather than by reading
+   every empty line to work out which one matters. */
+.emptyDanger {
+  @include empty.blocking-callout;
+}
+
+.emptyDangerIcon {
+  @include empty.blocking-callout-icon;
+}

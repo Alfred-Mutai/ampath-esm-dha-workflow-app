@@ -1,0 +1,30 @@
+@use '@carbon/layout';
+@use '@openmrs/esm-styleguide/src/vars' as *;
+
+/* The payer tag and the reload button share the right of the breadcrumb row. */
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: layout.$spacing-05;
+  flex-shrink: 0;
+}
+
+.payer {
+  display: inline-flex;
+  align-items: center;
+  gap: layout.$spacing-03;
+  min-width: 0;
+
+  /* Carbon tags carry their own margin, which would knock the tag out of line with the
+     scheme name beside it. */
+  :global(.cds--tag) {
+    margin: 0;
+  }
+}
+
+/* The scheme's full name, at a lower weight than the tag it qualifies. */
+.payerScheme {
+  font-size: 0.8125rem;
+  color: $text-02;
+  overflow-wrap: anywhere;
+}

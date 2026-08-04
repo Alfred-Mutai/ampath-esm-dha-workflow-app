@@ -5,6 +5,7 @@ import { asBool } from '../../preauth/preauth.resource';
 import { interventionHasBlockingPreauth } from '../../../../../claims/claims.resource';
 import RecordCards, { YesNo, type RecordCardModel } from '../shared/record-cards.component';
 import InterventionAttachments from './intervention-attachments.component';
+import ClaimInterventionPanel, { type InterventionClaimFacts } from './claim-intervention-panel.component';
 
 interface claimInterventionDetailsProps {
   claimInterventions: VisitIntervention[];
@@ -39,6 +40,8 @@ const isActiveIntervention = (iv: VisitIntervention) => (iv.workflow_state ?? ''
 export function buildInterventionRecords(
   claimInterventions: VisitIntervention[],
   opts?: InterventionAttachmentOpts,
+  /** What the claim page states above the panel, so the panel doesn't restate it. */
+  claimFacts?: InterventionClaimFacts,
 ): RecordCardModel[] {
   return (claimInterventions ?? []).map((ci) => {
     const requiredDocs = Array.from(new Set(ci.applicable_document_types ?? []));
@@ -46,8 +49,26 @@ export function buildInterventionRecords(
     const alreadyRaised = interventionHasBlockingPreauth(opts?.preauthPreview, ci.intervention_code);
     const canRaisePreauth = canAct && Boolean(ci.needs_preauth) && !alreadyRaised;
     const hasActions = Boolean(opts?.onSwitchIntervention || opts?.onRaisePreauth);
+    const raisePreauthReason = !ci.needs_preauth
+      ? 'This intervention does not need preauth'
+      : alreadyRaised
+        ? 'Preauth already raised for this intervention'
+        : 'This intervention is no longer open to changes';
 
     return {
+      // How the side panel renders this intervention, in place of the generic field grid.
+      panel: (
+        <ClaimInterventionPanel
+          intervention={ci}
+          attachmentOpts={opts}
+          claimFacts={claimFacts}
+          canSwitch={canAct}
+          canRaisePreauth={canRaisePreauth}
+          onSwitch={opts?.onSwitchIntervention ? () => opts.onSwitchIntervention!(ci) : undefined}
+          onRaisePreauth={opts?.onRaisePreauth ? () => opts.onRaisePreauth!(ci) : undefined}
+          raisePreauthReason={raisePreauthReason}
+        />
+      ),
       tone: 'purple',
       kind: 'Intervention',
       title: ci.intervention_name,

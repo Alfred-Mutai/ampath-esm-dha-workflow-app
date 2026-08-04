@@ -3,6 +3,42 @@
 @use '@carbon/colors';
 @use '@openmrs/esm-styleguide/src/vars' as *;
 
+/* Marks a tab as having an explanation behind it. This is the Carbon Tooltip's own popover
+   container, which is a block by default and would push the icon onto a line of its own
+   inside the tab's label. */
+.tabHint {
+  display: inline-flex;
+  align-items: center;
+  margin-left: layout.$spacing-02;
+  vertical-align: middle;
+}
+
+/* Carbon wraps the trigger in a div of its own between the container and the icon; it has
+   to carry the inline layout through or the same wrapping happens one level down. */
+.tabHint :global(.cds--tooltip-trigger__wrapper) {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Carbon caps tooltip text at 288px, which turns a couple of sentences into a narrow
+   column tall enough to run off the bottom of the screen. Widened so a hint is three or
+   four lines rather than a dozen, and capped in height so an unexpectedly long one
+   scrolls inside the bubble instead of overflowing the viewport. */
+.tabHint :global(.cds--tooltip-content) {
+  max-inline-size: 22rem;
+  max-block-size: 60vh;
+  overflow-y: auto;
+}
+
+/* The icon itself. `cursor: help` is what says it is hoverable — there is no other
+   affordance on a mark that can't be clicked. */
+.tabHintIcon {
+  display: inline-flex;
+  align-items: center;
+  color: colors.$gray-50;
+  cursor: help;
+}
+
 /* Header: icon + title + subtitle (matches the facility dashboard header). */
 .hwrSection {
   width: 100%;
@@ -19,15 +55,11 @@
   border-bottom: 1px solid $ui-03;
 }
 
+/* The icon sits beside the title, unboxed — no disc behind it. */
 .bcHeaderIcon {
   display: flex;
   align-items: center;
-  justify-content: center;
   flex-shrink: 0;
-  width: 2.75rem;
-  height: 2.75rem;
-  border-radius: 50%;
-  background-color: colors.$blue-10;
   color: colors.$blue-60;
 }
 
@@ -85,25 +117,21 @@
   margin: 0;
 }
 
-.pendingHint {
-  @include type.type-style('body-01');
-  color: $text-02;
-  margin: 0 0 layout.$spacing-05;
-  max-width: 70ch;
-}
-
+/* Page inset on the spacing scale rather than a percentage: 2% was ~28px on a desktop and
+   ~20px on a laptop, so the dashboard sat at a different distance from the edge on every
+   screen and matched none of the spacing inside it. */
 .bcLayout {
     display: flex;
     flex-direction: column;
     width: 100%;
-    padding: 2% 2%;
-    row-gap: 10px;
+    padding: layout.$spacing-06;
+    row-gap: layout.$spacing-05;
 
     .bcContent {
         display: flex;
         flex-direction: column;
         width: 100%;
-        row-gap: 10px;
+        row-gap: layout.$spacing-05;
 
         .bcContentFilters {
             display: flex;

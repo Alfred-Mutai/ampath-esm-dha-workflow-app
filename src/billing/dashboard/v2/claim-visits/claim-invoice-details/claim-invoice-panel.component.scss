@@ -1,0 +1,98 @@
+/* Fills the workspace body so the footer can be held to the bottom even when the invoice
+   is a single line and the content doesn't reach that far. */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-height: 100%;
+}
+
+/* ---- The invoice sheet ---- */
+/* No box drawn round it: the ruled column band and the totals rule below are what give
+   the invoice its shape, so the sheet itself stays plain. */
+.sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* The invoice's particulars, in columns under the panel title the way an invoice sets
+   them out. Short values now the number has gone, so they sit side by side and only
+   step down to fewer columns on a narrow panel. */
+.meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.75rem 1.5rem;
+  margin: 0;
+
+  div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+  }
+
+  dt {
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #6f6f6f;
+  }
+
+  dd {
+    margin: 0;
+    font-size: 0.875rem;
+    line-height: 1.35;
+    color: #161616;
+    overflow-wrap: anywhere;
+  }
+}
+
+.statusTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+
+  /* Carbon tags carry their own margin, which would knock them out of line with the
+     values beside them. */
+  :global(.cds--tag) {
+    margin: 0;
+  }
+}
+
+/* ---- Footer ---- */
+/* margin-top:auto drops it to the bottom of a short panel; sticky keeps it there when a
+   long invoice scrolls. The negative margins bleed it over the panel's own padding, so
+   it spans the width and covers the strip content would scroll through beneath it. The
+   buttons keep their own width and sit to the left rather than filling the bar. */
+.footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  margin: auto -1rem -1rem;
+  padding: 0.5rem 1rem;
+  display: flex;
+  justify-content: flex-start;
+  gap: 0.5rem;
+  background-color: #ffffff;
+  border-top: 1px solid #e0e0e0;
+}
+
+/* ---- PDF preview ---- */
+/* The document is rendered for html2canvas to rasterise, not for the reader: kept in the
+   layout (it has to have a size to be captured) but out of sight. */
+.hiddenDocument {
+  position: fixed;
+  left: -9999px;
+  top: 0;
+  opacity: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.previewFrame {
+  inline-size: 100%;
+  block-size: 75vh;
+  border: none;
+}

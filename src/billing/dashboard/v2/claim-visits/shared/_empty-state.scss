@@ -1,0 +1,28 @@
+/* The look a section wears when what is missing from it is holding the claim up, as
+   against a section that simply happens to be unused.
+
+   Shared rather than written twice: the diagnoses table and the doctors line render their
+   empty states from different components, and if the two drifted apart the colour would
+   stop meaning one thing. */
+
+@mixin blocking-callout {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0.75rem;
+  border-left: 3px solid #da1e28;
+  background: #fff1f1;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: #a2191f;
+  overflow-wrap: anywhere;
+}
+
+@mixin blocking-callout-icon {
+  flex-shrink: 0;
+  /* Lines the glyph up with the first line of text beside it. */
+  margin-top: 0.0625rem;
+  color: #da1e28;
+}

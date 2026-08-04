@@ -1,3 +1,18 @@
-.tableContainer {
-    margin: 2rem !important;
+/* Matches the SHA list in the tab beside this one, which is the point: the two are read
+   as a pair. The 2rem !important margin that used to be here inset this table from a card
+   that already pads itself, so the cash tab sat a full step further in than the SHA tab
+   and its table started lower down. */
+.tableCard {
+  overflow-x: auto;
+}
+
+/* Keep the (bordered) action button tidy and sized to its label on one line. */
+.actionCell {
+  white-space: nowrap;
+}
+.actionCell :global(.cds--btn) {
+  min-height: 2rem;
+  width: max-content;
+  white-space: nowrap;
+  padding-inline: 0.75rem;
 }

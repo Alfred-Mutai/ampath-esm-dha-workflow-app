@@ -1,14 +1,14 @@
 import React, { useMemo, useState } from 'react';
 import { usePendingClearanceVisits } from './active-visits.resource';
 import { Button, DataTable, type DataTableRow, DataTableSkeleton, Pagination, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tag } from '@carbon/react';
-import { usePagination, type Visit } from '@openmrs/esm-framework';
+import { launchWorkspace, usePagination, type Visit } from '@openmrs/esm-framework';
 import { useTranslation } from 'react-i18next';
 import styles from "./active-visits.scss";
 import dayjs from 'dayjs';
 import TableToolbar from '../shared/table-toolbar.component';
 import EmptyState from '../shared/empty-state.component';
-import SendToQueueModal from '../../../../registry/modal/send-to-triage/send-to-queue.modal';
 import { IdentifierTypesUuids } from '../../../../resources/identifier-types';
+import { SEND_TO_QUEUE_WORKSPACE } from '../../../../registry/modal/send-to-triage/send-to-queue.modal';
 
 // OpenMRS renders patient.display as "IDENTIFIER - Full name"; split so the CR
 // number and the name can be shown in their own columns.
@@ -119,21 +119,26 @@ const ActiveVisits: React.FC<{ date?: string, onDateChange?: (value: string) => 
         [activeVisitsTableRows],
     );
 
+    // Opens the claim panel as an OpenMRS workspace rather than rendering it inline, so it
+    // gets the platform's own chrome — title bar, hide and maximise — and can be closed
+    // from anywhere the way every other panel in the app can.
     function handleRowClick(row: DataTableRow<any[]>): void {
-        row.cells.map(cell => {
+        let rowPatientUuid = '';
+        let rowVisitTypeUuid = '';
+        row.cells.forEach(cell => {
             if (cell.info.header === "action") {
-                setPatientUuid(cell.value)
+                rowPatientUuid = cell.value;
             }
             if (cell.info.header === "visitTypeUuid") {
-                setVisitTypeUuid(cell.value)
+                rowVisitTypeUuid = cell.value;
             }
         });
-        setVisitUuid(row.id);
-    }
-
-    function onModalClose({ success }: { success: boolean }): void {
-        setPatientUuid(null);
-        setVisitUuid(null);
+        launchWorkspace(SEND_TO_QUEUE_WORKSPACE, {
+            workspaceTitle: 'Initiate SHA claim',
+            patientUuid: rowPatientUuid,
+            visitUuid: row.id,
+            visitTypeUuid: rowVisitTypeUuid,
+        });
     }
 
     return <>
@@ -246,10 +251,6 @@ const ActiveVisits: React.FC<{ date?: string, onDateChange?: (value: string) => 
         </>
         )}
 
-        {
-            patientUuid && visitUuid &&
-            <SendToQueueModal patientUuid={patientUuid} visitUuid={visitUuid} visitTypeUuid={visitTypeUuid} onModalClose={onModalClose} />
-        }
     </>
 }
 

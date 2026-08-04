@@ -3,6 +3,7 @@ import { type ClaimVisitInvoince } from '../../types';
 import { Tag } from '@carbon/react';
 import { formatDate, parseDate } from '@openmrs/esm-framework';
 import ClaimInvoiceLineDetails from '../claim-invoice-line-details/claim-invoice-line-details.component';
+import ClaimInvoicePanel, { type ClaimFactsShownAbove } from './claim-invoice-panel.component';
 import RecordCards, { type RecordCardModel } from '../shared/record-cards.component';
 import { claimStatusTagType as stateTagType } from '../../claim-statuses';
 
@@ -20,6 +21,8 @@ export function buildInvoiceRecords(
   claimInvoices: ClaimVisitInvoince[],
   consentToken: string,
   canEditLines = false,
+  /** What the claim page states above the panel, so the panel doesn't restate it. */
+  claimFacts?: ClaimFactsShownAbove,
 ): RecordCardModel[] {
   return (claimInvoices ?? []).map((ci) => {
     const lineCount = ci.lines?.length ?? 0;
@@ -27,6 +30,15 @@ export function buildInvoiceRecords(
       tone: 'blue',
       kind: 'Invoice',
       title: `Invoice ${ci.invoice_number}`,
+      // How the side panel renders this invoice, in place of the generic field grid.
+      panel: (
+        <ClaimInvoicePanel
+          invoice={ci}
+          consentToken={consentToken}
+          canEditLines={canEditLines}
+          claimFacts={claimFacts}
+        />
+      ),
       badge: ci.workflow_state ? (
         <Tag size="sm" type={stateTagType(ci.workflow_state)}>
           {ci.workflow_state}
@@ -51,7 +63,9 @@ export function buildInvoiceRecords(
         { label: 'Co-pay', value: `KES ${money(ci.total_inv_copay)}` },
         { label: 'Discount', value: `KES ${money(ci.total_inv_discount)}` },
       ],
-      // Invoice lines expand inline beneath the invoice rather than in a modal.
+      // Invoice lines expand beneath the invoice rather than in a modal, and start open:
+      // the lines are what the panel is opened to read, so they shouldn't need a second
+      // click to reach.
       expandable:
         lineCount > 0
           ? {
@@ -63,6 +77,7 @@ export function buildInvoiceRecords(
                   canEditLines={canEditLines}
                 />
               ),
+              defaultOpen: true,
             }
           : undefined,
     };

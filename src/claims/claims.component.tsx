@@ -1,4 +1,17 @@
-import { Button, ComboBox, InlineLoading, Loading, Tag, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TextInput } from '@carbon/react';
+import {
+  Button,
+  ComboBox,
+  InlineLoading,
+  Loading,
+  Tag,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TextInput,
+} from '@carbon/react';
 import styles from './claims.component.scss';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -39,7 +52,12 @@ interface ClaimsComponentProps {
   otp?: string;
   authGuid?: string;
   onSelectChange: (key, value) => void;
-  onClaimsVisitStart?: (payload: ClaimResult, intervention: Intervention, subBenefit: ClientSubBenefit, usePreselectedIntervention: boolean) => void;
+  onClaimsVisitStart?: (
+    payload: ClaimResult,
+    intervention: Intervention,
+    subBenefit: ClientSubBenefit,
+    usePreselectedIntervention: boolean,
+  ) => void;
   onAddIntervention?: (intervention: any, subBenefit?: ClientSubBenefit) => void;
   onInterventionChange?: (intervention: Intervention | undefined) => void;
   onError?: (error: any) => void
@@ -103,7 +121,7 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
 
   const isPmsf = useMemo(() => {
     if (selectedSubBenefitCode) {
-      return selectedSubBenefitCode.code.toUpperCase().includes("PMF");
+      return selectedSubBenefitCode.code.toUpperCase().includes('PMF');
     }
     return false;
   }, [selectedSubBenefitCode]);
@@ -112,7 +130,7 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
     clientRegistryId,
     selectedIntervention?.code,
     selectedIntervention?.paymentMechanism?.toUpperCase() === 'CAPITATION',
-    isPmsf
+    isPmsf,
   );
 
   const { pomsfBalance, isLoadingPomsfBalances } = usePomsfBalance(clientRegistryId, isPmsf);
@@ -122,7 +140,9 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
     if (!isLoadingPomsfBalances && pomsfBalance && selectedSubBenefitCode && selectedIntervention) {
       pomsfBalance.memberPolicies.map((memberPolicy) => {
         memberPolicy.benefit.map((benefit) => {
-          const balance = benefit.subBenefit.find((subBenefit) => subBenefit.subBenefitCode === selectedSubBenefitCode.code)?.balance;
+          const balance = benefit.subBenefit.find(
+            (subBenefit) => subBenefit.subBenefitCode === selectedSubBenefitCode.code,
+          )?.balance;
           if (balance && balance?.length) {
             pBalance = balance[0].balance;
           }
@@ -195,8 +215,7 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
     if (!selectedIntervention) return;
 
     const elective =
-      Boolean(selectedIntervention.needsPreauth) &&
-      Boolean(selectedIntervention.needsManualPreauthApproval);
+      Boolean(selectedIntervention.needsPreauth) && Boolean(selectedIntervention.needsManualPreauthApproval);
 
     const token = getVisitConsentToken(activeVisit);
     if (!elective && !token) {
@@ -260,7 +279,7 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
         interventionCodes.push(selectedIntervention.code);
       }
       if (preExistingInterventions && preExistingInterventions.length) {
-        const preExistingCodes = preExistingInterventions.map(v => v.intervention_code);
+        const preExistingCodes = preExistingInterventions.map((v) => v.intervention_code);
         interventionCodes.push(...preExistingCodes);
       }
 
@@ -280,7 +299,9 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
         const consentToken = claimVisit.authorization_code;
 
         const promises = [];
-        const existsInPreExistingInterventions = preExistingInterventions.some(v => v.intervention_code === selectedIntervention.code);
+        const existsInPreExistingInterventions = preExistingInterventions.some(
+          (v) => v.intervention_code === selectedIntervention.code,
+        );
         if (existsInPreExistingInterventions) {
           promises.push(
             ...preExistingInterventions.map((intervention) =>
@@ -288,7 +309,9 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
             ),
           );
         } else {
-          const filteredPreExistingInterventions = preExistingInterventions.filter(v => v.intervention_code != selectedIntervention.code);
+          const filteredPreExistingInterventions = preExistingInterventions.filter(
+            (v) => v.intervention_code != selectedIntervention.code,
+          );
           promises.push(
             ...filteredPreExistingInterventions.map((intervention) =>
               updateBillOrderConsentToken(intervention.id, claimVisit.authorization_code),
@@ -299,19 +322,22 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
         if (consentToken) {
           promises.push(
             interventionCodes.map((intervention) => {
-              const interventionExistsInProviderPreview = claimVisit?.interventions?.some(i => i?.intervention_code === intervention);
+              const interventionExistsInProviderPreview = claimVisit?.interventions?.some(
+                (i) => i?.intervention_code === intervention,
+              );
               if (interventionExistsInProviderPreview) {
                 return;
               }
               return addIntervention(consentToken, intervention, sessionLocation?.uuid);
-            },
-            ),
+            }),
           );
         }
 
         await Promise.all(promises);
 
-        const selectedInterventionPreExists = preExistingInterventions.some(p => p.intervention_code === selectedIntervention.code);
+        const selectedInterventionPreExists = preExistingInterventions.some(
+          (p) => p.intervention_code === selectedIntervention.code,
+        );
         if (!selectedInterventionPreExists) {
           onClaimsVisitStart(claimVisit, selectedIntervention, selectedSubBenefitCode, false);
         } else {
@@ -401,7 +427,7 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
       applicable_document_types: i.applicableDocumentTypes ?? [],
       needs_preauth: !!i.needsPreauth,
     };
-  }
+  };
 
   const handleAddIntervention = async () => {
     try {
@@ -417,7 +443,9 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
       }
       // Check if intervention exists
       const interventionExists = await checkInterventionExists(consentToken, selectedIntervention.code);
-      const interventionExistsInProviderPreview = existingClaimVisit?.interventions?.some(i => i?.intervention_code === selectedIntervention.code);
+      const interventionExistsInProviderPreview = existingClaimVisit?.interventions?.some(
+        (i) => i?.intervention_code === selectedIntervention.code,
+      );
       if (interventionExists || interventionExistsInProviderPreview) {
         onAddIntervention(mapIntervention(selectedIntervention), selectedSubBenefitCode);
       } else {
@@ -444,21 +472,20 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
   // deleted/typed over. Once an item is selected we lock the field: block typing
   // and partial edits; Backspace/Delete (or the ✕) clears the whole selection so
   // the user can search again from scratch.
-  const lockSelection =
-    (selected: unknown, onClear: () => void) => (e: React.KeyboardEvent<HTMLDivElement>) => {
-      if (!selected || e.ctrlKey || e.metaKey || e.altKey) {
-        return;
-      }
-      if (e.key === 'Backspace' || e.key === 'Delete') {
-        e.preventDefault();
-        e.stopPropagation();
-        onClear();
-      } else if (e.key.length === 1) {
-        // Any single printable character would edit the locked label — block it.
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    };
+  const lockSelection = (selected: unknown, onClear: () => void) => (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!selected || e.ctrlKey || e.metaKey || e.altKey) {
+      return;
+    }
+    if (e.key === 'Backspace' || e.key === 'Delete') {
+      e.preventDefault();
+      e.stopPropagation();
+      onClear();
+    } else if (e.key.length === 1) {
+      // Any single printable character would edit the locked label — block it.
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
 
   const clearSubBenefit = () => {
     setSelectedSubBenefitCode(undefined);
@@ -475,49 +502,50 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
 
   return (
     <>
-      {
-        isLoadingPreExistingIntervention ?
-          <InlineLoading className={styles.checkingEligibility} description="Loading existing interventions" /> :
-          preExistingInterventions && preExistingInterventions.length ?
-            <div className={styles.claimFields}>
-              <div className={styles.preExistingInterventionsHeader}>
-                <h6>{t('preExistingInterventionsHeading', 'Existing interventions')}</h6>
-              </div>
-              <div className={styles.tableWrapper}>
-                <Table size="sm">
-                  <TableHead>
-                    <TableRow>
-                      <TableHeader>{t('orderNumber', 'Order #')}</TableHeader>
-                      <TableHeader>{t('subBenefit', 'Sub-benefit')}</TableHeader>
-                      <TableHeader>{t('interventionCode', 'Intervention')}</TableHeader>
-                      <TableHeader>{t('preauthRequired', 'Preauth')}</TableHeader>
-                      <TableHeader>{t('createdAt', 'Created')}</TableHeader>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {preExistingInterventions.map((intervention) => (
-                      <TableRow key={intervention.id}>
-                        <TableCell>{intervention.order_no || '-'}</TableCell>
-                        <TableCell>{intervention.sub_benefit_code || '-'}</TableCell>
-                        <TableCell>{intervention.intervention_code || '-'}</TableCell>
-                        <TableCell>{formatPreauthType(intervention)}</TableCell>
-                        <TableCell>{formatDate(intervention.createdAt)}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
-            : <></>
-      }
+      {isLoadingPreExistingIntervention ? (
+        <InlineLoading className={styles.checkingEligibility} description="Loading existing interventions" />
+      ) : preExistingInterventions && preExistingInterventions.length ? (
+        <div className={styles.claimFields}>
+          <div className={styles.preExistingInterventionsHeader}>
+            <h6>{t('preExistingInterventionsHeading', 'Existing interventions')}</h6>
+          </div>
+          <div className={styles.tableWrapper}>
+            <Table size="sm">
+              <TableHead>
+                <TableRow>
+                  <TableHeader>{t('orderNumber', 'Order #')}</TableHeader>
+                  <TableHeader>{t('subBenefit', 'Sub-benefit')}</TableHeader>
+                  <TableHeader>{t('interventionCode', 'Intervention')}</TableHeader>
+                  <TableHeader>{t('preauthRequired', 'Preauth')}</TableHeader>
+                  <TableHeader>{t('createdAt', 'Created')}</TableHeader>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {preExistingInterventions.map((intervention) => (
+                  <TableRow key={intervention.id}>
+                    <TableCell>{intervention.order_no || '-'}</TableCell>
+                    <TableCell>{intervention.sub_benefit_code || '-'}</TableCell>
+                    <TableCell>{intervention.intervention_code || '-'}</TableCell>
+                    <TableCell>{formatPreauthType(intervention)}</TableCell>
+                    <TableCell>{formatDate(intervention.createdAt)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      ) : (
+        <></>
+      )}
 
       <div className={styles.claimFields}>
         {/* Benefits — searchable */}
         <div className={styles.field} onKeyDownCapture={lockSelection(selectedSubBenefitCode, clearSubBenefit)}>
           <ComboBox
             id="client-sub-benefits"
+            autoAlign
             titleText="Client sub benefits"
-            placeholder={isLoadingClientSubBenefits ? 'Loading sub-benefits…' : 'Search sub-benefit'}
+            placeholder={isLoadingClientSubBenefits ? 'Loading…' : 'Search sub-benefit'}
             disabled={isLoadingClientSubBenefits}
             items={clientSubBenefits ?? []}
             itemToString={(item) => (item ? `${item.name} (${item.code})` : '')}
@@ -551,12 +579,13 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
           <div className={styles.field} onKeyDownCapture={lockSelection(selectedIntervention, clearIntervention)}>
             <ComboBox
               id="interventions"
+              autoAlign
               titleText="Interventions"
               placeholder={
                 !selectedSubBenefitCode
                   ? 'Select a sub-benefit first'
                   : isLoadingInterventions
-                    ? 'Loading interventions…'
+                    ? 'Loading…'
                     : 'Search intervention'
               }
               disabled={!selectedSubBenefitCode || isLoadingInterventions}
@@ -601,12 +630,12 @@ const ClaimsComponent: React.FC<ClaimsComponentProps> = ({
 
           {isLoadingPomsfBalances && isPmsf ? (
             <InlineLoading className={styles.checkingEligibility} description="Loading POMSF balance" />
+          ) : pmfBalance ? (
+            <Tag size="sm" type="green">
+              {pmfBalance}
+            </Tag>
           ) : (
-            pmfBalance ? (
-              <Tag size="sm" type="green">
-                {pmfBalance}
-              </Tag>
-            ) : <></>
+            <></>
           )}
 
           {selectedIntervention ? (
