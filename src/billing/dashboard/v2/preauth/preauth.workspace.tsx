@@ -27,7 +27,7 @@ import {
   type PreauthFormPayload,
 } from '../../../../claims/claims.resource';
 import { cancelAllPendingAuthorizations, sendClaimsOTP, authorizeClaimsWithOtp } from '../../../../registry/hie.resource';
-import { addClaimDiagnosis, fetchPatientDiagnosis } from '../../../billing-claims.resource';
+import { addClaimDiagnosis, fetchPatientDiagnosesForBilling } from '../../../billing-claims.resource';
 import { ensureInterventionOnVisit } from '../../../../claims/interventions.resource';
 import { type AmrsVisitDiagnosis } from '../../../types';
 import { type PatientFacilityBillDetails } from '../types';
@@ -61,7 +61,7 @@ type DiagnosisPick =
 
 const visitDxPick = (dx: AmrsVisitDiagnosis): DiagnosisPick => ({
   kind: 'visit',
-  key: `visit-${dx.uuid || dx.encounter_id}-${dx.icd11_code}`,
+  key: `visit-${dx.encounter_id}-${dx.icd11_code}-${dx.diagnosis_coded ?? dx.value_coded ?? ''}`,
   dx,
 });
 
@@ -230,7 +230,7 @@ const PreauthForm: React.FC<PreauthWorkspaceProps> = ({
     String(billItem.item_price ?? billItem.item_total_price ?? '').trim(),
   );
 
-  // Diagnosis: prefill from patient visit diagnoses; search uses concept dictionary (ICD-11).
+  // Diagnosis: prefill from ETL encounter-diagnosis; search uses concept dictionary (ICD-11).
   const [visitDiagnoses, setVisitDiagnoses] = useState<AmrsVisitDiagnosis[]>([]);
   const [conceptDxHits, setConceptDxHits] = useState<DiagnosisConceptHit[]>([]);
   const [loadingDx, setLoadingDx] = useState(false);
@@ -410,7 +410,7 @@ const PreauthForm: React.FC<PreauthWorkspaceProps> = ({
     }
   };
 
-  // Prefill from patient visit diagnoses (same ETL source as Patient diagnosis on bill details).
+  // Prefill from visit + maternity + encounter diagnoses (same three ETL sources as bill details).
   useEffect(() => {
     const uuid = patientUuid || billItem.patient_uuid;
     if (!uuid || !locationUuid) return;
@@ -419,8 +419,10 @@ const PreauthForm: React.FC<PreauthWorkspaceProps> = ({
       setLoadingDx(true);
       try {
         const visitDate = billingDateToVisitDate(billItem.bill_date);
-        const results = await fetchPatientDiagnosis({
+        const billingDate = visitDate;
+        const results = await fetchPatientDiagnosesForBilling({
           visitDate,
+          billingDate,
           patientUuid: uuid,
           locationUuid,
         });
@@ -1229,10 +1231,10 @@ const PreauthForm: React.FC<PreauthWorkspaceProps> = ({
 
           <div className={styles.searchBlock}>
             <p className={styles.fieldHint}>
-              Diagnosis (ICD-11) — prefilled from patient visit; type to search the concept dictionary
+              Diagnosis (ICD-11)
             </p>
             {loadingDx ? (
-              <InlineLoading description="Loading visit diagnoses…" />
+              <InlineLoading description="Loading patient diagnoses…" />
             ) : (
               <ComboBox
                 id="preauth-diagnosis"

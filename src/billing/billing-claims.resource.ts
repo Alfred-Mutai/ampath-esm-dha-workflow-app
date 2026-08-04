@@ -702,6 +702,90 @@ export async function fetchPatientEncounterDiagnosis(
   return data.results ?? [];
 }
 
+export type PatientDiagnosesForBillingDto = {
+  visitDate: string;
+  billingDate: string;
+  patientUuid: string;
+  locationUuid: string;
+};
+
+function diagnosisDedupeKey(d: AmrsVisitDiagnosis): string {
+  return `${d.encounter_id ?? ''}|${(d.icd11_code ?? '').trim()}`;
+}
+
+/**
+ * Load patient diagnoses from the same three ETL sources as bill/claim details,
+ * merge, and dedupe. Used by Raise Preauth prefill (not wired into bill details).
+ */
+export async function fetchPatientDiagnosesForBilling(
+  dto: PatientDiagnosesForBillingDto,
+): Promise<AmrsVisitDiagnosis[]> {
+  const visitDto: AmrsVisitDiagnosisDto = {
+    visitDate: dto.visitDate,
+    patientUuid: dto.patientUuid,
+    locationUuid: dto.locationUuid,
+  };
+  const maternityDto: AmrsMaternityDiagnosisDto = {
+    patientUuid: dto.patientUuid,
+    billingDate: dto.billingDate,
+  };
+
+  const [visitResult, maternityResult, encounterResult] = await Promise.allSettled([
+    fetchPatientDiagnosis(visitDto),
+    fetchMaternityDiagnosis(maternityDto),
+    fetchPatientEncounterDiagnosis(visitDto),
+  ]);
+
+  const visitRows: AmrsVisitDiagnosis[] =
+    visitResult.status === 'fulfilled' ? visitResult.value ?? [] : [];
+
+  const maternityRows: AmrsVisitDiagnosis[] =
+    maternityResult.status === 'fulfilled'
+      ? (maternityResult.value ?? [])
+          .filter((r) => r?.uuid != null)
+          .map(
+            (v): AmrsVisitDiagnosis => ({
+              patient_id: Number(v.patient_id) || 0,
+              encounter_id: v.encounter_id,
+              encounter_datetime: v.encounter_datetime,
+              facility: v.facility ?? '',
+              encounter_type: v.encounter_type,
+              concept_id: v.concept_id != null ? Number(v.concept_id) : null,
+              value_coded: v.value_coded != null ? Number(v.value_coded) : null,
+              concept_source_name: v.concept_source_name,
+              hl7_code: v.hl7_code,
+              icd11_code: v.icd11_code,
+              provider_id: '',
+              national_id: v.practioner_nat_id ?? '',
+              speciality: v.practitioner_speciality ?? null,
+              uuid: v.uuid,
+              practioner_nat_id: v.practioner_nat_id,
+              practitioner_speciality: v.practitioner_speciality,
+              practitioner_identifier_type: 'National ID',
+              practitioner_body: v.practitioner_body,
+            }),
+          )
+      : [];
+
+  const encounterRows: AmrsVisitDiagnosis[] =
+    encounterResult.status === 'fulfilled' ? encounterResult.value ?? [] : [];
+
+  const merged = [...visitRows, ...maternityRows, ...encounterRows];
+  const seen = new Set<string>();
+  const deduped: AmrsVisitDiagnosis[] = [];
+  for (const row of merged) {
+    const key = diagnosisDedupeKey(row);
+    if (!key || key === '|') {
+      deduped.push(row);
+      continue;
+    }
+    if (seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(row);
+  }
+  return deduped;
+}
+
 export async function fetchFacilityBedOccupancy(locationUuid: string):  Promise<BedOccupancy>{
   const { hieBaseUrl } = await getHieBaseUrl();
   const response = await openmrsFetch(`${hieBaseUrl}/bed-occupancy?locationUuid=${locationUuid}`);

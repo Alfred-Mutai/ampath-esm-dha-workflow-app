@@ -89,14 +89,16 @@ export type AmrsVisitDiagnosis = {
   encounter_datetime: string;
   facility: string;
   encounter_type: string;
-  concept_id: number;
-  value_coded: number;
+  concept_id?: number | null;
+  value_coded?: number | null;
+  /** Encounter diagnosis coded concept (/patient/encounter-diagnosis). */
+  diagnosis_coded?: number | null;
   concept_source_name: string;
   hl7_code: string;
   icd11_code: string;
-  provider_id: string;
+  provider_id: string | number;
   national_id: string;
-  speciality: string;
+  speciality?: string | null;
   uuid: string;
   practioner_nat_id: string;
   practitioner_speciality: string;
